@@ -477,7 +477,7 @@ export function ShopDialog({ open, onOpenChange, shop, onSuccess }: ShopDialogPr
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        <SelectItem value="">Kein Bankkonto</SelectItem>
+                        <SelectItem value="none">Kein Bankkonto</SelectItem>
                         {bankAccounts.map((account) => (
                           <SelectItem key={account.id} value={account.id}>
                             {account.account_name} ({account.bank_name})
@@ -503,7 +503,7 @@ export function ShopDialog({ open, onOpenChange, shop, onSuccess }: ShopDialogPr
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        <SelectItem value="">Keine Konfiguration</SelectItem>
+                        <SelectItem value="none">Keine Konfiguration</SelectItem>
                         {resendConfigs.map((config) => (
                           <SelectItem key={config.id} value={config.id}>
                             {config.config_name}
