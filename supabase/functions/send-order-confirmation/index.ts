@@ -87,6 +87,7 @@ const handler = async (req: Request): Promise<Response> => {
         <h2>Bestelldetails:</h2>
         <ul>
           <li><strong>Bestellnummer:</strong> ${order.order_number}</li>
+          <li><strong>Rechnungsnummer:</strong> ${order.invoice_number || 'Wird generiert'}</li>
           <li><strong>Produkt:</strong> ${order.product}</li>
           <li><strong>Menge:</strong> ${order.liters} Liter</li>
           <li><strong>Gesamtbetrag:</strong> €${order.total_amount.toFixed(2)}</li>
@@ -99,7 +100,7 @@ const handler = async (req: Request): Promise<Response> => {
           ${order.delivery_postcode} ${order.delivery_city}
         </p>
         
-        <p><strong>Status:</strong> Ihre Bestellung wird automatisch bearbeitet. Sie erhalten in Kürze Ihre Rechnung per E-Mail.</p>
+        <p><strong>Status:</strong> Ihre Bestellung wird automatisch bearbeitet. Die Rechnung finden Sie im Anhang dieser E-Mail.</p>
         
         <p>Bei Fragen kontaktieren Sie uns gerne unter ${order.shops?.company_email}</p>
         
@@ -136,13 +137,45 @@ const handler = async (req: Request): Promise<Response> => {
       `;
     }
 
-    // Send email
-    const emailResponse = await resend.emails.send({
+    // Prepare email payload
+    const emailPayload: any = {
       from: `${resendConfig.from_name} <${resendConfig.from_email}>`,
       to: [order.customer_email],
       subject: subject,
       html: htmlContent,
-    });
+    };
+
+    // Add PDF attachment for instant orders with invoices
+    if (include_invoice && order.invoice_pdf_url && email_type === 'instant_confirmation') {
+      try {
+        // Download PDF from Supabase Storage
+        const { data: pdfData, error: downloadError } = await supabase.storage
+          .from('invoices')
+          .download(order.invoice_pdf_url.split('/').pop() || '');
+
+        if (!downloadError && pdfData) {
+          // Convert blob to base64
+          const arrayBuffer = await pdfData.arrayBuffer();
+          const base64 = btoa(String.fromCharCode(...new Uint8Array(arrayBuffer)));
+
+          emailPayload.attachments = [{
+            filename: `Rechnung-${order.invoice_number || order.order_number}.pdf`,
+            content: base64,
+            content_type: 'application/pdf',
+          }];
+
+          console.log('PDF attachment added to email');
+        } else {
+          console.warn('Could not download PDF for attachment:', downloadError);
+        }
+      } catch (attachmentError) {
+        console.warn('Error adding PDF attachment:', attachmentError);
+        // Continue sending email without attachment
+      }
+    }
+
+    // Send email
+    const emailResponse = await resend.emails.send(emailPayload);
 
     console.log('Email sent successfully:', emailResponse);
 
@@ -151,6 +184,7 @@ const handler = async (req: Request): Promise<Response> => {
       email_id: emailResponse.data?.id,
       email_type,
       sent_to: order.customer_email,
+      attachment_included: !!emailPayload.attachments,
       sent_at: new Date().toISOString()
     }), {
       status: 200,

@@ -1,5 +1,7 @@
+
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { jsPDF } from "https://esm.sh/jspdf@2.5.1";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -77,64 +79,166 @@ const handler = async (req: Request): Promise<Response> => {
       invoiceNumber = `INV-${new Date().getFullYear()}-${Date.now()}`;
     }
 
-    // Generate simple PDF content (in real implementation, use a PDF library)
-    const invoiceData = {
-      invoice_number: invoiceNumber,
-      invoice_date: new Date().toISOString().split('T')[0],
-      customer: {
-        name: order.customer_name,
-        email: order.customer_email,
-        address: order.use_same_address 
-          ? `${order.delivery_street}, ${order.delivery_postcode} ${order.delivery_city}`
-          : `${order.billing_street || order.delivery_street}, ${order.billing_postcode || order.delivery_postcode} ${order.billing_city || order.delivery_city}`,
-      },
-      company: order.shops,
-      items: [
-        {
-          description: `${order.product} - ${order.liters}L`,
-          quantity: order.liters,
-          unit_price: order.price_per_liter,
-          total: order.base_price,
-        },
-        {
-          description: 'Liefergebühr',
-          quantity: 1,
-          unit_price: order.delivery_fee,
-          total: order.delivery_fee,
-        },
-      ],
-      total_amount: order.total_amount,
-    };
+    // Create PDF document
+    const doc = new jsPDF();
+    const pageWidth = doc.internal.pageSize.width;
+    let yPosition = 20;
 
-    // For now, we'll create a simple text representation
-    // In a real implementation, you'd use a PDF generation library
-    const pdfContent = `
-      RECHNUNG ${invoiceNumber}
-      Datum: ${invoiceData.invoice_date}
-      
-      Kunde: ${invoiceData.customer.name}
-      Email: ${invoiceData.customer.email}
-      Adresse: ${invoiceData.customer.address}
-      
-      Positionen:
-      ${invoiceData.items.map(item => 
-        `${item.description}: ${item.quantity} x ${item.unit_price}€ = ${item.total}€`
-      ).join('\n')}
-      
-      Gesamtbetrag: ${invoiceData.total_amount}€
-    `;
+    // Company header
+    doc.setFontSize(20);
+    doc.setFont('helvetica', 'bold');
+    doc.text(order.shops.company_name || 'Company Name', 20, yPosition);
+    yPosition += 10;
 
-    // Simulate PDF URL (in real implementation, upload to storage)
-    const simulatedPdfUrl = `https://example.com/invoices/${invoiceNumber}.pdf`;
+    doc.setFontSize(10);
+    doc.setFont('helvetica', 'normal');
+    doc.text(order.shops.company_address || '', 20, yPosition);
+    yPosition += 5;
+    doc.text(`${order.shops.company_postcode || ''} ${order.shops.company_city || ''}`, 20, yPosition);
+    yPosition += 5;
+    if (order.shops.company_phone) {
+      doc.text(`Tel: ${order.shops.company_phone}`, 20, yPosition);
+      yPosition += 5;
+    }
+    doc.text(`Email: ${order.shops.company_email || ''}`, 20, yPosition);
+    yPosition += 15;
+
+    // Invoice title and number
+    doc.setFontSize(16);
+    doc.setFont('helvetica', 'bold');
+    doc.text('RECHNUNG', pageWidth - 60, 30);
+    doc.setFontSize(12);
+    doc.setFont('helvetica', 'normal');
+    doc.text(`Nr: ${invoiceNumber}`, pageWidth - 60, 40);
+    doc.text(`Datum: ${new Date().toLocaleDateString('de-DE')}`, pageWidth - 60, 50);
+
+    // Customer information
+    doc.setFontSize(12);
+    doc.setFont('helvetica', 'bold');
+    doc.text('Rechnungsempfänger:', 20, yPosition);
+    yPosition += 10;
+    
+    doc.setFont('helvetica', 'normal');
+    doc.text(order.customer_name, 20, yPosition);
+    yPosition += 5;
+    
+    // Use billing address if different, otherwise delivery address
+    const customerAddress = order.use_same_address 
+      ? `${order.delivery_street}\n${order.delivery_postcode} ${order.delivery_city}`
+      : `${order.billing_street || order.delivery_street}\n${order.billing_postcode || order.delivery_postcode} ${order.billing_city || order.delivery_city}`;
+    
+    const addressLines = customerAddress.split('\n');
+    addressLines.forEach(line => {
+      doc.text(line, 20, yPosition);
+      yPosition += 5;
+    });
+
+    yPosition += 15;
+
+    // Table header
+    doc.setFontSize(12);
+    doc.setFont('helvetica', 'bold');
+    doc.text('Pos.', 20, yPosition);
+    doc.text('Beschreibung', 40, yPosition);
+    doc.text('Menge', 120, yPosition);
+    doc.text('Preis', 140, yPosition);
+    doc.text('Gesamt', 170, yPosition);
+    yPosition += 5;
+
+    // Table line
+    doc.line(20, yPosition, pageWidth - 20, yPosition);
+    yPosition += 10;
+
+    // Table content
+    doc.setFont('helvetica', 'normal');
+    
+    // Main product line
+    doc.text('1', 20, yPosition);
+    doc.text(`${order.product} - ${order.liters}L`, 40, yPosition);
+    doc.text(`${order.liters}`, 120, yPosition);
+    doc.text(`€${order.price_per_liter.toFixed(2)}`, 140, yPosition);
+    doc.text(`€${order.base_price.toFixed(2)}`, 170, yPosition);
+    yPosition += 8;
+
+    // Delivery fee line
+    doc.text('2', 20, yPosition);
+    doc.text('Liefergebühr', 40, yPosition);
+    doc.text('1', 120, yPosition);
+    doc.text(`€${order.delivery_fee.toFixed(2)}`, 140, yPosition);
+    doc.text(`€${order.delivery_fee.toFixed(2)}`, 170, yPosition);
+    yPosition += 15;
+
+    // Total line
+    doc.line(140, yPosition, pageWidth - 20, yPosition);
+    yPosition += 8;
+    doc.setFont('helvetica', 'bold');
+    doc.text('Gesamtbetrag:', 140, yPosition);
+    doc.text(`€${order.total_amount.toFixed(2)}`, 170, yPosition);
+    yPosition += 20;
+
+    // Delivery address
+    doc.setFont('helvetica', 'bold');
+    doc.text('Lieferadresse:', 20, yPosition);
+    yPosition += 8;
+    doc.setFont('helvetica', 'normal');
+    doc.text(`${order.delivery_first_name} ${order.delivery_last_name}`, 20, yPosition);
+    yPosition += 5;
+    doc.text(order.delivery_street, 20, yPosition);
+    yPosition += 5;
+    doc.text(`${order.delivery_postcode} ${order.delivery_city}`, 20, yPosition);
+    yPosition += 15;
+
+    // Footer with company details
+    if (order.shops.vat_number || order.shops.registration_number) {
+      doc.setFontSize(8);
+      doc.setFont('helvetica', 'normal');
+      yPosition = doc.internal.pageSize.height - 30;
+      
+      if (order.shops.vat_number) {
+        doc.text(`USt-IdNr: ${order.shops.vat_number}`, 20, yPosition);
+        yPosition += 4;
+      }
+      if (order.shops.registration_number) {
+        doc.text(`Handelsregister: ${order.shops.registration_number}`, 20, yPosition);
+      }
+    }
+
+    // Generate PDF as base64
+    const pdfBase64 = doc.output('dataurlstring').split(',')[1];
+    const pdfBuffer = Uint8Array.from(atob(pdfBase64), c => c.charCodeAt(0));
+
+    // Upload to Supabase Storage
+    const fileName = `${invoiceNumber}-${order_id}.pdf`;
+    const { data: uploadData, error: uploadError } = await supabase.storage
+      .from('invoices')
+      .upload(fileName, pdfBuffer, {
+        contentType: 'application/pdf',
+        upsert: true,
+      });
+
+    if (uploadError) {
+      console.error('Error uploading PDF:', uploadError);
+      return new Response(JSON.stringify({ error: 'Failed to upload PDF' }), {
+        status: 500,
+        headers: { 'Content-Type': 'application/json', ...corsHeaders },
+      });
+    }
+
+    // Get public URL
+    const { data: urlData } = supabase.storage
+      .from('invoices')
+      .getPublicUrl(fileName);
+
+    const publicUrl = urlData.publicUrl;
 
     // Update order with invoice information
     const { error: updateError } = await supabase
       .from('orders')
       .update({
         invoice_number: invoiceNumber,
-        invoice_date: invoiceData.invoice_date,
+        invoice_date: new Date().toISOString().split('T')[0],
         invoice_pdf_generated: true,
-        invoice_pdf_url: simulatedPdfUrl,
+        invoice_pdf_url: publicUrl,
         invoice_generation_date: new Date().toISOString(),
       })
       .eq('id', order_id);
@@ -151,9 +255,9 @@ const handler = async (req: Request): Promise<Response> => {
 
     return new Response(JSON.stringify({
       invoice_number: invoiceNumber,
-      invoice_url: simulatedPdfUrl,
-      invoice_data: invoiceData,
+      invoice_url: publicUrl,
       generated_at: new Date().toISOString(),
+      file_name: fileName,
     }), {
       status: 201,
       headers: { 'Content-Type': 'application/json', ...corsHeaders },
@@ -161,7 +265,10 @@ const handler = async (req: Request): Promise<Response> => {
 
   } catch (error) {
     console.error('Error in generate-invoice function:', error);
-    return new Response(JSON.stringify({ error: 'Internal server error' }), {
+    return new Response(JSON.stringify({ 
+      error: 'Internal server error',
+      details: error instanceof Error ? error.message : 'Unknown error'
+    }), {
       status: 500,
       headers: { 'Content-Type': 'application/json', ...corsHeaders },
     });
