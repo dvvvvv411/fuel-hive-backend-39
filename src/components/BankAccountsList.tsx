@@ -4,8 +4,10 @@ import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { CreditCard, Plus, Building } from 'lucide-react';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { CreditCard, Plus, Building, Edit, Trash2 } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
+import { BankAccountDialog } from './BankAccountDialog';
 
 interface BankAccount {
   id: string;
@@ -20,28 +22,45 @@ interface BankAccount {
   created_at: string;
 }
 
+interface Shop {
+  id: string;
+  name: string;
+  bank_account_id: string | null;
+}
+
 export function BankAccountsList() {
   const [bankAccounts, setBankAccounts] = useState<BankAccount[]>([]);
+  const [shops, setShops] = useState<Shop[]>([]);
   const [loading, setLoading] = useState(true);
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [selectedAccount, setSelectedAccount] = useState<BankAccount | undefined>();
 
   useEffect(() => {
-    fetchBankAccounts();
+    fetchData();
   }, []);
 
-  const fetchBankAccounts = async () => {
+  const fetchData = async () => {
     try {
-      const { data, error } = await supabase
-        .from('bank_accounts')
-        .select('*')
-        .order('created_at', { ascending: false });
+      const [bankAccountsResponse, shopsResponse] = await Promise.all([
+        supabase
+          .from('bank_accounts')
+          .select('*')
+          .order('created_at', { ascending: false }),
+        supabase
+          .from('shops')
+          .select('id, name, bank_account_id')
+      ]);
 
-      if (error) throw error;
-      setBankAccounts(data || []);
+      if (bankAccountsResponse.error) throw bankAccountsResponse.error;
+      if (shopsResponse.error) throw shopsResponse.error;
+
+      setBankAccounts(bankAccountsResponse.data || []);
+      setShops(shopsResponse.data || []);
     } catch (error) {
-      console.error('Error fetching bank accounts:', error);
+      console.error('Error fetching data:', error);
       toast({
-        title: 'Error',
-        description: 'Failed to fetch bank accounts',
+        title: 'Fehler',
+        description: 'Fehler beim Laden der Daten',
         variant: 'destructive',
       });
     } finally {
@@ -54,20 +73,98 @@ export function BankAccountsList() {
     return iban.substring(0, 4) + '*'.repeat(iban.length - 8) + iban.substring(iban.length - 4);
   };
 
+  const getShopsUsingAccount = (accountId: string) => {
+    return shops.filter(shop => shop.bank_account_id === accountId);
+  };
+
+  const toggleAccountStatus = async (account: BankAccount) => {
+    try {
+      const { error } = await supabase
+        .from('bank_accounts')
+        .update({ active: !account.active })
+        .eq('id', account.id);
+
+      if (error) throw error;
+
+      toast({
+        title: 'Erfolg',
+        description: `Bankkonto wurde ${!account.active ? 'aktiviert' : 'deaktiviert'}`,
+      });
+
+      fetchData();
+    } catch (error) {
+      console.error('Error updating account status:', error);
+      toast({
+        title: 'Fehler',
+        description: 'Fehler beim Aktualisieren des Kontostatus',
+        variant: 'destructive',
+      });
+    }
+  };
+
+  const deleteAccount = async (account: BankAccount) => {
+    const shopsUsing = getShopsUsingAccount(account.id);
+    if (shopsUsing.length > 0) {
+      toast({
+        title: 'Fehler',
+        description: `Bankkonto wird noch von ${shopsUsing.length} Shop(s) verwendet`,
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    if (!confirm('Sind Sie sicher, dass Sie dieses Bankkonto löschen möchten?')) {
+      return;
+    }
+
+    try {
+      const { error } = await supabase
+        .from('bank_accounts')
+        .delete()
+        .eq('id', account.id);
+
+      if (error) throw error;
+
+      toast({
+        title: 'Erfolg',
+        description: 'Bankkonto wurde gelöscht',
+      });
+
+      fetchData();
+    } catch (error) {
+      console.error('Error deleting account:', error);
+      toast({
+        title: 'Fehler',
+        description: 'Fehler beim Löschen des Bankkontos',
+        variant: 'destructive',
+      });
+    }
+  };
+
+  const handleEdit = (account: BankAccount) => {
+    setSelectedAccount(account);
+    setDialogOpen(true);
+  };
+
+  const handleAdd = () => {
+    setSelectedAccount(undefined);
+    setDialogOpen(true);
+  };
+
   if (loading) {
-    return <div className="text-center py-8">Loading bank accounts...</div>;
+    return <div className="text-center py-8">Bankkonten werden geladen...</div>;
   }
 
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <div>
-          <h2 className="text-2xl font-bold">Bank Accounts</h2>
-          <p className="text-gray-600">Manage payment bank accounts</p>
+          <h2 className="text-2xl font-bold">Bankkonten-Verwaltung</h2>
+          <p className="text-gray-600">Verwalten Sie Zahlungs-Bankkonten</p>
         </div>
-        <Button>
+        <Button onClick={handleAdd}>
           <Plus className="h-4 w-4 mr-2" />
-          Add Bank Account
+          Bankkonto hinzufügen
         </Button>
       </div>
 
@@ -75,62 +172,115 @@ export function BankAccountsList() {
         <Card>
           <CardContent className="flex flex-col items-center justify-center py-12">
             <CreditCard className="h-12 w-12 text-gray-400 mb-4" />
-            <h3 className="text-lg font-medium text-gray-900 mb-2">No bank accounts found</h3>
+            <h3 className="text-lg font-medium text-gray-900 mb-2">Keine Bankkonten gefunden</h3>
             <p className="text-gray-500 text-center mb-4">
-              Add bank accounts to receive payments for heating oil orders
+              Fügen Sie Bankkonten hinzu, um Zahlungen für Heizöl-Bestellungen zu erhalten
             </p>
-            <Button>
+            <Button onClick={handleAdd}>
               <Plus className="h-4 w-4 mr-2" />
-              Add Bank Account
+              Bankkonto hinzufügen
             </Button>
           </CardContent>
         </Card>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {bankAccounts.map((account) => (
-            <Card key={account.id}>
-              <CardHeader>
-                <div className="flex justify-between items-start">
-                  <div>
-                    <CardTitle className="text-lg">{account.account_name}</CardTitle>
-                    <CardDescription>{account.account_holder}</CardDescription>
-                  </div>
-                  <Badge variant={account.active ? "default" : "secondary"}>
-                    {account.active ? "Active" : "Inactive"}
-                  </Badge>
-                </div>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                <div className="flex items-center text-sm text-gray-600">
-                  <Building className="h-4 w-4 mr-2" />
-                  {account.bank_name}
-                </div>
-                
-                <div>
-                  <h4 className="font-medium text-sm text-gray-900 mb-1">IBAN</h4>
-                  <p className="text-sm text-gray-600 font-mono">{maskIban(account.iban)}</p>
-                </div>
-                
-                {account.bic && (
-                  <div>
-                    <h4 className="font-medium text-sm text-gray-900 mb-1">BIC</h4>
-                    <p className="text-sm text-gray-600 font-mono">{account.bic}</p>
-                  </div>
-                )}
-                
-                <div className="flex justify-between text-xs text-gray-500">
-                  <span>Currency: {account.currency}</span>
-                  <span>Country: {account.country}</span>
-                </div>
-                
-                <div className="text-xs text-gray-400">
-                  Created: {new Date(account.created_at).toLocaleDateString()}
-                </div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
+        <Card>
+          <CardHeader>
+            <CardTitle>Bankkonten ({bankAccounts.length})</CardTitle>
+            <CardDescription>
+              Übersicht aller konfigurierten Bankkonten
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Kontoname</TableHead>
+                  <TableHead>Bank</TableHead>
+                  <TableHead>IBAN</TableHead>
+                  <TableHead>Währung</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead>Verwendung</TableHead>
+                  <TableHead>Aktionen</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {bankAccounts.map((account) => {
+                  const shopsUsing = getShopsUsingAccount(account.id);
+                  return (
+                    <TableRow key={account.id}>
+                      <TableCell>
+                        <div>
+                          <div className="font-medium">{account.account_name}</div>
+                          <div className="text-sm text-gray-500">{account.account_holder}</div>
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex items-center">
+                          <Building className="h-4 w-4 mr-2 text-gray-500" />
+                          {account.bank_name}
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <code className="text-sm bg-gray-100 px-2 py-1 rounded">
+                          {maskIban(account.iban)}
+                        </code>
+                      </TableCell>
+                      <TableCell>{account.currency}</TableCell>
+                      <TableCell>
+                        <Badge 
+                          variant={account.active ? "default" : "secondary"}
+                          className="cursor-pointer"
+                          onClick={() => toggleAccountStatus(account)}
+                        >
+                          {account.active ? "Aktiv" : "Inaktiv"}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>
+                        {shopsUsing.length > 0 ? (
+                          <div className="text-sm">
+                            <div className="font-medium">{shopsUsing.length} Shop(s)</div>
+                            <div className="text-gray-500">
+                              {shopsUsing.map(shop => shop.name).join(', ')}
+                            </div>
+                          </div>
+                        ) : (
+                          <span className="text-gray-500 text-sm">Nicht verwendet</span>
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-2">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleEdit(account)}
+                          >
+                            <Edit className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => deleteAccount(account)}
+                            disabled={shopsUsing.length > 0}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
+              </TableBody>
+            </Table>
+          </CardContent>
+        </Card>
       )}
+
+      <BankAccountDialog
+        open={dialogOpen}
+        onOpenChange={setDialogOpen}
+        bankAccount={selectedAccount}
+        onSave={fetchData}
+      />
     </div>
   );
 }
