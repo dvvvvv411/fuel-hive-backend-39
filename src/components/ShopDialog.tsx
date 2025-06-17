@@ -55,10 +55,12 @@ const shopFormSchema = z.object({
   bank_account_id: z.string().optional(),
   resend_config_id: z.string().optional(),
   payment_methods: z.array(z.string()).optional(),
-  // Neue Branding-Felder
+  // Branding-Felder
   logo_url: z.string().optional(),
   accent_color: z.string().optional(),
   support_phone: z.string().optional(),
+  // Neues VAT-Feld
+  vat_rate: z.number().min(0).max(100).optional(),
 });
 
 type ShopFormValues = z.infer<typeof shopFormSchema>;
@@ -89,6 +91,16 @@ interface PaymentMethod {
   code: string;
   active: boolean;
 }
+
+const VAT_RATES = [
+  { value: 0, label: '0% (Steuerbefreit)' },
+  { value: 7, label: '7% (Ermäßigter Satz)' },
+  { value: 19, label: '19% (Regelsteuersatz)' },
+  { value: 20, label: '20% (Österreich)' },
+  { value: 7.7, label: '7,7% (Schweiz)' },
+  { value: 21, label: '21% (Niederlande/Belgien)' },
+  { value: 25, label: '25% (Dänemark/Schweden)' },
+];
 
 export function ShopDialog({ open, onOpenChange, shop, onSuccess }: ShopDialogProps) {
   const [loading, setLoading] = useState(false);
@@ -125,6 +137,7 @@ export function ShopDialog({ open, onOpenChange, shop, onSuccess }: ShopDialogPr
       logo_url: '',
       accent_color: '#2563eb',
       support_phone: '',
+      vat_rate: 19,
     },
   });
 
@@ -160,6 +173,7 @@ export function ShopDialog({ open, onOpenChange, shop, onSuccess }: ShopDialogPr
           logo_url: shop.logo_url || '',
           accent_color: shop.accent_color || '#2563eb',
           support_phone: shop.support_phone || '',
+          vat_rate: shop.vat_rate || 19,
         });
       } else {
         form.reset({
@@ -186,6 +200,7 @@ export function ShopDialog({ open, onOpenChange, shop, onSuccess }: ShopDialogPr
           logo_url: '',
           accent_color: '#2563eb',
           support_phone: '',
+          vat_rate: 19,
         });
       }
     }
@@ -306,10 +321,12 @@ export function ShopDialog({ open, onOpenChange, shop, onSuccess }: ShopDialogPr
         // Handle select fields - convert "none" to null, otherwise use the value
         bank_account_id: values.bank_account_id === 'none' || !values.bank_account_id ? null : values.bank_account_id,
         resend_config_id: values.resend_config_id === 'none' || !values.resend_config_id ? null : values.resend_config_id,
-        // Neue Branding-Felder
+        // Branding-Felder
         logo_url: values.logo_url || null,
         accent_color: values.accent_color || null,
         support_phone: values.support_phone || null,
+        // VAT-Feld
+        vat_rate: values.vat_rate,
       };
 
       let shopId: string;
@@ -573,6 +590,32 @@ export function ShopDialog({ open, onOpenChange, shop, onSuccess }: ShopDialogPr
                         <SelectItem value="standard">Standard</SelectItem>
                         <SelectItem value="express">Express</SelectItem>
                         <SelectItem value="custom">Benutzerdefiniert</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              {/* Neues VAT-Rate Feld */}
+              <FormField
+                control={form.control}
+                name="vat_rate"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Mehrwertsteuersatz *</FormLabel>
+                    <Select onValueChange={(value) => field.onChange(parseFloat(value))} value={field.value?.toString()}>
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="MwSt-Satz auswählen" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {VAT_RATES.map((rate) => (
+                          <SelectItem key={rate.value} value={rate.value.toString()}>
+                            {rate.label}
+                          </SelectItem>
+                        ))}
                       </SelectContent>
                     </Select>
                     <FormMessage />

@@ -59,6 +59,8 @@ export type Database = {
           shop_id: string
           token: string
           total_amount: number
+          vat_amount: number | null
+          vat_rate: number | null
         }
         Insert: {
           created_at?: string
@@ -70,6 +72,8 @@ export type Database = {
           shop_id: string
           token: string
           total_amount: number
+          vat_amount?: number | null
+          vat_rate?: number | null
         }
         Update: {
           created_at?: string
@@ -81,6 +85,8 @@ export type Database = {
           shop_id?: string
           token?: string
           total_amount?: number
+          vat_amount?: number | null
+          vat_rate?: number | null
         }
         Relationships: [
           {
@@ -376,6 +382,7 @@ export type Database = {
           resend_config_id: string | null
           support_phone: string | null
           vat_number: string | null
+          vat_rate: number | null
         }
         Insert: {
           accent_color?: string | null
@@ -402,6 +409,7 @@ export type Database = {
           resend_config_id?: string | null
           support_phone?: string | null
           vat_number?: string | null
+          vat_rate?: number | null
         }
         Update: {
           accent_color?: string | null
@@ -428,6 +436,7 @@ export type Database = {
           resend_config_id?: string | null
           support_phone?: string | null
           vat_number?: string | null
+          vat_rate?: number | null
         }
         Relationships: [
           {
