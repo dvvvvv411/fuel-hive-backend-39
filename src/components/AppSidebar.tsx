@@ -1,4 +1,3 @@
-
 import { useAuth } from '@/hooks/useAuth';
 import { useLocation, useNavigate } from 'react-router-dom';
 import {
@@ -14,7 +13,7 @@ import {
   SidebarMenuItem,
 } from '@/components/ui/sidebar';
 import { Button } from '@/components/ui/button';
-import { Store, FileText, CreditCard, LayoutDashboard, LogOut, Fuel } from 'lucide-react';
+import { Store, FileText, CreditCard, LayoutDashboard, LogOut, Fuel, Mail } from 'lucide-react';
 
 const navigationItems = [
   {
@@ -40,6 +39,12 @@ const navigationItems = [
     url: "/dashboard",
     icon: CreditCard,
     value: "bank-accounts"
+  },
+  {
+    title: "Resend Config",
+    url: "/dashboard",
+    icon: Mail,
+    value: "resend-configs"
   },
 ];
 
