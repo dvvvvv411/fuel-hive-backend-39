@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useForm } from 'react-hook-form';
@@ -194,15 +195,27 @@ export function ShopDialog({ open, onOpenChange, shop, onSuccess }: ShopDialogPr
     setLoading(true);
     try {
       const shopData = {
-        ...values,
-        company_website: values.company_website || null,
+        name: values.name,
+        company_name: values.company_name,
+        company_email: values.company_email,
+        company_address: values.company_address,
+        company_city: values.company_city,
+        company_postcode: values.company_postcode,
+        country_code: values.country_code,
+        currency: values.currency,
+        language: values.language,
+        checkout_mode: values.checkout_mode,
+        active: values.active,
+        // Handle optional string fields - convert empty strings to null
         company_phone: values.company_phone || null,
+        company_website: values.company_website || null,
         vat_number: values.vat_number || null,
         court_name: values.court_name || null,
         business_owner: values.business_owner || null,
         registration_number: values.registration_number || null,
-        bank_account_id: values.bank_account_id || null,
-        resend_config_id: values.resend_config_id || null,
+        // Handle select fields - convert "none" to null, otherwise use the value
+        bank_account_id: values.bank_account_id === 'none' || !values.bank_account_id ? null : values.bank_account_id,
+        resend_config_id: values.resend_config_id === 'none' || !values.resend_config_id ? null : values.resend_config_id,
       };
 
       if (isEditing) {
