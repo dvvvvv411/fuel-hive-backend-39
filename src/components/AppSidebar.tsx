@@ -1,3 +1,4 @@
+
 import { useAuth } from '@/hooks/useAuth';
 import { useLocation, useNavigate } from 'react-router-dom';
 import {
@@ -13,7 +14,7 @@ import {
   SidebarMenuItem,
 } from '@/components/ui/sidebar';
 import { Button } from '@/components/ui/button';
-import { Store, FileText, CreditCard, LayoutDashboard, LogOut, Fuel, Mail } from 'lucide-react';
+import { Store, FileText, CreditCard, LayoutDashboard, LogOut, Fuel, Mail, Banknote } from 'lucide-react';
 
 const navigationItems = [
   {
@@ -39,6 +40,12 @@ const navigationItems = [
     url: "/dashboard",
     icon: CreditCard,
     value: "bank-accounts"
+  },
+  {
+    title: "Payment Methods",
+    url: "/dashboard",
+    icon: Banknote,
+    value: "payment-methods"
   },
   {
     title: "Resend Config",

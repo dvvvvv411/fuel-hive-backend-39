@@ -80,6 +80,7 @@ export type Database = {
           liters: number
           order_number: string
           payment_method: string
+          payment_method_id: string | null
           price_per_liter: number
           processing_mode: string | null
           product: string
@@ -119,6 +120,7 @@ export type Database = {
           liters: number
           order_number: string
           payment_method: string
+          payment_method_id?: string | null
           price_per_liter: number
           processing_mode?: string | null
           product: string
@@ -158,6 +160,7 @@ export type Database = {
           liters?: number
           order_number?: string
           payment_method?: string
+          payment_method_id?: string | null
           price_per_liter?: number
           processing_mode?: string | null
           product?: string
@@ -168,6 +171,13 @@ export type Database = {
         }
         Relationships: [
           {
+            foreignKeyName: "orders_payment_method_id_fkey"
+            columns: ["payment_method_id"]
+            isOneToOne: false
+            referencedRelation: "payment_methods"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "orders_shop_id_fkey"
             columns: ["shop_id"]
             isOneToOne: false
@@ -175,6 +185,33 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      payment_methods: {
+        Row: {
+          active: boolean
+          code: string
+          created_at: string
+          description: string | null
+          id: string
+          name: string
+        }
+        Insert: {
+          active?: boolean
+          code: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          name: string
+        }
+        Update: {
+          active?: boolean
+          code?: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          name?: string
+        }
+        Relationships: []
       }
       profiles: {
         Row: {
@@ -226,6 +263,45 @@ export type Database = {
           resend_api_key?: string
         }
         Relationships: []
+      }
+      shop_payment_methods: {
+        Row: {
+          active: boolean
+          created_at: string
+          id: string
+          payment_method_id: string
+          shop_id: string
+        }
+        Insert: {
+          active?: boolean
+          created_at?: string
+          id?: string
+          payment_method_id: string
+          shop_id: string
+        }
+        Update: {
+          active?: boolean
+          created_at?: string
+          id?: string
+          payment_method_id?: string
+          shop_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "shop_payment_methods_payment_method_id_fkey"
+            columns: ["payment_method_id"]
+            isOneToOne: false
+            referencedRelation: "payment_methods"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "shop_payment_methods_shop_id_fkey"
+            columns: ["shop_id"]
+            isOneToOne: false
+            referencedRelation: "shops"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       shops: {
         Row: {

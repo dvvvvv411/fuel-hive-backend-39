@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useForm } from 'react-hook-form';
@@ -30,6 +29,8 @@ import {
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { toast } from '@/hooks/use-toast';
 
 const shopFormSchema = z.object({
@@ -52,6 +53,7 @@ const shopFormSchema = z.object({
   active: z.boolean(),
   bank_account_id: z.string().optional(),
   resend_config_id: z.string().optional(),
+  payment_methods: z.array(z.string()).optional(),
 });
 
 type ShopFormValues = z.infer<typeof shopFormSchema>;
@@ -76,10 +78,19 @@ interface ResendConfig {
   active: boolean;
 }
 
+interface PaymentMethod {
+  id: string;
+  name: string;
+  code: string;
+  active: boolean;
+}
+
 export function ShopDialog({ open, onOpenChange, shop, onSuccess }: ShopDialogProps) {
   const [loading, setLoading] = useState(false);
   const [bankAccounts, setBankAccounts] = useState<BankAccount[]>([]);
   const [resendConfigs, setResendConfigs] = useState<ResendConfig[]>([]);
+  const [paymentMethods, setPaymentMethods] = useState<PaymentMethod[]>([]);
+  const [shopPaymentMethods, setShopPaymentMethods] = useState<string[]>([]);
 
   const isEditing = !!shop;
 
@@ -105,6 +116,7 @@ export function ShopDialog({ open, onOpenChange, shop, onSuccess }: ShopDialogPr
       active: true,
       bank_account_id: '',
       resend_config_id: '',
+      payment_methods: [],
     },
   });
 
@@ -112,8 +124,10 @@ export function ShopDialog({ open, onOpenChange, shop, onSuccess }: ShopDialogPr
     if (open) {
       fetchBankAccounts();
       fetchResendConfigs();
+      fetchPaymentMethods();
       
       if (shop) {
+        fetchShopPaymentMethods(shop.id);
         form.reset({
           name: shop.name || '',
           company_name: shop.company_name || '',
@@ -134,6 +148,7 @@ export function ShopDialog({ open, onOpenChange, shop, onSuccess }: ShopDialogPr
           active: shop.active ?? true,
           bank_account_id: shop.bank_account_id || '',
           resend_config_id: shop.resend_config_id || '',
+          payment_methods: [],
         });
       } else {
         form.reset({
@@ -156,6 +171,7 @@ export function ShopDialog({ open, onOpenChange, shop, onSuccess }: ShopDialogPr
           active: true,
           bank_account_id: '',
           resend_config_id: '',
+          payment_methods: [],
         });
       }
     }
@@ -191,6 +207,66 @@ export function ShopDialog({ open, onOpenChange, shop, onSuccess }: ShopDialogPr
     }
   };
 
+  const fetchPaymentMethods = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('payment_methods')
+        .select('id, name, code, active')
+        .eq('active', true)
+        .order('name');
+
+      if (error) throw error;
+      setPaymentMethods(data || []);
+    } catch (error) {
+      console.error('Error fetching payment methods:', error);
+    }
+  };
+
+  const fetchShopPaymentMethods = async (shopId: string) => {
+    try {
+      const { data, error } = await supabase
+        .from('shop_payment_methods')
+        .select('payment_method_id')
+        .eq('shop_id', shopId)
+        .eq('active', true);
+
+      if (error) throw error;
+      const paymentMethodIds = data?.map(item => item.payment_method_id) || [];
+      setShopPaymentMethods(paymentMethodIds);
+      form.setValue('payment_methods', paymentMethodIds);
+    } catch (error) {
+      console.error('Error fetching shop payment methods:', error);
+    }
+  };
+
+  const updateShopPaymentMethods = async (shopId: string, paymentMethodIds: string[]) => {
+    try {
+      // Delete existing associations
+      await supabase
+        .from('shop_payment_methods')
+        .delete()
+        .eq('shop_id', shopId);
+
+      // Insert new associations
+      if (paymentMethodIds.length > 0) {
+        const associations = paymentMethodIds.map(paymentMethodId => ({
+          shop_id: shopId,
+          payment_method_id: paymentMethodId,
+          active: true,
+        }));
+
+        const { error } = await supabase
+          .from('shop_payment_methods')
+          .insert(associations);
+
+        if (error) throw error;
+      }
+    } catch (error) {
+      console.error('Error updating shop payment methods:', error);
+      throw error;
+    }
+  };
+
   const onSubmit = async (values: ShopFormValues) => {
     setLoading(true);
     try {
@@ -218,6 +294,8 @@ export function ShopDialog({ open, onOpenChange, shop, onSuccess }: ShopDialogPr
         resend_config_id: values.resend_config_id === 'none' || !values.resend_config_id ? null : values.resend_config_id,
       };
 
+      let shopId: string;
+
       if (isEditing) {
         const { error } = await supabase
           .from('shops')
@@ -225,23 +303,30 @@ export function ShopDialog({ open, onOpenChange, shop, onSuccess }: ShopDialogPr
           .eq('id', shop.id);
 
         if (error) throw error;
+        shopId = shop.id;
 
         toast({
           title: 'Erfolg',
           description: 'Shop wurde erfolgreich aktualisiert',
         });
       } else {
-        const { error } = await supabase
+        const { data, error } = await supabase
           .from('shops')
-          .insert(shopData);
+          .insert(shopData)
+          .select('id')
+          .single();
 
         if (error) throw error;
+        shopId = data.id;
 
         toast({
           title: 'Erfolg',
           description: 'Shop wurde erfolgreich erstellt',
         });
       }
+
+      // Update payment methods associations
+      await updateShopPaymentMethods(shopId, values.payment_methods || []);
 
       onSuccess();
       onOpenChange(false);
@@ -585,6 +670,62 @@ export function ShopDialog({ open, onOpenChange, shop, onSuccess }: ShopDialogPr
                 )}
               />
             </div>
+
+            {/* Payment Methods Section */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Zahlungsmethoden</CardTitle>
+                <CardDescription>
+                  Wählen Sie die verfügbaren Zahlungsmethoden für diesen Shop aus
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <FormField
+                  control={form.control}
+                  name="payment_methods"
+                  render={() => (
+                    <FormItem>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {paymentMethods.map((method) => (
+                          <FormField
+                            key={method.id}
+                            control={form.control}
+                            name="payment_methods"
+                            render={({ field }) => {
+                              return (
+                                <FormItem
+                                  key={method.id}
+                                  className="flex flex-row items-start space-x-3 space-y-0"
+                                >
+                                  <FormControl>
+                                    <Checkbox
+                                      checked={field.value?.includes(method.id)}
+                                      onCheckedChange={(checked) => {
+                                        return checked
+                                          ? field.onChange([...(field.value || []), method.id])
+                                          : field.onChange(
+                                              field.value?.filter(
+                                                (value) => value !== method.id
+                                              )
+                                            )
+                                      }}
+                                    />
+                                  </FormControl>
+                                  <FormLabel className="text-sm font-normal">
+                                    {method.name}
+                                  </FormLabel>
+                                </FormItem>
+                              )
+                            }}
+                          />
+                        ))}
+                      </div>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </CardContent>
+            </Card>
 
             <FormField
               control={form.control}

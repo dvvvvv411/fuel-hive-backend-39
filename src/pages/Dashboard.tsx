@@ -6,8 +6,9 @@ import { AppSidebar } from '@/components/AppSidebar';
 import { ShopsList } from '@/components/ShopsList';
 import { OrdersList } from '@/components/OrdersList';
 import { BankAccountsList } from '@/components/BankAccountsList';
+import { PaymentMethodsList } from '@/components/PaymentMethodsList';
 import { ResendConfigsList } from '@/components/ResendConfigsList';
-import { Store, CreditCard, FileText, TrendingUp, Mail } from 'lucide-react';
+import { Store, CreditCard, FileText, TrendingUp, Mail, Banknote } from 'lucide-react';
 
 const Dashboard = () => {
   const [activeTab, setActiveTab] = useState('overview');
@@ -20,6 +21,8 @@ const Dashboard = () => {
         return <OrdersList />;
       case 'bank-accounts':
         return <BankAccountsList />;
+      case 'payment-methods':
+        return <PaymentMethodsList />;
       case 'resend-configs':
         return <ResendConfigsList />;
       default:
@@ -132,6 +135,15 @@ const Dashboard = () => {
                       </div>
                     </button>
                     <button 
+                      onClick={() => setActiveTab('payment-methods')}
+                      className="w-full text-left p-3 rounded-lg border border-gray-200 hover:bg-gray-50 transition-colors"
+                    >
+                      <div className="flex items-center gap-3">
+                        <Banknote className="h-5 w-5 text-indigo-600" />
+                        <span className="font-medium">Payment Methods</span>
+                      </div>
+                    </button>
+                    <button 
                       onClick={() => setActiveTab('resend-configs')}
                       className="w-full text-left p-3 rounded-lg border border-gray-200 hover:bg-gray-50 transition-colors"
                     >
@@ -160,6 +172,7 @@ const Dashboard = () => {
             <h2 className="text-lg font-semibold text-gray-900 capitalize">
               {activeTab === 'overview' ? 'Dashboard' : 
                activeTab === 'resend-configs' ? 'Resend Configuration' :
+               activeTab === 'payment-methods' ? 'Payment Methods' :
                activeTab.replace('-', ' ')}
             </h2>
           </div>
