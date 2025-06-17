@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -18,10 +17,14 @@ interface Order {
   customer_name: string;
   customer_email: string;
   customer_phone: string | null;
+  customer_address: string | null;
   product: string;
   liters: number;
   price_per_liter: number;
   total_amount: number;
+  amount: number;
+  base_price: number;
+  delivery_fee: number;
   status: string;
   payment_method: string;
   delivery_city: string;
@@ -29,10 +32,21 @@ interface Order {
   delivery_postcode: string;
   delivery_first_name: string;
   delivery_last_name: string;
+  delivery_phone: string | null;
+  billing_first_name: string | null;
+  billing_last_name: string | null;
+  billing_street: string | null;
+  billing_postcode: string | null;
+  billing_city: string | null;
+  use_same_address: boolean;
   invoice_number: string | null;
   invoice_pdf_generated: boolean;
   invoice_pdf_url: string | null;
   invoice_sent: boolean;
+  invoice_date: string | null;
+  invoice_generation_date: string | null;
+  bank_details_shown: boolean;
+  processing_mode: string | null;
   created_at: string;
   shop_id: string;
   shops?: {
