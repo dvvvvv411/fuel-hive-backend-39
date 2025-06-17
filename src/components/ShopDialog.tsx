@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useForm } from 'react-hook-form';
@@ -221,7 +220,7 @@ export function ShopDialog({ open, onOpenChange, shop, onSuccess }: ShopDialogPr
       } else {
         const { error } = await supabase
           .from('shops')
-          .insert([shopData]);
+          .insert(shopData);
 
         if (error) throw error;
 
