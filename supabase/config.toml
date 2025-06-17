@@ -1,1 +1,48 @@
+
 project_id = "luhhnsvwtnmxztcmdxyq"
+
+[api]
+enabled = true
+port = 54321
+schemas = ["public", "storage", "graphql_public"]
+extra_search_path = ["public", "extensions"]
+max_rows = 1000
+
+[db]
+port = 54322
+shadow_port = 54320
+major_version = 15
+
+[studio]
+enabled = true
+port = 54323
+api_url = "http://127.0.0.1:54321"
+
+[inbucket]
+enabled = true
+port = 54324
+smtp_port = 54325
+pop3_port = 54326
+
+[storage]
+enabled = true
+file_size_limit = "50MiB"
+
+[auth]
+enabled = true
+external_url = "http://127.0.0.1:3000"
+additional_redirect_urls = ["https://luhhnsvwtnmxztcmdxyq.supabase.co"]
+jwt_expiry = 3600
+enable_confirmations = false
+
+[functions.create-order]
+verify_jwt = false
+
+[functions.get-shop-bankdata]
+verify_jwt = false
+
+[functions.generate-invoice]
+verify_jwt = false
+
+[functions.get-order-status]
+verify_jwt = false
