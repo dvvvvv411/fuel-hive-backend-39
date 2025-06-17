@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent } from '@/components/ui/card';
@@ -30,6 +29,7 @@ interface Shop {
   court_name: string | null;
   business_owner: string | null;
   registration_number: string | null;
+  vat_rate: number | null;
 }
 
 export function ShopsList() {
