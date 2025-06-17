@@ -48,6 +48,50 @@ export type Database = {
         }
         Relationships: []
       }
+      order_tokens: {
+        Row: {
+          created_at: string
+          delivery_fee: number
+          expires_at: string
+          liters: number
+          price_per_liter: number
+          product: string
+          shop_id: string
+          token: string
+          total_amount: number
+        }
+        Insert: {
+          created_at?: string
+          delivery_fee?: number
+          expires_at?: string
+          liters: number
+          price_per_liter: number
+          product: string
+          shop_id: string
+          token: string
+          total_amount: number
+        }
+        Update: {
+          created_at?: string
+          delivery_fee?: number
+          expires_at?: string
+          liters?: number
+          price_per_liter?: number
+          product?: string
+          shop_id?: string
+          token?: string
+          total_amount?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "order_tokens_shop_id_fkey"
+            columns: ["shop_id"]
+            isOneToOne: false
+            referencedRelation: "shops"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       orders: {
         Row: {
           amount: number
@@ -79,6 +123,7 @@ export type Database = {
           invoice_sent: boolean
           liters: number
           order_number: string
+          order_token: string | null
           payment_method: string
           payment_method_id: string | null
           price_per_liter: number
@@ -119,6 +164,7 @@ export type Database = {
           invoice_sent?: boolean
           liters: number
           order_number: string
+          order_token?: string | null
           payment_method: string
           payment_method_id?: string | null
           price_per_liter: number
@@ -159,6 +205,7 @@ export type Database = {
           invoice_sent?: boolean
           liters?: number
           order_number?: string
+          order_token?: string | null
           payment_method?: string
           payment_method_id?: string | null
           price_per_liter?: number
@@ -305,6 +352,7 @@ export type Database = {
       }
       shops: {
         Row: {
+          accent_color: string | null
           active: boolean
           bank_account_id: string | null
           business_owner: string | null
@@ -322,12 +370,15 @@ export type Database = {
           currency: string
           id: string
           language: string
+          logo_url: string | null
           name: string
           registration_number: string | null
           resend_config_id: string | null
+          support_phone: string | null
           vat_number: string | null
         }
         Insert: {
+          accent_color?: string | null
           active?: boolean
           bank_account_id?: string | null
           business_owner?: string | null
@@ -345,12 +396,15 @@ export type Database = {
           currency?: string
           id?: string
           language?: string
+          logo_url?: string | null
           name: string
           registration_number?: string | null
           resend_config_id?: string | null
+          support_phone?: string | null
           vat_number?: string | null
         }
         Update: {
+          accent_color?: string | null
           active?: boolean
           bank_account_id?: string | null
           business_owner?: string | null
@@ -368,9 +422,11 @@ export type Database = {
           currency?: string
           id?: string
           language?: string
+          logo_url?: string | null
           name?: string
           registration_number?: string | null
           resend_config_id?: string | null
+          support_phone?: string | null
           vat_number?: string | null
         }
         Relationships: [
@@ -395,7 +451,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      cleanup_expired_tokens: {
+        Args: Record<PropertyKey, never>
+        Returns: undefined
+      }
     }
     Enums: {
       [_ in never]: never

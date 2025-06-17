@@ -32,6 +32,7 @@ import { Switch } from '@/components/ui/switch';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { toast } from '@/hooks/use-toast';
+import { BrandingFields } from './BrandingFields';
 
 const shopFormSchema = z.object({
   name: z.string().min(1, 'Name ist erforderlich'),
@@ -54,6 +55,10 @@ const shopFormSchema = z.object({
   bank_account_id: z.string().optional(),
   resend_config_id: z.string().optional(),
   payment_methods: z.array(z.string()).optional(),
+  // Neue Branding-Felder
+  logo_url: z.string().optional(),
+  accent_color: z.string().optional(),
+  support_phone: z.string().optional(),
 });
 
 type ShopFormValues = z.infer<typeof shopFormSchema>;
@@ -117,6 +122,9 @@ export function ShopDialog({ open, onOpenChange, shop, onSuccess }: ShopDialogPr
       bank_account_id: '',
       resend_config_id: '',
       payment_methods: [],
+      logo_url: '',
+      accent_color: '#2563eb',
+      support_phone: '',
     },
   });
 
@@ -149,6 +157,9 @@ export function ShopDialog({ open, onOpenChange, shop, onSuccess }: ShopDialogPr
           bank_account_id: shop.bank_account_id || '',
           resend_config_id: shop.resend_config_id || '',
           payment_methods: [],
+          logo_url: shop.logo_url || '',
+          accent_color: shop.accent_color || '#2563eb',
+          support_phone: shop.support_phone || '',
         });
       } else {
         form.reset({
@@ -172,6 +183,9 @@ export function ShopDialog({ open, onOpenChange, shop, onSuccess }: ShopDialogPr
           bank_account_id: '',
           resend_config_id: '',
           payment_methods: [],
+          logo_url: '',
+          accent_color: '#2563eb',
+          support_phone: '',
         });
       }
     }
@@ -292,6 +306,10 @@ export function ShopDialog({ open, onOpenChange, shop, onSuccess }: ShopDialogPr
         // Handle select fields - convert "none" to null, otherwise use the value
         bank_account_id: values.bank_account_id === 'none' || !values.bank_account_id ? null : values.bank_account_id,
         resend_config_id: values.resend_config_id === 'none' || !values.resend_config_id ? null : values.resend_config_id,
+        // Neue Branding-Felder
+        logo_url: values.logo_url || null,
+        accent_color: values.accent_color || null,
+        support_phone: values.support_phone || null,
       };
 
       let shopId: string;
@@ -670,6 +688,9 @@ export function ShopDialog({ open, onOpenChange, shop, onSuccess }: ShopDialogPr
                 )}
               />
             </div>
+
+            {/* Branding Fields */}
+            <BrandingFields form={form} shopId={shop?.id} />
 
             {/* Payment Methods Section */}
             <Card>
