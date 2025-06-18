@@ -94,7 +94,7 @@ const handler = async (req: Request): Promise<Response> => {
     // Now get the bank account details
     const { data: bankAccount, error: bankError } = await supabase
       .from('bank_accounts')
-      .select('account_name, account_holder, bank_name, iban, bic, currency, active')
+      .select('account_name, account_holder, bank_name, iban, bic, currency, active, use_anyname')
       .eq('id', shop.bank_account_id)
       .eq('active', true)
       .single();
@@ -117,15 +117,19 @@ const handler = async (req: Request): Promise<Response> => {
 
     console.log('Bank data retrieved successfully for shop:', shopId);
 
+    // Use shop name if use_anyname is enabled, otherwise use account holder
+    const accountDisplayName = bankAccount.use_anyname ? shop.company_name : bankAccount.account_holder;
+
     return new Response(JSON.stringify({
       shop_name: shop.company_name,
       bank_data: {
         account_name: bankAccount.account_name,
-        account_holder: bankAccount.account_holder,
+        account_holder: accountDisplayName,
         bank_name: bankAccount.bank_name,
         iban: bankAccount.iban,
         bic: bankAccount.bic,
         currency: bankAccount.currency,
+        use_anyname: bankAccount.use_anyname,
       },
     }), {
       status: 200,

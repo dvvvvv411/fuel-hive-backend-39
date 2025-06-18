@@ -5,7 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { CreditCard, Plus, Building, Edit, Trash2 } from 'lucide-react';
+import { CreditCard, Plus, Building, Edit, Trash2, Store } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import { BankAccountDialog } from './BankAccountDialog';
 
@@ -19,6 +19,7 @@ interface BankAccount {
   currency: string;
   country: string;
   active: boolean;
+  use_anyname: boolean;
   created_at: string;
 }
 
@@ -199,6 +200,7 @@ export function BankAccountsList() {
                   <TableHead>IBAN</TableHead>
                   <TableHead>Währung</TableHead>
                   <TableHead>Status</TableHead>
+                  <TableHead>Anyname</TableHead>
                   <TableHead>Verwendung</TableHead>
                   <TableHead>Aktionen</TableHead>
                 </TableRow>
@@ -234,6 +236,16 @@ export function BankAccountsList() {
                         >
                           {account.active ? "Aktiv" : "Inaktiv"}
                         </Badge>
+                      </TableCell>
+                      <TableCell>
+                        {account.use_anyname ? (
+                          <div className="flex items-center text-green-600">
+                            <Store className="h-4 w-4 mr-1" />
+                            <span className="text-sm">Shopname</span>
+                          </div>
+                        ) : (
+                          <span className="text-gray-500 text-sm">Kontoinhaber</span>
+                        )}
                       </TableCell>
                       <TableCell>
                         {shopsUsing.length > 0 ? (

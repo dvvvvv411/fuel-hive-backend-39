@@ -21,6 +21,7 @@ export type Database = {
           currency: string
           iban: string
           id: string
+          use_anyname: boolean
         }
         Insert: {
           account_holder: string
@@ -33,6 +34,7 @@ export type Database = {
           currency?: string
           iban: string
           id?: string
+          use_anyname?: boolean
         }
         Update: {
           account_holder?: string
@@ -45,6 +47,7 @@ export type Database = {
           currency?: string
           iban?: string
           id?: string
+          use_anyname?: boolean
         }
         Relationships: []
       }

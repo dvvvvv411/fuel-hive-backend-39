@@ -19,6 +19,7 @@ interface BankAccount {
   currency: string;
   country: string;
   active: boolean;
+  use_anyname: boolean;
 }
 
 interface BankAccountDialogProps {
@@ -49,6 +50,7 @@ export function BankAccountDialog({ open, onOpenChange, bankAccount, onSave }: B
     currency: 'EUR',
     country: 'DE',
     active: true,
+    use_anyname: false,
   });
   const [loading, setLoading] = useState(false);
 
@@ -63,6 +65,7 @@ export function BankAccountDialog({ open, onOpenChange, bankAccount, onSave }: B
         currency: bankAccount.currency,
         country: bankAccount.country,
         active: bankAccount.active,
+        use_anyname: bankAccount.use_anyname,
       });
     } else {
       setFormData({
@@ -74,6 +77,7 @@ export function BankAccountDialog({ open, onOpenChange, bankAccount, onSave }: B
         currency: 'EUR',
         country: 'DE',
         active: true,
+        use_anyname: false,
       });
     }
   }, [bankAccount, open]);
@@ -227,6 +231,18 @@ export function BankAccountDialog({ open, onOpenChange, bankAccount, onSave }: B
             />
             <Label htmlFor="active">Aktiv</Label>
           </div>
+
+          <div className="flex items-center space-x-2">
+            <Switch
+              id="use_anyname"
+              checked={formData.use_anyname}
+              onCheckedChange={(checked) => setFormData({ ...formData, use_anyname: checked })}
+            />
+            <Label htmlFor="use_anyname">Shopname für Zahlungen verwenden</Label>
+          </div>
+          <p className="text-sm text-gray-500">
+            Wenn aktiviert, wird der Shopname anstelle des Kontoinhabers auf Rechnungen angezeigt
+          </p>
 
           <div className="flex justify-end space-x-2 pt-4">
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>

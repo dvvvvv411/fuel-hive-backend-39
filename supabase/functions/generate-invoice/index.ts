@@ -33,7 +33,7 @@ const handler = async (req: Request): Promise<Response> => {
     const { order_id }: InvoiceRequest = await req.json();
     console.log('Generating invoice for order:', order_id);
 
-    // Get order with shop information
+    // Get order with shop and bank account information
     const { data: order, error: orderError } = await supabase
       .from('orders')
       .select(`
@@ -46,7 +46,8 @@ const handler = async (req: Request): Promise<Response> => {
           company_email,
           company_phone,
           vat_number,
-          registration_number
+          registration_number,
+          bank_account_id
         )
       `)
       .eq('id', order_id)
@@ -58,6 +59,20 @@ const handler = async (req: Request): Promise<Response> => {
         status: 404,
         headers: { 'Content-Type': 'application/json', ...corsHeaders },
       });
+    }
+
+    // Get bank account details if available
+    let bankAccount = null;
+    if (order.shops.bank_account_id) {
+      const { data: bankData, error: bankError } = await supabase
+        .from('bank_accounts')
+        .select('account_holder, use_anyname')
+        .eq('id', order.shops.bank_account_id)
+        .single();
+
+      if (!bankError && bankData) {
+        bankAccount = bankData;
+      }
     }
 
     // Check if invoice already exists
@@ -187,6 +202,19 @@ const handler = async (req: Request): Promise<Response> => {
     yPosition += 5;
     doc.text(`${order.delivery_postcode} ${order.delivery_city}`, 20, yPosition);
     yPosition += 15;
+
+    // Payment recipient information
+    if (bankAccount) {
+      doc.setFont('helvetica', 'bold');
+      doc.text('Zahlungsempfänger:', 20, yPosition);
+      yPosition += 8;
+      doc.setFont('helvetica', 'normal');
+      
+      // Use shop name if use_anyname is enabled, otherwise use account holder
+      const paymentRecipient = bankAccount.use_anyname ? order.shops.company_name : bankAccount.account_holder;
+      doc.text(paymentRecipient, 20, yPosition);
+      yPosition += 10;
+    }
 
     // Footer with company details
     if (order.shops.vat_number || order.shops.registration_number) {
