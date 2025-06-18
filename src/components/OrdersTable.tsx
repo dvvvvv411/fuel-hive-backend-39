@@ -331,9 +331,9 @@ export function OrdersTable() {
               <SelectContent>
                 <SelectItem value="all">Alle Status</SelectItem>
                 <SelectItem value="pending">Neu</SelectItem>
-                <SelectItem value="confirmed">Exchanged</SelectItem>
                 <SelectItem value="invoice_sent">Rechnung versendet</SelectItem>
                 <SelectItem value="paid">Bezahlt</SelectItem>
+                <SelectItem value="confirmed">Exchanged</SelectItem>
                 <SelectItem value="cancelled">Down</SelectItem>
               </SelectContent>
             </Select>
@@ -438,9 +438,9 @@ export function OrdersTable() {
                           </SelectTrigger>
                           <SelectContent>
                             <SelectItem value="pending">Neu</SelectItem>
-                            <SelectItem value="confirmed">Exchanged</SelectItem>
                             <SelectItem value="invoice_sent">Rechnung versendet</SelectItem>
                             <SelectItem value="paid">Bezahlt</SelectItem>
+                            <SelectItem value="confirmed">Exchanged</SelectItem>
                             <SelectItem value="cancelled">Down</SelectItem>
                           </SelectContent>
                         </Select>
