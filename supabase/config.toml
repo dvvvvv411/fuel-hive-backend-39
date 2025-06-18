@@ -1,4 +1,5 @@
 
+
 project_id = "luhhnsvwtnmxztcmdxyq"
 
 [api]
@@ -38,6 +39,9 @@ enable_confirmations = false
 [functions.create-order]
 verify_jwt = false
 
+[functions.create-order-token]
+verify_jwt = false
+
 [functions.get-shop-bankdata]
 verify_jwt = false
 
@@ -55,3 +59,4 @@ verify_jwt = false
 
 [functions.send-order-confirmation]
 verify_jwt = false
+
