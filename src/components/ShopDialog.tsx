@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -18,6 +19,7 @@ interface ShopDialogProps {
 export function ShopDialog({ open, onOpenChange, onSuccess, shop }: ShopDialogProps) {
   const [loading, setLoading] = useState(false);
   const [logoUploading, setLogoUploading] = useState(false);
+  const [bankAccounts, setBankAccounts] = useState<any[]>([]);
   
   const [formData, setFormData] = useState({
     name: '',
@@ -40,7 +42,34 @@ export function ShopDialog({ open, onOpenChange, onSuccess, shop }: ShopDialogPr
     logo_url: '',
     accent_color: '#2563eb',
     support_phone: '',
+    bank_account_id: '',
   });
+
+  useEffect(() => {
+    if (open) {
+      fetchBankAccounts();
+    }
+  }, [open]);
+
+  const fetchBankAccounts = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('bank_accounts')
+        .select('*')
+        .eq('active', true)
+        .order('account_name');
+
+      if (error) throw error;
+      setBankAccounts(data || []);
+    } catch (error) {
+      console.error('Error fetching bank accounts:', error);
+      toast({
+        title: 'Fehler',
+        description: 'Fehler beim Laden der Bankkonten',
+        variant: 'destructive',
+      });
+    }
+  };
 
   useEffect(() => {
     if (shop) {
@@ -65,6 +94,7 @@ export function ShopDialog({ open, onOpenChange, onSuccess, shop }: ShopDialogPr
         logo_url: shop.logo_url || '',
         accent_color: shop.accent_color || '#2563eb',
         support_phone: shop.support_phone || '',
+        bank_account_id: shop.bank_account_id || '',
       });
     } else {
       setFormData({
@@ -88,6 +118,7 @@ export function ShopDialog({ open, onOpenChange, onSuccess, shop }: ShopDialogPr
         logo_url: '',
         accent_color: '#2563eb',
         support_phone: '',
+        bank_account_id: '',
       });
     }
   }, [shop]);
@@ -97,6 +128,17 @@ export function ShopDialog({ open, onOpenChange, onSuccess, shop }: ShopDialogPr
     setLoading(true);
 
     try {
+      // Validate that if checkout_mode is instant, a bank account must be selected
+      if (formData.checkout_mode === 'instant' && !formData.bank_account_id) {
+        toast({
+          title: 'Validierungsfehler',
+          description: 'Für den Sofort-Modus muss ein Bankkonto ausgewählt werden',
+          variant: 'destructive',
+        });
+        setLoading(false);
+        return;
+      }
+
       // Check if there's a logo to upload via the global function
       let finalFormData = { ...formData };
       
@@ -343,6 +385,39 @@ export function ShopDialog({ open, onOpenChange, onSuccess, shop }: ShopDialogPr
               </Select>
             </div>
           </div>
+
+          {/* Bank Account Selection - Only show when checkout mode is instant */}
+          {formData.checkout_mode === 'instant' && (
+            <div className="border-t pt-6">
+              <h3 className="text-lg font-semibold mb-4">Bankkonto-Einstellungen</h3>
+              <div className="space-y-2">
+                <Label htmlFor="bank_account_id">Bankkonto für Sofort-Checkout</Label>
+                <Select 
+                  value={formData.bank_account_id} 
+                  onValueChange={(value) => handleInputChange('bank_account_id', value)}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Bankkonto auswählen..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {bankAccounts.map((account) => (
+                      <SelectItem key={account.id} value={account.id}>
+                        {account.account_name} - {account.iban}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {bankAccounts.length === 0 && (
+                  <p className="text-sm text-gray-500">
+                    Keine aktiven Bankkonten gefunden. Bitte erstellen Sie zuerst ein Bankkonto.
+                  </p>
+                )}
+                <p className="text-sm text-gray-600">
+                  Das ausgewählte Bankkonto wird bei Sofort-Bestellungen für die Überweisung angezeigt.
+                </p>
+              </div>
+            </div>
+          )}
 
           <BrandingFields 
             formData={formData}
