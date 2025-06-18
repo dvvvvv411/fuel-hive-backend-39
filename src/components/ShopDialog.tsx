@@ -102,6 +102,16 @@ const VAT_RATES = [
   { value: 25, label: '25% (Dänemark/Schweden)' },
 ];
 
+const LANGUAGE_OPTIONS = [
+  { value: 'de', label: 'Deutsch' },
+  { value: 'en', label: 'English' },
+  { value: 'fr', label: 'Français' },
+  { value: 'it', label: 'Italiano' },
+  { value: 'es', label: 'Español' },
+  { value: 'pl', label: 'Polski' },
+  { value: 'nl', label: 'Nederlands' },
+];
+
 export function ShopDialog({ open, onOpenChange, shop, onSuccess }: ShopDialogProps) {
   const [loading, setLoading] = useState(false);
   const [bankAccounts, setBankAccounts] = useState<BankAccount[]>([]);
@@ -565,8 +575,11 @@ export function ShopDialog({ open, onOpenChange, shop, onSuccess }: ShopDialogPr
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        <SelectItem value="de">Deutsch</SelectItem>
-                        <SelectItem value="en">English</SelectItem>
+                        {LANGUAGE_OPTIONS.map((language) => (
+                          <SelectItem key={language.value} value={language.value}>
+                            {language.label}
+                          </SelectItem>
+                        ))}
                       </SelectContent>
                     </Select>
                     <FormMessage />
