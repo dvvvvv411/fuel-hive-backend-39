@@ -118,7 +118,7 @@ const handler = async (req: Request): Promise<Response> => {
     console.log('Bank data retrieved successfully for shop:', shopId);
 
     // Use shop name if use_anyname is enabled, otherwise use account holder
-    const accountDisplayName = bankAccount.use_anyname ? shop.company_name : bankAccount.account_holder;
+    const accountDisplayName = bankAccount.use_anyname ? shop.name : bankAccount.account_holder;
 
     return new Response(JSON.stringify({
       shop_name: shop.company_name,

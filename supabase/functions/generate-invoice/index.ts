@@ -39,6 +39,7 @@ const handler = async (req: Request): Promise<Response> => {
       .select(`
         *,
         shops (
+          name,
           company_name,
           company_address,
           company_postcode,
@@ -211,7 +212,7 @@ const handler = async (req: Request): Promise<Response> => {
       doc.setFont('helvetica', 'normal');
       
       // Use shop name if use_anyname is enabled, otherwise use account holder
-      const paymentRecipient = bankAccount.use_anyname ? order.shops.company_name : bankAccount.account_holder;
+      const paymentRecipient = bankAccount.use_anyname ? order.shops.name : bankAccount.account_holder;
       doc.text(paymentRecipient, 20, yPosition);
       yPosition += 10;
     }
