@@ -10,6 +10,7 @@ import { Pagination, PaginationContent, PaginationItem, PaginationLink, Paginati
 import { Search, Filter, FileText, Eye, Download } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import { OrderDetailsDialog } from './OrderDetailsDialog';
+import { BankAccountSelectionDialog } from './BankAccountSelectionDialog';
 
 interface Order {
   id: string;
@@ -71,6 +72,8 @@ export function OrdersTable() {
   const [loading, setLoading] = useState(true);
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const [showDetailsDialog, setShowDetailsDialog] = useState(false);
+  const [showBankAccountDialog, setShowBankAccountDialog] = useState(false);
+  const [selectedOrderForInvoice, setSelectedOrderForInvoice] = useState<Order | null>(null);
   
   // Filter states
   const [searchTerm, setSearchTerm] = useState('');
@@ -198,7 +201,7 @@ export function OrdersTable() {
     }
   };
 
-  const generateInvoice = async (orderId: string) => {
+  const generateInvoice = async (orderId: string, bankAccountId?: string) => {
     try {
       // This would typically call an edge function to generate the PDF
       toast({
@@ -215,6 +218,18 @@ export function OrdersTable() {
         description: 'Rechnung konnte nicht generiert werden',
         variant: 'destructive',
       });
+    }
+  };
+
+  const handleInvoiceClick = (order: Order) => {
+    setSelectedOrderForInvoice(order);
+    setShowBankAccountDialog(true);
+  };
+
+  const handleBankAccountSelected = (bankAccountId: string) => {
+    if (selectedOrderForInvoice) {
+      generateInvoice(selectedOrderForInvoice.id, bankAccountId);
+      setSelectedOrderForInvoice(null);
     }
   };
 
@@ -466,7 +481,7 @@ export function OrdersTable() {
                             {order.status === 'pending' && (
                               <Button
                                 size="sm"
-                                onClick={() => generateInvoice(order.id)}
+                                onClick={() => handleInvoiceClick(order)}
                               >
                                 <FileText className="h-4 w-4 mr-1" />
                                 Rechnung
@@ -554,6 +569,16 @@ export function OrdersTable() {
           open={showDetailsDialog}
           onOpenChange={setShowDetailsDialog}
           onOrderUpdate={fetchOrders}
+        />
+      )}
+
+      {/* Bank Account Selection Dialog */}
+      {selectedOrderForInvoice && (
+        <BankAccountSelectionDialog
+          open={showBankAccountDialog}
+          onOpenChange={setShowBankAccountDialog}
+          onBankAccountSelected={handleBankAccountSelected}
+          orderNumber={selectedOrderForInvoice.order_number}
         />
       )}
     </div>
