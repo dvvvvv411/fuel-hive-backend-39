@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -261,7 +260,10 @@ export function OrdersTable() {
   };
 
   const formatAddress = (order: Order) => {
-    return `${order.delivery_street}; ${order.delivery_postcode} ${order.delivery_city}`;
+    return {
+      street: order.delivery_street,
+      cityPostcode: `${order.delivery_postcode} ${order.delivery_city}`
+    };
   };
 
   const getBankAccountInfo = (order: Order) => {
@@ -394,93 +396,97 @@ export function OrdersTable() {
                     </TableCell>
                   </TableRow>
                 ) : (
-                  orders.map((order) => (
-                    <TableRow key={order.id}>
-                      <TableCell className="font-medium">
-                        {formatDateTime(order.created_at)}
-                      </TableCell>
-                      <TableCell className="font-medium">
-                        #{order.order_number}
-                      </TableCell>
-                      <TableCell>
-                        <div>
-                          <div className="font-medium">{order.customer_name}</div>
-                          <div className="text-sm text-gray-500">{order.customer_email}</div>
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        {order.customer_phone || order.delivery_phone || '-'}
-                      </TableCell>
-                      <TableCell>
-                        <div className="text-sm">
-                          {formatAddress(order)}
-                        </div>
-                      </TableCell>
-                      <TableCell>{order.product}</TableCell>
-                      <TableCell>{order.liters}</TableCell>
-                      <TableCell>€{order.total_amount.toFixed(2)}</TableCell>
-                      <TableCell>
-                        <div className="text-sm">
-                          {getBankAccountInfo(order)}
-                        </div>
-                      </TableCell>
-                      <TableCell>{order.shops?.name}</TableCell>
-                      <TableCell>{order.payment_method}</TableCell>
-                      <TableCell>
-                        <Select
-                          value={order.status}
-                          onValueChange={(value) => updateOrderStatus(order.id, value)}
-                        >
-                          <SelectTrigger className="w-32">
-                            <Badge className={getStatusColor(order.status)}>
-                              {getStatusLabel(order.status)}
-                            </Badge>
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="pending">Neu</SelectItem>
-                            <SelectItem value="invoice_sent">Rechnung versendet</SelectItem>
-                            <SelectItem value="paid">Bezahlt</SelectItem>
-                            <SelectItem value="confirmed">Exchanged</SelectItem>
-                            <SelectItem value="cancelled">Down</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex items-center gap-2">
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => {
-                              setSelectedOrder(order);
-                              setShowDetailsDialog(true);
-                            }}
+                  orders.map((order) => {
+                    const address = formatAddress(order);
+                    return (
+                      <TableRow key={order.id}>
+                        <TableCell className="font-medium">
+                          {formatDateTime(order.created_at)}
+                        </TableCell>
+                        <TableCell className="font-medium">
+                          #{order.order_number}
+                        </TableCell>
+                        <TableCell>
+                          <div>
+                            <div className="font-medium">{order.customer_name}</div>
+                            <div className="text-sm text-gray-500">{order.customer_email}</div>
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          {order.customer_phone || order.delivery_phone || '-'}
+                        </TableCell>
+                        <TableCell>
+                          <div className="text-sm">
+                            <div>{address.street}</div>
+                            <div>{address.cityPostcode}</div>
+                          </div>
+                        </TableCell>
+                        <TableCell>{order.product}</TableCell>
+                        <TableCell>{order.liters}</TableCell>
+                        <TableCell>€{order.total_amount.toFixed(2)}</TableCell>
+                        <TableCell>
+                          <div className="text-sm">
+                            {getBankAccountInfo(order)}
+                          </div>
+                        </TableCell>
+                        <TableCell>{order.shops?.name}</TableCell>
+                        <TableCell>{order.payment_method}</TableCell>
+                        <TableCell>
+                          <Select
+                            value={order.status}
+                            onValueChange={(value) => updateOrderStatus(order.id, value)}
                           >
-                            <Eye className="h-4 w-4" />
-                          </Button>
-                          
-                          {order.status === 'pending' && (
-                            <Button
-                              size="sm"
-                              onClick={() => generateInvoice(order.id)}
-                            >
-                              <FileText className="h-4 w-4 mr-1" />
-                              Rechnung
-                            </Button>
-                          )}
-                          
-                          {order.invoice_pdf_url && (
+                            <SelectTrigger className="w-32">
+                              <Badge className={getStatusColor(order.status)}>
+                                {getStatusLabel(order.status)}
+                              </Badge>
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="pending">Neu</SelectItem>
+                              <SelectItem value="invoice_sent">Rechnung versendet</SelectItem>
+                              <SelectItem value="paid">Bezahlt</SelectItem>
+                              <SelectItem value="confirmed">Exchanged</SelectItem>
+                              <SelectItem value="cancelled">Down</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex items-center gap-2">
                             <Button
                               variant="outline"
                               size="sm"
-                              onClick={() => window.open(order.invoice_pdf_url!, '_blank')}
+                              onClick={() => {
+                                setSelectedOrder(order);
+                                setShowDetailsDialog(true);
+                              }}
                             >
-                              <Download className="h-4 w-4" />
+                              <Eye className="h-4 w-4" />
                             </Button>
-                          )}
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  ))
+                            
+                            {order.status === 'pending' && (
+                              <Button
+                                size="sm"
+                                onClick={() => generateInvoice(order.id)}
+                              >
+                                <FileText className="h-4 w-4 mr-1" />
+                                Rechnung
+                              </Button>
+                            )}
+                            
+                            {order.invoice_pdf_url && (
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => window.open(order.invoice_pdf_url!, '_blank')}
+                              >
+                                <Download className="h-4 w-4" />
+                              </Button>
+                            )}
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })
                 )}
               </TableBody>
             </Table>
