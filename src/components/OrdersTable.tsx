@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -51,6 +52,12 @@ interface Order {
   shop_id: string;
   shops?: {
     name: string;
+    bank_account_id: string | null;
+    bank_accounts?: {
+      account_name: string;
+      account_holder: string;
+      iban: string;
+    };
   };
 }
 
@@ -106,7 +113,15 @@ export function OrdersTable() {
         .from('orders')
         .select(`
           *,
-          shops!inner(name)
+          shops!inner(
+            name,
+            bank_account_id,
+            bank_accounts(
+              account_name,
+              account_holder,
+              iban
+            )
+          )
         `, { count: 'exact' });
 
       // Apply filters
@@ -238,6 +253,25 @@ export function OrdersTable() {
     }
   };
 
+  const formatDateTime = (dateString: string) => {
+    const date = new Date(dateString);
+    const dateStr = date.toLocaleDateString('de-DE');
+    const timeStr = date.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' });
+    return `${dateStr} (${timeStr})`;
+  };
+
+  const formatAddress = (order: Order) => {
+    return `${order.delivery_street}; ${order.delivery_postcode} ${order.delivery_city}`;
+  };
+
+  const getBankAccountInfo = (order: Order) => {
+    if (order.shops?.bank_accounts) {
+      const bankAccount = order.shops.bank_accounts;
+      return `${bankAccount.account_name} (${bankAccount.iban})`;
+    }
+    return 'Kein Bankkonto';
+  };
+
   const totalPages = Math.ceil(totalCount / itemsPerPage);
 
   const clearFilters = () => {
@@ -327,38 +361,44 @@ export function OrdersTable() {
           </div>
 
           {/* Orders Table */}
-          <div className="border rounded-lg">
+          <div className="border rounded-lg overflow-x-auto">
             <Table>
               <TableHeader>
                 <TableRow>
+                  <TableHead>Datum & Uhrzeit</TableHead>
                   <TableHead>Bestellnummer</TableHead>
                   <TableHead>Kunde</TableHead>
-                  <TableHead>Shop</TableHead>
+                  <TableHead>Telefon</TableHead>
+                  <TableHead>Adresse</TableHead>
                   <TableHead>Produkt</TableHead>
-                  <TableHead>Menge</TableHead>
-                  <TableHead>Betrag</TableHead>
+                  <TableHead>Menge (L)</TableHead>
+                  <TableHead>Gesamtpreis</TableHead>
+                  <TableHead>Bankkonto</TableHead>
+                  <TableHead>Shop</TableHead>
+                  <TableHead>Zahlung</TableHead>
                   <TableHead>Status</TableHead>
-                  <TableHead>Rechnung</TableHead>
-                  <TableHead>Datum</TableHead>
                   <TableHead>Aktionen</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {loading ? (
                   <TableRow>
-                    <TableCell colSpan={10} className="text-center py-8">
+                    <TableCell colSpan={13} className="text-center py-8">
                       Lade Bestellungen...
                     </TableCell>
                   </TableRow>
                 ) : orders.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={10} className="text-center py-8">
+                    <TableCell colSpan={13} className="text-center py-8">
                       Keine Bestellungen gefunden
                     </TableCell>
                   </TableRow>
                 ) : (
                   orders.map((order) => (
                     <TableRow key={order.id}>
+                      <TableCell className="font-medium">
+                        {formatDateTime(order.created_at)}
+                      </TableCell>
                       <TableCell className="font-medium">
                         #{order.order_number}
                       </TableCell>
@@ -368,10 +408,24 @@ export function OrdersTable() {
                           <div className="text-sm text-gray-500">{order.customer_email}</div>
                         </div>
                       </TableCell>
-                      <TableCell>{order.shops?.name}</TableCell>
+                      <TableCell>
+                        {order.customer_phone || order.delivery_phone || '-'}
+                      </TableCell>
+                      <TableCell>
+                        <div className="text-sm">
+                          {formatAddress(order)}
+                        </div>
+                      </TableCell>
                       <TableCell>{order.product}</TableCell>
-                      <TableCell>{order.liters} L</TableCell>
+                      <TableCell>{order.liters}</TableCell>
                       <TableCell>€{order.total_amount.toFixed(2)}</TableCell>
+                      <TableCell>
+                        <div className="text-sm">
+                          {getBankAccountInfo(order)}
+                        </div>
+                      </TableCell>
+                      <TableCell>{order.shops?.name}</TableCell>
+                      <TableCell>{order.payment_method}</TableCell>
                       <TableCell>
                         <Select
                           value={order.status}
@@ -390,27 +444,6 @@ export function OrdersTable() {
                             <SelectItem value="cancelled">Storniert</SelectItem>
                           </SelectContent>
                         </Select>
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex items-center gap-2">
-                          {order.invoice_pdf_generated ? (
-                            <Badge className="bg-green-100 text-green-800">
-                              PDF erstellt
-                            </Badge>
-                          ) : (
-                            <Badge variant="outline">
-                              Kein PDF
-                            </Badge>
-                          )}
-                          {order.invoice_sent && (
-                            <Badge className="bg-blue-100 text-blue-800">
-                              Versendet
-                            </Badge>
-                          )}
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        {new Date(order.created_at).toLocaleDateString('de-DE')}
                       </TableCell>
                       <TableCell>
                         <div className="flex items-center gap-2">
