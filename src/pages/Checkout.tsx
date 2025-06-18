@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -96,11 +95,7 @@ const Checkout = () => {
     try {
       // Get token data
       const tokenResponse = await supabase.functions.invoke('get-order-token', {
-        body: null,
-        headers: {},
-      }, {
-        method: 'GET',
-        query: { token: token! }
+        body: { token: token! }
       });
 
       if (tokenResponse.error) {
@@ -112,11 +107,7 @@ const Checkout = () => {
 
       // Get shop configuration
       const configResponse = await supabase.functions.invoke('get-shop-config', {
-        body: null,
-        headers: {},
-      }, {
-        method: 'GET',
-        query: { shop_id: tokenData.shop_id }
+        body: { shop_id: tokenData.shop_id }
       });
 
       if (configResponse.error) {
@@ -129,11 +120,7 @@ const Checkout = () => {
       // If checkout mode is instant, get bank data
       if (config.shop.checkout_mode === 'instant') {
         const bankResponse = await supabase.functions.invoke('get-shop-bankdata', {
-          body: null,
-          headers: {},
-        }, {
-          method: 'GET',
-          query: { shop_id: tokenData.shop_id }
+          body: { shop_id: tokenData.shop_id }
         });
 
         if (bankResponse.error) {
