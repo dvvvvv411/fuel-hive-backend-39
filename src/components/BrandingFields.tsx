@@ -1,19 +1,19 @@
 
 import { useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { FormField, FormItem, FormLabel, FormControl, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Upload, X, Eye } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 
 interface BrandingFieldsProps {
-  form: any;
-  shopId?: string;
+  formData: any;
+  onInputChange: (field: string, value: string | number) => void;
 }
 
-export function BrandingFields({ form, shopId }: BrandingFieldsProps) {
+export function BrandingFields({ formData, onInputChange }: BrandingFieldsProps) {
   const [logoFile, setLogoFile] = useState<File | null>(null);
   const [uploading, setUploading] = useState(false);
   const [logoPreview, setLogoPreview] = useState<string | null>(null);
@@ -53,12 +53,12 @@ export function BrandingFields({ form, shopId }: BrandingFieldsProps) {
   };
 
   const uploadLogo = async () => {
-    if (!logoFile || !shopId) return null;
+    if (!logoFile) return null;
 
     setUploading(true);
     try {
       const fileExt = logoFile.name.split('.').pop();
-      const fileName = `${shopId}-logo-${Date.now()}.${fileExt}`;
+      const fileName = `logo-${Date.now()}.${fileExt}`;
       const filePath = `logos/${fileName}`;
 
       const { error: uploadError } = await supabase.storage
@@ -88,10 +88,10 @@ export function BrandingFields({ form, shopId }: BrandingFieldsProps) {
   const removeLogo = () => {
     setLogoFile(null);
     setLogoPreview(null);
-    form.setValue('logo_url', '');
+    onInputChange('logo_url', '');
   };
 
-  const currentLogoUrl = form.watch('logo_url');
+  const currentLogoUrl = formData.logo_url;
 
   return (
     <Card>
@@ -104,7 +104,7 @@ export function BrandingFields({ form, shopId }: BrandingFieldsProps) {
       <CardContent className="space-y-6">
         {/* Logo Upload */}
         <div className="space-y-4">
-          <FormLabel>Shop-Logo</FormLabel>
+          <Label>Shop-Logo</Label>
           
           {/* Current Logo Display */}
           {(currentLogoUrl || logoPreview) && (
@@ -176,54 +176,42 @@ export function BrandingFields({ form, shopId }: BrandingFieldsProps) {
         </div>
 
         {/* Accent Color */}
-        <FormField
-          control={form.control}
-          name="accent_color"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Akzentfarbe</FormLabel>
-              <div className="flex items-center space-x-3">
-                <FormControl>
-                  <Input
-                    type="color"
-                    {...field}
-                    className="w-16 h-10 p-1 border rounded cursor-pointer"
-                  />
-                </FormControl>
-                <FormControl>
-                  <Input
-                    type="text"
-                    placeholder="#2563eb"
-                    {...field}
-                    className="flex-1"
-                  />
-                </FormControl>
-              </div>
-              <p className="text-xs text-gray-500">
-                Diese Farbe wird für Buttons und Akzente in Ihrem Shop verwendet
-              </p>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
+        <div className="space-y-2">
+          <Label htmlFor="accent_color">Akzentfarbe</Label>
+          <div className="flex items-center space-x-3">
+            <Input
+              id="accent_color"
+              type="color"
+              value={formData.accent_color || '#2563eb'}
+              onChange={(e) => onInputChange('accent_color', e.target.value)}
+              className="w-16 h-10 p-1 border rounded cursor-pointer"
+            />
+            <Input
+              type="text"
+              placeholder="#2563eb"
+              value={formData.accent_color || ''}
+              onChange={(e) => onInputChange('accent_color', e.target.value)}
+              className="flex-1"
+            />
+          </div>
+          <p className="text-xs text-gray-500">
+            Diese Farbe wird für Buttons und Akzente in Ihrem Shop verwendet
+          </p>
+        </div>
 
         {/* Support Phone */}
-        <FormField
-          control={form.control}
-          name="support_phone"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Support-Telefon</FormLabel>
-              <FormControl>
-                <Input placeholder="+49 123 456-789" {...field} />
-              </FormControl>
-              <p className="text-xs text-gray-500">
-                Optionale Telefonnummer für Kundensupport (wird im Shop angezeigt)
-              </p>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
+        <div className="space-y-2">
+          <Label htmlFor="support_phone">Support-Telefon</Label>
+          <Input
+            id="support_phone"
+            placeholder="+49 123 456-789"
+            value={formData.support_phone || ''}
+            onChange={(e) => onInputChange('support_phone', e.target.value)}
+          />
+          <p className="text-xs text-gray-500">
+            Optionale Telefonnummer für Kundensupport (wird im Shop angezeigt)
+          </p>
+        </div>
       </CardContent>
     </Card>
   );

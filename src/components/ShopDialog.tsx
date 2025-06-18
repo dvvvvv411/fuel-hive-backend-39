@@ -36,6 +36,9 @@ export function ShopDialog({ open, onOpenChange, onSuccess, shop }: ShopDialogPr
     business_owner: '',
     registration_number: '',
     vat_rate: 19,
+    logo_url: '',
+    accent_color: '#2563eb',
+    support_phone: '',
   });
 
   useEffect(() => {
@@ -58,6 +61,9 @@ export function ShopDialog({ open, onOpenChange, onSuccess, shop }: ShopDialogPr
         business_owner: shop.business_owner || '',
         registration_number: shop.registration_number || '',
         vat_rate: shop.vat_rate || 19,
+        logo_url: shop.logo_url || '',
+        accent_color: shop.accent_color || '#2563eb',
+        support_phone: shop.support_phone || '',
       });
     } else {
       setFormData({
@@ -78,6 +84,9 @@ export function ShopDialog({ open, onOpenChange, onSuccess, shop }: ShopDialogPr
         business_owner: '',
         registration_number: '',
         vat_rate: 19,
+        logo_url: '',
+        accent_color: '#2563eb',
+        support_phone: '',
       });
     }
   }, [shop]);
