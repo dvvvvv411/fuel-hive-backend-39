@@ -7,7 +7,7 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-interface OrderRequest {
+interface DirectOrderRequest {
   shop_id: string;
   customer_name: string;
   customer_email: string;
@@ -31,6 +31,18 @@ interface OrderRequest {
   payment_method: string;
 }
 
+interface TokenOrderRequest {
+  token: string;
+  customer_name: string;
+  customer_email: string;
+  customer_phone?: string;
+  delivery_street: string;
+  delivery_postal_code: string;
+  delivery_city: string;
+  payment_method_id: string;
+  terms_accepted: boolean;
+}
+
 const handler = async (req: Request): Promise<Response> => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
@@ -49,8 +61,85 @@ const handler = async (req: Request): Promise<Response> => {
   );
 
   try {
-    const orderData: OrderRequest = await req.json();
-    console.log('Received order data:', orderData);
+    const requestData = await req.json();
+    console.log('Received order data:', requestData);
+
+    let orderData: DirectOrderRequest;
+    let tokenData: any = null;
+
+    // Check if this is a token-based order
+    if (requestData.token) {
+      console.log('Processing token-based order with token:', requestData.token);
+      
+      // Retrieve token data from database
+      const { data: retrievedTokenData, error: tokenError } = await supabase
+        .from('order_tokens')
+        .select(`
+          *,
+          shops!inner(
+            id,
+            name,
+            company_name,
+            checkout_mode,
+            active,
+            currency
+          )
+        `)
+        .eq('token', requestData.token)
+        .single();
+
+      if (tokenError || !retrievedTokenData) {
+        console.error('Token lookup error:', tokenError);
+        return new Response(JSON.stringify({ error: 'Invalid or expired token' }), {
+          status: 400,
+          headers: { 'Content-Type': 'application/json', ...corsHeaders },
+        });
+      }
+
+      // Check if token is still valid
+      const now = new Date();
+      const expiresAt = new Date(retrievedTokenData.expires_at);
+      
+      if (now > expiresAt) {
+        console.log(`Token expired: ${requestData.token}, expired at: ${expiresAt}`);
+        return new Response(JSON.stringify({ error: 'Token has expired' }), {
+          status: 410,
+          headers: { 'Content-Type': 'application/json', ...corsHeaders },
+        });
+      }
+
+      tokenData = retrievedTokenData;
+
+      // Split customer name into first and last name
+      const nameParts = requestData.customer_name?.trim().split(' ') || ['', ''];
+      const firstName = nameParts[0] || '';
+      const lastName = nameParts.slice(1).join(' ') || '';
+
+      // Map token-based request to direct order format
+      orderData = {
+        shop_id: tokenData.shop_id,
+        customer_name: requestData.customer_name,
+        customer_email: requestData.customer_email,
+        customer_phone: requestData.customer_phone,
+        delivery_first_name: firstName,
+        delivery_last_name: lastName,
+        delivery_street: requestData.delivery_street,
+        delivery_postcode: requestData.delivery_postal_code, // Map postal_code to postcode
+        delivery_city: requestData.delivery_city,
+        delivery_phone: requestData.customer_phone, // Use customer phone for delivery
+        use_same_address: true, // Default for token-based orders
+        product: tokenData.product,
+        liters: tokenData.liters,
+        price_per_liter: tokenData.price_per_liter,
+        delivery_fee: tokenData.delivery_fee,
+        payment_method: requestData.payment_method_id, // Map payment_method_id to payment_method
+      };
+
+      console.log('Mapped token order to direct order format:', orderData);
+    } else {
+      // Direct order data (existing functionality)
+      orderData = requestData as DirectOrderRequest;
+    }
 
     // Validate shop exists and get checkout mode
     const { data: shop, error: shopError } = await supabase
@@ -109,13 +198,14 @@ const handler = async (req: Request): Promise<Response> => {
         payment_method: orderData.payment_method,
         status: initialStatus,
         processing_mode: shop.checkout_mode,
+        order_token: requestData.token || null, // Store the token if present
       }])
       .select()
       .single();
 
     if (orderError) {
       console.error('Error creating order:', orderError);
-      return new Response(JSON.stringify({ error: 'Failed to create order' }), {
+      return new Response(JSON.stringify({ error: 'Failed to create order', details: orderError.message }), {
         status: 500,
         headers: { 'Content-Type': 'application/json', ...corsHeaders },
       });
@@ -136,7 +226,7 @@ const handler = async (req: Request): Promise<Response> => {
 
   } catch (error) {
     console.error('Error in create-order function:', error);
-    return new Response(JSON.stringify({ error: 'Internal server error' }), {
+    return new Response(JSON.stringify({ error: 'Internal server error', details: error.message }), {
       status: 500,
       headers: { 'Content-Type': 'application/json', ...corsHeaders },
     });
