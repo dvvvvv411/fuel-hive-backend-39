@@ -267,7 +267,7 @@ export function OrdersTable() {
   const getBankAccountInfo = (order: Order) => {
     if (order.shops?.bank_accounts) {
       const bankAccount = order.shops.bank_accounts;
-      return `${bankAccount.account_name} (${bankAccount.iban})`;
+      return bankAccount.account_name;
     }
     return 'Kein Bankkonto';
   };
