@@ -43,6 +43,29 @@ interface TokenOrderRequest {
   terms_accepted: boolean;
 }
 
+// Function to generate a unique 7-digit order number
+async function generateUniqueOrderNumber(supabase: any): Promise<string> {
+  let orderNumber: string;
+  let exists: boolean;
+  
+  do {
+    // Generate a random 7-digit number (1000000 to 9999999)
+    const randomNumber = Math.floor(Math.random() * 9000000) + 1000000;
+    orderNumber = randomNumber.toString();
+    
+    // Check if this order number already exists
+    const { data } = await supabase
+      .from('orders')
+      .select('order_number')
+      .eq('order_number', orderNumber)
+      .single();
+    
+    exists = !!data;
+  } while (exists);
+  
+  return orderNumber;
+}
+
 const handler = async (req: Request): Promise<Response> => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
@@ -157,8 +180,8 @@ const handler = async (req: Request): Promise<Response> => {
       });
     }
 
-    // Generate order number
-    const orderNumber = `ORD-${Date.now()}-${Math.random().toString(36).substr(2, 9).toUpperCase()}`;
+    // Generate simple 7-digit order number
+    const orderNumber = await generateUniqueOrderNumber(supabase);
 
     // Calculate totals
     const basePrice = orderData.liters * orderData.price_per_liter;
