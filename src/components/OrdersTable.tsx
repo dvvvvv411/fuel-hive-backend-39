@@ -239,15 +239,15 @@ export function OrdersTable() {
   const getStatusLabel = (status: string) => {
     switch (status) {
       case 'pending':
-        return 'Ausstehend';
+        return 'Neu';
       case 'confirmed':
-        return 'Bestätigt';
+        return 'Exchanged';
       case 'invoice_sent':
         return 'Rechnung versendet';
       case 'paid':
         return 'Bezahlt';
       case 'cancelled':
-        return 'Storniert';
+        return 'Down';
       default:
         return status;
     }
@@ -330,11 +330,11 @@ export function OrdersTable() {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">Alle Status</SelectItem>
-                <SelectItem value="pending">Ausstehend</SelectItem>
-                <SelectItem value="confirmed">Bestätigt</SelectItem>
+                <SelectItem value="pending">Neu</SelectItem>
+                <SelectItem value="confirmed">Exchanged</SelectItem>
                 <SelectItem value="invoice_sent">Rechnung versendet</SelectItem>
                 <SelectItem value="paid">Bezahlt</SelectItem>
-                <SelectItem value="cancelled">Storniert</SelectItem>
+                <SelectItem value="cancelled">Down</SelectItem>
               </SelectContent>
             </Select>
 
@@ -437,11 +437,11 @@ export function OrdersTable() {
                             </Badge>
                           </SelectTrigger>
                           <SelectContent>
-                            <SelectItem value="pending">Ausstehend</SelectItem>
-                            <SelectItem value="confirmed">Bestätigt</SelectItem>
+                            <SelectItem value="pending">Neu</SelectItem>
+                            <SelectItem value="confirmed">Exchanged</SelectItem>
                             <SelectItem value="invoice_sent">Rechnung versendet</SelectItem>
                             <SelectItem value="paid">Bezahlt</SelectItem>
-                            <SelectItem value="cancelled">Storniert</SelectItem>
+                            <SelectItem value="cancelled">Down</SelectItem>
                           </SelectContent>
                         </Select>
                       </TableCell>
