@@ -1,6 +1,6 @@
 
-import { useAuth } from '@/hooks/useAuth';
 import { useLocation, useNavigate } from 'react-router-dom';
+import { User } from '@supabase/supabase-js';
 import {
   Sidebar,
   SidebarContent,
@@ -58,15 +58,16 @@ const navigationItems = [
 interface AppSidebarProps {
   activeTab: string;
   onTabChange: (tab: string) => void;
+  user: User | null;
+  onSignOut: () => Promise<void>;
 }
 
-export function AppSidebar({ activeTab, onTabChange }: AppSidebarProps) {
-  const { user, signOut } = useAuth();
+export function AppSidebar({ activeTab, onTabChange, user, onSignOut }: AppSidebarProps) {
   const navigate = useNavigate();
   const location = useLocation();
 
   const handleSignOut = async () => {
-    await signOut();
+    await onSignOut();
     navigate('/auth');
   };
 
