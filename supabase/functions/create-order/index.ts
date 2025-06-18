@@ -213,6 +213,38 @@ const handler = async (req: Request): Promise<Response> => {
 
     console.log('Order created successfully:', order);
 
+    // Process the order based on checkout mode (replacing the removed database trigger)
+    try {
+      if (shop.checkout_mode === 'instant') {
+        console.log('Processing instant order...');
+        const { error: processError } = await supabase.functions.invoke('process-instant-order', {
+          body: { order_id: order.id }
+        });
+        
+        if (processError) {
+          console.error('Error processing instant order:', processError);
+          // Don't fail the whole order creation if processing fails
+        } else {
+          console.log('Instant order processing initiated successfully');
+        }
+      } else {
+        console.log('Processing manual order...');
+        const { error: processError } = await supabase.functions.invoke('process-manual-order', {
+          body: { order_id: order.id }
+        });
+        
+        if (processError) {
+          console.error('Error processing manual order:', processError);
+          // Don't fail the whole order creation if processing fails
+        } else {
+          console.log('Manual order processing initiated successfully');
+        }
+      }
+    } catch (processingError) {
+      console.error('Order processing error:', processingError);
+      // Continue with order creation success even if post-processing fails
+    }
+
     return new Response(JSON.stringify({
       order_id: order.id,
       order_number: order.order_number,
