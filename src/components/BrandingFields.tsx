@@ -11,9 +11,10 @@ import { toast } from '@/hooks/use-toast';
 interface BrandingFieldsProps {
   formData: any;
   onInputChange: (field: string, value: string | number) => void;
+  onLogoUpload?: (logoUrl: string) => void;
 }
 
-export function BrandingFields({ formData, onInputChange }: BrandingFieldsProps) {
+export function BrandingFields({ formData, onInputChange, onLogoUpload }: BrandingFieldsProps) {
   const [logoFile, setLogoFile] = useState<File | null>(null);
   const [uploading, setUploading] = useState(false);
   const [logoPreview, setLogoPreview] = useState<string | null>(null);
@@ -52,7 +53,7 @@ export function BrandingFields({ formData, onInputChange }: BrandingFieldsProps)
     }
   };
 
-  const uploadLogo = async () => {
+  const uploadLogo = async (): Promise<string | null> => {
     if (!logoFile) return null;
 
     setUploading(true);
@@ -71,7 +72,19 @@ export function BrandingFields({ formData, onInputChange }: BrandingFieldsProps)
         .from('shop-logos')
         .getPublicUrl(filePath);
 
-      return data.publicUrl;
+      const logoUrl = data.publicUrl;
+      
+      // Update form data and call callback
+      onInputChange('logo_url', logoUrl);
+      if (onLogoUpload) {
+        onLogoUpload(logoUrl);
+      }
+
+      // Clear the file after successful upload
+      setLogoFile(null);
+      setLogoPreview(null);
+
+      return logoUrl;
     } catch (error) {
       console.error('Error uploading logo:', error);
       toast({
@@ -90,6 +103,14 @@ export function BrandingFields({ formData, onInputChange }: BrandingFieldsProps)
     setLogoPreview(null);
     onInputChange('logo_url', '');
   };
+
+  // Expose upload function for external use
+  React.useEffect(() => {
+    (window as any).uploadShopLogo = uploadLogo;
+    return () => {
+      delete (window as any).uploadShopLogo;
+    };
+  }, [logoFile]);
 
   const currentLogoUrl = formData.logo_url;
 
@@ -116,7 +137,7 @@ export function BrandingFields({ formData, onInputChange }: BrandingFieldsProps)
               />
               <div className="flex-1">
                 <p className="text-sm font-medium">
-                  {logoFile ? 'Neues Logo (noch nicht gespeichert)' : 'Aktuelles Logo'}
+                  {logoFile ? 'Neues Logo (wird beim Speichern hochgeladen)' : 'Aktuelles Logo'}
                 </p>
                 <p className="text-xs text-gray-500">
                   {logoFile ? logoFile.name : 'Gespeichertes Logo'}
@@ -130,6 +151,14 @@ export function BrandingFields({ formData, onInputChange }: BrandingFieldsProps)
               >
                 <X className="h-4 w-4" />
               </Button>
+            </div>
+          )}
+
+          {/* Upload Status */}
+          {uploading && (
+            <div className="flex items-center space-x-2 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
+              <span className="text-sm text-blue-800">Logo wird hochgeladen...</span>
             </div>
           )}
 
@@ -172,6 +201,7 @@ export function BrandingFields({ formData, onInputChange }: BrandingFieldsProps)
           
           <p className="text-xs text-gray-500">
             Unterstützte Formate: JPG, PNG, GIF. Maximale Größe: 5MB
+            {logoFile && <span className="block font-medium text-blue-600 mt-1">Das Logo wird automatisch beim Speichern des Shops hochgeladen.</span>}
           </p>
         </div>
 

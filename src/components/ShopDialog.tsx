@@ -1,5 +1,5 @@
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -18,6 +18,8 @@ interface ShopDialogProps {
 
 export function ShopDialog({ open, onOpenChange, onSuccess, shop }: ShopDialogProps) {
   const [loading, setLoading] = useState(false);
+  const [logoUploading, setLogoUploading] = useState(false);
+  const brandingFieldsRef = useRef<any>(null);
   const [formData, setFormData] = useState({
     name: '',
     company_name: '',
@@ -96,10 +98,41 @@ export function ShopDialog({ open, onOpenChange, onSuccess, shop }: ShopDialogPr
     setLoading(true);
 
     try {
+      // Check if there's a logo to upload via the global function
+      let finalFormData = { ...formData };
+      
+      if ((window as any).uploadShopLogo) {
+        console.log('Attempting to upload logo...');
+        setLogoUploading(true);
+        
+        try {
+          const logoUrl = await (window as any).uploadShopLogo();
+          if (logoUrl) {
+            finalFormData.logo_url = logoUrl;
+            console.log('Logo uploaded successfully:', logoUrl);
+            toast({
+              title: 'Logo hochgeladen',
+              description: 'Das Logo wurde erfolgreich hochgeladen',
+            });
+          }
+        } catch (logoError) {
+          console.error('Logo upload failed:', logoError);
+          // Continue with shop creation/update even if logo upload fails
+          toast({
+            title: 'Logo-Upload fehlgeschlagen',
+            description: 'Der Shop wird ohne Logo gespeichert',
+            variant: 'destructive',
+          });
+        } finally {
+          setLogoUploading(false);
+        }
+      }
+
+      // Save shop data
       if (shop) {
         const { error } = await supabase
           .from('shops')
-          .update(formData)
+          .update(finalFormData)
           .eq('id', shop.id);
 
         if (error) throw error;
@@ -111,7 +144,7 @@ export function ShopDialog({ open, onOpenChange, onSuccess, shop }: ShopDialogPr
       } else {
         const { error } = await supabase
           .from('shops')
-          .insert([formData]);
+          .insert([finalFormData]);
 
         if (error) throw error;
 
@@ -132,12 +165,20 @@ export function ShopDialog({ open, onOpenChange, onSuccess, shop }: ShopDialogPr
       });
     } finally {
       setLoading(false);
+      setLogoUploading(false);
     }
   };
 
   const handleInputChange = (field: string, value: string | number) => {
     setFormData(prev => ({ ...prev, [field]: value }));
   };
+
+  const handleLogoUpload = (logoUrl: string) => {
+    console.log('Logo uploaded callback:', logoUrl);
+    setFormData(prev => ({ ...prev, logo_url: logoUrl }));
+  };
+
+  const isSubmitting = loading || logoUploading;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -305,21 +346,40 @@ export function ShopDialog({ open, onOpenChange, onSuccess, shop }: ShopDialogPr
           </div>
 
           <BrandingFields 
+            ref={brandingFieldsRef}
             formData={formData}
             onInputChange={handleInputChange}
+            onLogoUpload={handleLogoUpload}
           />
+
+          {/* Loading State */}
+          {logoUploading && (
+            <div className="flex items-center justify-center p-4 bg-blue-50 border border-blue-200 rounded-lg">
+              <div className="flex items-center space-x-3">
+                <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-blue-600"></div>
+                <span className="text-blue-800 font-medium">Logo wird hochgeladen...</span>
+              </div>
+            </div>
+          )}
 
           <div className="flex justify-end space-x-2 pt-4">
             <Button
               type="button"
               variant="outline"
               onClick={() => onOpenChange(false)}
-              disabled={loading}
+              disabled={isSubmitting}
             >
               Abbrechen
             </Button>
-            <Button type="submit" disabled={loading}>
-              {loading ? 'Speichern...' : (shop ? 'Aktualisieren' : 'Erstellen')}
+            <Button type="submit" disabled={isSubmitting}>
+              {isSubmitting ? (
+                <div className="flex items-center space-x-2">
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                  <span>{logoUploading ? 'Logo wird hochgeladen...' : 'Speichern...'}</span>
+                </div>
+              ) : (
+                shop ? 'Aktualisieren' : 'Erstellen'
+              )}
             </Button>
           </div>
         </form>
