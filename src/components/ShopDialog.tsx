@@ -1,5 +1,4 @@
-
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -19,7 +18,7 @@ interface ShopDialogProps {
 export function ShopDialog({ open, onOpenChange, onSuccess, shop }: ShopDialogProps) {
   const [loading, setLoading] = useState(false);
   const [logoUploading, setLogoUploading] = useState(false);
-  const brandingFieldsRef = useRef<any>(null);
+  
   const [formData, setFormData] = useState({
     name: '',
     company_name: '',
@@ -346,7 +345,6 @@ export function ShopDialog({ open, onOpenChange, onSuccess, shop }: ShopDialogPr
           </div>
 
           <BrandingFields 
-            ref={brandingFieldsRef}
             formData={formData}
             onInputChange={handleInputChange}
             onLogoUpload={handleLogoUpload}
