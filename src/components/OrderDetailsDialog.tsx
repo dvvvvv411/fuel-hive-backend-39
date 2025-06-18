@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import {
@@ -134,7 +135,7 @@ export function OrderDetailsDialog({ order, open, onOpenChange, onOrderUpdate }:
         description: 'Die Rechnung wird per E-Mail versendet',
       });
       
-      // Update status to invoice_sent
+      // Always update status to invoice_sent when sending invoice
       await updateOrderStatus('invoice_sent');
     } catch (error) {
       console.error('Error sending invoice:', error);
@@ -218,7 +219,7 @@ export function OrderDetailsDialog({ order, open, onOpenChange, onOrderUpdate }:
                     </Button>
                   )}
                   
-                  {order.invoice_pdf_generated && !order.invoice_sent && (
+                  {(order.invoice_pdf_generated || order.status === 'pending') && (
                     <Button onClick={sendInvoice} disabled={updating}>
                       <Send className="h-4 w-4 mr-2" />
                       Rechnung versenden
