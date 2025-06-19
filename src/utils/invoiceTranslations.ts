@@ -30,6 +30,10 @@ export interface InvoiceTranslations {
   deliveryFee: string;
   dueDays: string;
   currency: string;
+  phone: string;
+  email: string;
+  website: string;
+  paymentTerm: string;
 }
 
 export const translations: Record<string, InvoiceTranslations> = {
@@ -63,7 +67,11 @@ export const translations: Record<string, InvoiceTranslations> = {
     pricePerLiter: 'Preis pro Liter',
     deliveryFee: 'Liefergebühr',
     dueDays: '14 Tage',
-    currency: '€'
+    currency: '€',
+    phone: 'Telefon',
+    email: 'E-Mail',
+    website: 'Website',
+    paymentTerm: 'Zahlungsziel'
   },
   en: {
     invoice: 'Invoice',
@@ -95,7 +103,11 @@ export const translations: Record<string, InvoiceTranslations> = {
     pricePerLiter: 'Price per Liter',
     deliveryFee: 'Delivery Fee',
     dueDays: '14 days',
-    currency: '€'
+    currency: '€',
+    phone: 'Phone',
+    email: 'Email',
+    website: 'Website',
+    paymentTerm: 'Payment Term'
   },
   fr: {
     invoice: 'Facture',
@@ -127,7 +139,11 @@ export const translations: Record<string, InvoiceTranslations> = {
     pricePerLiter: 'Prix par litre',
     deliveryFee: 'Frais de livraison',
     dueDays: '14 jours',
-    currency: '€'
+    currency: '€',
+    phone: 'Téléphone',
+    email: 'Email',
+    website: 'Site web',
+    paymentTerm: 'Délai de paiement'
   },
   es: {
     invoice: 'Factura',
@@ -159,7 +175,11 @@ export const translations: Record<string, InvoiceTranslations> = {
     pricePerLiter: 'Precio por litro',
     deliveryFee: 'Tarifa de entrega',
     dueDays: '14 días',
-    currency: '€'
+    currency: '€',
+    phone: 'Teléfono',
+    email: 'Email',
+    website: 'Sitio web',
+    paymentTerm: 'Plazo de pago'
   },
   it: {
     invoice: 'Fattura',
@@ -191,7 +211,11 @@ export const translations: Record<string, InvoiceTranslations> = {
     pricePerLiter: 'Prezzo per litro',
     deliveryFee: 'Tassa di consegna',
     dueDays: '14 giorni',
-    currency: '€'
+    currency: '€',
+    phone: 'Telefono',
+    email: 'Email',
+    website: 'Sito web',
+    paymentTerm: 'Termine di pagamento'
   },
   nl: {
     invoice: 'Factuur',
@@ -223,7 +247,11 @@ export const translations: Record<string, InvoiceTranslations> = {
     pricePerLiter: 'Prijs per liter',
     deliveryFee: 'Leveringskosten',
     dueDays: '14 dagen',
-    currency: '€'
+    currency: '€',
+    phone: 'Telefoon',
+    email: 'Email',
+    website: 'Website',
+    paymentTerm: 'Betalingstermijn'
   },
   pt: {
     invoice: 'Fatura',
@@ -255,7 +283,11 @@ export const translations: Record<string, InvoiceTranslations> = {
     pricePerLiter: 'Preço por litro',
     deliveryFee: 'Taxa de entrega',
     dueDays: '14 dias',
-    currency: '€'
+    currency: '€',
+    phone: 'Telefone',
+    email: 'Email',
+    website: 'Website',
+    paymentTerm: 'Prazo de pagamento'
   },
   pl: {
     invoice: 'Faktura',
@@ -287,7 +319,11 @@ export const translations: Record<string, InvoiceTranslations> = {
     pricePerLiter: 'Cena za litr',
     deliveryFee: 'Opłata za dostawę',
     dueDays: '14 dni',
-    currency: '€'
+    currency: '€',
+    phone: 'Telefon',
+    email: 'Email',
+    website: 'Strona internetowa',
+    paymentTerm: 'Termin płatności'
   },
   sv: {
     invoice: 'Faktura',
@@ -319,7 +355,11 @@ export const translations: Record<string, InvoiceTranslations> = {
     pricePerLiter: 'Pris per liter',
     deliveryFee: 'Leveransavgift',
     dueDays: '14 dagar',
-    currency: '€'
+    currency: '€',
+    phone: 'Telefon',
+    email: 'Email',
+    website: 'Webbplats',
+    paymentTerm: 'Betalningsvillkor'
   },
   da: {
     invoice: 'Faktura',
@@ -351,7 +391,11 @@ export const translations: Record<string, InvoiceTranslations> = {
     pricePerLiter: 'Pris per liter',
     deliveryFee: 'Leveringsgebyr',
     dueDays: '14 dage',
-    currency: '€'
+    currency: '€',
+    phone: 'Telefon',
+    email: 'Email',
+    website: 'Hjemmeside',
+    paymentTerm: 'Betalingsbetingelser'
   },
   no: {
     invoice: 'Faktura',
@@ -383,7 +427,11 @@ export const translations: Record<string, InvoiceTranslations> = {
     pricePerLiter: 'Pris per liter',
     deliveryFee: 'Leveringsgebyr',
     dueDays: '14 dager',
-    currency: '€'
+    currency: '€',
+    phone: 'Telefon',
+    email: 'Email',
+    website: 'Nettside',
+    paymentTerm: 'Betalingsbetingelser'
   },
   fi: {
     invoice: 'Lasku',
@@ -415,7 +463,11 @@ export const translations: Record<string, InvoiceTranslations> = {
     pricePerLiter: 'Hinta per litra',
     deliveryFee: 'Toimitusmaksu',
     dueDays: '14 päivää',
-    currency: '€'
+    currency: '€',
+    phone: 'Puhelin',
+    email: 'Sähköposti',
+    website: 'Verkkosivu',
+    paymentTerm: 'Maksuehdot'
   }
 };
 
