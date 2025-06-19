@@ -906,24 +906,22 @@ async function generateInvoicePDF(order: any, invoiceNumber: string, t: any, cur
       
       doc.text(`${t.accountHolder}:`, margin + 3, yPos);
       doc.text(accountHolderName, margin + 3 + paymentLabelWidth, yPos);
-      yPos += 5;
+      yPos += 6; // Increased spacing from 5 to 6
       
       doc.text(`${t.iban}:`, margin + 3, yPos);
       doc.text(order.shops.bank_accounts.iban, margin + 3 + paymentLabelWidth, yPos);
-      yPos += 5;
+      yPos += 6; // Increased spacing from 5 to 6
       
       if (order.shops.bank_accounts.bic) {
         doc.text(`${t.bic}:`, margin + 3, yPos);
         doc.text(order.shops.bank_accounts.bic, margin + 3 + paymentLabelWidth, yPos);
-        yPos += 5;
+        yPos += 6; // Increased spacing from 5 to 6
       }
       
       // Use order number instead of invoice number for payment reference
       doc.text(`${t.paymentReference}:`, margin + 3, yPos);
       doc.text(order.order_number, margin + 3 + paymentLabelWidth, yPos);
-      yPos += 5;
-      
-      // Removed payment term
+      yPos += 6; // Increased spacing from 5 to 6
     }
     
     // FOOTER - 4 columns with updated information
@@ -954,11 +952,11 @@ async function generateInvoicePDF(order: any, invoiceNumber: string, t: any, cur
     doc.text('Kontakt', col2X, footerY);
     doc.setFont("helvetica", "normal");
     if (order.shops.company_phone) {
-      doc.text(`Tel.: ${order.shops.company_phone}`, col2X, footerY + 4);
+      doc.text(order.shops.company_phone, col2X, footerY + 4);
     }
-    doc.text(`Email: ${order.shops.company_email}`, col2X, footerY + 8);
+    doc.text(order.shops.company_email, col2X, footerY + 8);
     if (order.shops.company_website) {
-      doc.text(`Website: ${order.shops.company_website}`, col2X, footerY + 12);
+      doc.text(order.shops.company_website, col2X, footerY + 12);
     }
     
     // Column 3: Bank information
@@ -972,10 +970,10 @@ async function generateInvoicePDF(order: any, invoiceNumber: string, t: any, cur
         ? order.shops.name 
         : order.shops.bank_accounts.account_holder;
       
-      doc.text(`Kontoinhaber: ${accountHolderName}`, col3X, footerY + 4);
-      doc.text(`IBAN: ${order.shops.bank_accounts.iban}`, col3X, footerY + 8);
+      doc.text(accountHolderName, col3X, footerY + 4);
+      doc.text(order.shops.bank_accounts.iban, col3X, footerY + 8);
       if (order.shops.bank_accounts.bic) {
-        doc.text(`BIC: ${order.shops.bank_accounts.bic}`, col3X, footerY + 12);
+        doc.text(order.shops.bank_accounts.bic, col3X, footerY + 12);
       }
     }
     
@@ -984,10 +982,10 @@ async function generateInvoicePDF(order: any, invoiceNumber: string, t: any, cur
     doc.text('Geschäftsdaten', col4X, footerY);
     doc.setFont("helvetica", "normal");
     if (order.shops.business_owner) {
-      doc.text(`Geschäftsinhaber: ${order.shops.business_owner}`, col4X, footerY + 4);
+      doc.text(order.shops.business_owner, col4X, footerY + 4);
     }
     if (order.shops.vat_number) {
-      doc.text(`USt-IdNr: ${order.shops.vat_number}`, col4X, footerY + 8);
+      doc.text(order.shops.vat_number, col4X, footerY + 8);
     }
     
     console.log('PDF content created with logo support and language', language, ', converting to bytes...');

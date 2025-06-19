@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -465,7 +466,7 @@ export function InvoicePreview() {
                   <div className="p-3 text-white text-lg font-bold" style={{ backgroundColor: accentColor }}>
                     {t.paymentDetails}
                   </div>
-                  <div className="bg-gray-50 p-4 space-y-2 text-sm">
+                  <div className="bg-gray-50 p-4 space-y-3 text-sm">
                     <div className="flex">
                       <span className="w-32 font-medium">{t.accountHolder}:</span>
                       <span>{selectedShop.bank_accounts.use_anyname ? selectedShop.name : selectedShop.bank_accounts.account_holder}</span>
@@ -502,9 +503,9 @@ export function InvoicePreview() {
                 {/* Column 2: Contact information */}
                 <div>
                   <h4 className="font-bold text-gray-800 mb-2">Kontakt</h4>
-                  {selectedShop.company_phone && <div>Tel.: {selectedShop.company_phone}</div>}
-                  <div>Email: {selectedShop.company_email}</div>
-                  {selectedShop.company_website && <div>Website: {selectedShop.company_website}</div>}
+                  {selectedShop.company_phone && <div>{selectedShop.company_phone}</div>}
+                  <div>{selectedShop.company_email}</div>
+                  {selectedShop.company_website && <div>{selectedShop.company_website}</div>}
                 </div>
                 
                 {/* Column 3: Bank information */}
@@ -512,9 +513,9 @@ export function InvoicePreview() {
                   <h4 className="font-bold text-gray-800 mb-2">Bankinformationen</h4>
                   {selectedShop.bank_accounts && (
                     <>
-                      <div>Kontoinhaber: {selectedShop.bank_accounts.use_anyname ? selectedShop.name : selectedShop.bank_accounts.account_holder}</div>
-                      <div>IBAN: {selectedShop.bank_accounts.iban}</div>
-                      {selectedShop.bank_accounts.bic && <div>BIC: {selectedShop.bank_accounts.bic}</div>}
+                      <div>{selectedShop.bank_accounts.use_anyname ? selectedShop.name : selectedShop.bank_accounts.account_holder}</div>
+                      <div>{selectedShop.bank_accounts.iban}</div>
+                      {selectedShop.bank_accounts.bic && <div>{selectedShop.bank_accounts.bic}</div>}
                     </>
                   )}
                 </div>
@@ -522,8 +523,8 @@ export function InvoicePreview() {
                 {/* Column 4: Business owner and VAT ID */}
                 <div>
                   <h4 className="font-bold text-gray-800 mb-2">Geschäftsdaten</h4>
-                  {selectedShop.business_owner && <div>Geschäftsinhaber: {selectedShop.business_owner}</div>}
-                  {selectedShop.vat_number && <div>USt-IdNr: {selectedShop.vat_number}</div>}
+                  {selectedShop.business_owner && <div>{selectedShop.business_owner}</div>}
+                  {selectedShop.vat_number && <div>{selectedShop.vat_number}</div>}
                 </div>
               </div>
             </div>
