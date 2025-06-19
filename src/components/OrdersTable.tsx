@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -213,14 +214,33 @@ export function OrdersTable() {
 
   const generateInvoice = async (orderId: string, bankAccountId?: string) => {
     try {
-      // This would typically call an edge function to generate the PDF
+      console.log('Calling generate-invoice edge function for order:', orderId);
+      
       toast({
         title: 'Rechnung wird generiert',
         description: 'Die Rechnung wird im Hintergrund erstellt',
       });
-      
-      // Update status to indicate invoice generation started
-      await updateOrderStatus(orderId, 'confirmed');
+
+      // Call the edge function to generate the invoice
+      const { data, error } = await supabase.functions.invoke('generate-invoice', {
+        body: { order_id: orderId }
+      });
+
+      if (error) {
+        console.error('Error calling generate-invoice function:', error);
+        throw error;
+      }
+
+      console.log('Invoice generation response:', data);
+
+      // Refresh orders to get the updated status
+      await fetchOrders();
+
+      toast({
+        title: 'Erfolg',
+        description: 'Rechnung wurde erfolgreich generiert und Status auf "Rechnung versendet" aktualisiert',
+      });
+
     } catch (error) {
       console.error('Error generating invoice:', error);
       toast({
