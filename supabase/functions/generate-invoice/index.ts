@@ -450,12 +450,9 @@ Deno.serve(async (req) => {
     console.log('PDF conversion completed, size:', pdfBytes.length, 'bytes');
     console.log('Responsive PDF generated successfully, size:', pdfBytes.length, 'bytes');
 
-    // Upload to Supabase storage
-    const filename = language === 'de' ? `rechnung_${order.order_number}_${language}.pdf` :
-                    language === 'fr' ? `facture_${order.order_number}_${language}.pdf` :
-                    language === 'es' ? `factura_${order.order_number}_${language}.pdf` :
-                    language === 'it' ? `fattura_${order.order_number}_${language}.pdf` :
-                    `invoice_${order.order_number}_${language}.pdf`;
+    // Upload to Supabase storage - use translation for filename prefix and proper order number
+    const orderNumberToUse = newOrderNumber || order.order_number;
+    const filename = `${t.invoice.toLowerCase()}_${orderNumberToUse}_${language}.pdf`;
 
     const { error: uploadError } = await supabase.storage
       .from('invoices')
@@ -500,7 +497,7 @@ Deno.serve(async (req) => {
       language,
       filename,
       used_temp_bank_account: !!bankAccountId,
-      order_number_used: order.order_number
+      order_number_used: orderNumberToUse
     }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' }
     });
