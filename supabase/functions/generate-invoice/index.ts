@@ -86,7 +86,7 @@ const serve_handler = async (req: Request): Promise<Response> => {
         .like('invoice_number', `${currentYear}-%`)
         .order('invoice_number', { ascending: false })
         .limit(1)
-        .single();
+        .maybeSingle();
 
       let nextNumber = 1;
       if (lastInvoice?.invoice_number) {
@@ -104,7 +104,7 @@ const serve_handler = async (req: Request): Promise<Response> => {
     // Generate PDF content with translations
     const pdfContent = await generateInvoicePDF(order, invoiceNumber, t, currencySymbol);
 
-    // Upload PDF to Supabase Storage (we'll create this bucket)
+    // Upload PDF to Supabase Storage
     const { data: uploadData, error: uploadError } = await supabase.storage
       .from('invoices')
       .upload(filename, pdfContent, {
@@ -173,8 +173,14 @@ const serve_handler = async (req: Request): Promise<Response> => {
 };
 
 async function generateInvoicePDF(order: any, invoiceNumber: string, t: any, currencySymbol: string): Promise<Uint8Array> {
-  // Simple HTML-to-PDF generation (in a real implementation, you'd use a proper PDF library)
-  // For now, this is a placeholder that returns a basic PDF structure
+  // Calculate VAT details
+  const vatRate = order.shops.vat_rate || 19;
+  const totalWithoutVat = order.total_amount / (1 + vatRate / 100);
+  const vatAmount = order.total_amount - totalWithoutVat;
+  
+  // Calculate due date (14 days from now)
+  const dueDate = new Date();
+  dueDate.setDate(dueDate.getDate() + 14);
   
   const htmlContent = `
     <!DOCTYPE html>
@@ -183,45 +189,170 @@ async function generateInvoicePDF(order: any, invoiceNumber: string, t: any, cur
       <meta charset="UTF-8">
       <title>${t.invoice} ${invoiceNumber}</title>
       <style>
-        body { font-family: Arial, sans-serif; margin: 40px; }
-        .header { display: flex; justify-content: space-between; margin-bottom: 40px; }
-        .company-info { text-align: right; }
-        .invoice-title { font-size: 24px; font-weight: bold; margin-bottom: 20px; }
-        .invoice-details { margin-bottom: 30px; }
-        .customer-info { margin-bottom: 30px; }
-        .items-table { width: 100%; border-collapse: collapse; margin-bottom: 30px; }
-        .items-table th, .items-table td { border: 1px solid #ddd; padding: 10px; text-align: left; }
-        .items-table th { background-color: #f5f5f5; }
-        .totals { margin-left: auto; width: 300px; }
-        .total-row { display: flex; justify-content: space-between; margin-bottom: 5px; }
-        .grand-total { font-weight: bold; border-top: 2px solid #000; padding-top: 10px; }
-        .payment-info { margin-top: 40px; }
-        .thank-you { margin-top: 40px; font-style: italic; }
+        body { 
+          font-family: Arial, sans-serif; 
+          margin: 40px; 
+          color: #333;
+          line-height: 1.4;
+        }
+        .header { 
+          display: flex; 
+          justify-content: space-between; 
+          margin-bottom: 40px; 
+          border-bottom: 2px solid #eee;
+          padding-bottom: 20px;
+        }
+        .company-info { 
+          text-align: right; 
+          max-width: 300px;
+        }
+        .company-info h2 {
+          margin: 0 0 10px 0;
+          color: #2563eb;
+          font-size: 20px;
+        }
+        .company-info p {
+          margin: 3px 0;
+          font-size: 12px;
+        }
+        .invoice-title { 
+          font-size: 32px; 
+          font-weight: bold; 
+          margin-bottom: 20px; 
+          color: #2563eb;
+        }
+        .invoice-details { 
+          display: grid;
+          grid-template-columns: 1fr 1fr;
+          gap: 20px;
+          margin-bottom: 30px; 
+          background: #f8f9fa;
+          padding: 20px;
+          border-radius: 8px;
+        }
+        .invoice-meta p {
+          margin: 5px 0;
+          font-size: 14px;
+        }
+        .customer-info { 
+          margin-bottom: 30px; 
+          background: #fff;
+          border: 1px solid #e3e3e3;
+          padding: 20px;
+          border-radius: 8px;
+        }
+        .customer-info h3 {
+          margin: 0 0 15px 0;
+          color: #2563eb;
+        }
+        .customer-info p {
+          margin: 3px 0;
+        }
+        .items-table { 
+          width: 100%; 
+          border-collapse: collapse; 
+          margin-bottom: 30px; 
+          box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+        .items-table th, .items-table td { 
+          border: 1px solid #ddd; 
+          padding: 12px; 
+          text-align: left; 
+        }
+        .items-table th { 
+          background-color: #2563eb; 
+          color: white;
+          font-weight: bold;
+        }
+        .items-table tbody tr:nth-child(even) {
+          background-color: #f8f9fa;
+        }
+        .items-table tbody tr:hover {
+          background-color: #e3f2fd;
+        }
+        .totals { 
+          margin-left: auto; 
+          width: 350px; 
+          background: #f8f9fa;
+          padding: 20px;
+          border-radius: 8px;
+          border: 1px solid #e3e3e3;
+        }
+        .total-row { 
+          display: flex; 
+          justify-content: space-between; 
+          margin-bottom: 8px; 
+          padding: 5px 0;
+        }
+        .grand-total { 
+          font-weight: bold; 
+          border-top: 2px solid #2563eb; 
+          padding-top: 15px; 
+          margin-top: 10px;
+          font-size: 18px;
+          color: #2563eb;
+        }
+        .payment-info { 
+          margin-top: 40px; 
+          background: #fff;
+          border: 1px solid #e3e3e3;
+          padding: 20px;
+          border-radius: 8px;
+        }
+        .payment-info h3 {
+          margin: 0 0 15px 0;
+          color: #2563eb;
+        }
+        .payment-info p {
+          margin: 5px 0;
+        }
+        .thank-you { 
+          margin-top: 40px; 
+          font-style: italic; 
+          text-align: center;
+          color: #666;
+          font-size: 14px;
+          border-top: 1px solid #eee;
+          padding-top: 20px;
+        }
+        .amount { font-weight: bold; }
+        .text-right { text-align: right; }
       </style>
     </head>
     <body>
       <div class="header">
-        <div class="company-details">
+        <div>
+          ${order.shops.logo_url ? `<img src="${order.shops.logo_url}" alt="Logo" style="max-height: 80px; margin-bottom: 20px;">` : ''}
+        </div>
+        <div class="company-info">
           <h2>${order.shops.company_name}</h2>
           <p>${order.shops.company_address}</p>
           <p>${order.shops.company_postcode} ${order.shops.company_city}</p>
-          <p>${t.phoneLabel}: ${order.shops.company_phone}</p>
-          <p>${t.emailLabel}: ${order.shops.company_email}</p>
-          ${order.shops.vat_number ? `<p>${t.vatNumber}: ${order.shops.vat_number}</p>` : ''}
+          ${order.shops.company_phone ? `<p>Tel: ${order.shops.company_phone}</p>` : ''}
+          <p>E-Mail: ${order.shops.company_email}</p>
+          ${order.shops.company_website ? `<p>Web: ${order.shops.company_website}</p>` : ''}
+          ${order.shops.vat_number ? `<p>USt-IdNr: ${order.shops.vat_number}</p>` : ''}
+          ${order.shops.business_owner ? `<p>Inhaber: ${order.shops.business_owner}</p>` : ''}
         </div>
       </div>
 
       <div class="invoice-title">${t.invoice}</div>
 
       <div class="invoice-details">
-        <p><strong>${t.invoiceNumber}:</strong> ${invoiceNumber}</p>
-        <p><strong>${t.invoiceDate}:</strong> ${new Date().toLocaleDateString()}</p>
-        <p><strong>${t.dueDate}:</strong> ${new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toLocaleDateString()}</p>
+        <div class="invoice-meta">
+          <p><strong>${t.invoiceNumber}:</strong> ${invoiceNumber}</p>
+          <p><strong>${t.invoiceDate}:</strong> ${new Date().toLocaleDateString(order.shops.language === 'en' ? 'en-US' : 'de-DE')}</p>
+          <p><strong>${t.dueDate}:</strong> ${dueDate.toLocaleDateString(order.shops.language === 'en' ? 'en-US' : 'de-DE')}</p>
+        </div>
+        <div class="invoice-meta">
+          <p><strong>Bestellnummer:</strong> ${order.order_number}</p>
+          <p><strong>Bestelldatum:</strong> ${new Date(order.created_at).toLocaleDateString(order.shops.language === 'en' ? 'en-US' : 'de-DE')}</p>
+        </div>
       </div>
 
       <div class="customer-info">
         <h3>${t.customerDetails}</h3>
-        <p>${order.customer_name}</p>
+        <p><strong>${order.customer_name}</strong></p>
         <p>${order.delivery_street}</p>
         <p>${order.delivery_postcode} ${order.delivery_city}</p>
         <p>${order.customer_email}</p>
@@ -232,24 +363,24 @@ async function generateInvoicePDF(order: any, invoiceNumber: string, t: any, cur
         <thead>
           <tr>
             <th>${t.description}</th>
-            <th>${t.quantity}</th>
-            <th>${t.unitPrice}</th>
-            <th>${t.total}</th>
+            <th class="text-right">${t.quantity}</th>
+            <th class="text-right">${t.unitPrice}</th>
+            <th class="text-right">${t.total}</th>
           </tr>
         </thead>
         <tbody>
           <tr>
             <td>${t.heatingOilDelivery}</td>
-            <td>${order.liters} ${t.liters}</td>
-            <td>${currencySymbol}${order.price_per_liter.toFixed(2)}</td>
-            <td>${currencySymbol}${order.base_price.toFixed(2)}</td>
+            <td class="text-right">${order.liters} ${t.liters}</td>
+            <td class="text-right amount">${currencySymbol}${order.price_per_liter.toFixed(3)}</td>
+            <td class="text-right amount">${currencySymbol}${order.base_price.toFixed(2)}</td>
           </tr>
           ${order.delivery_fee > 0 ? `
           <tr>
             <td>${t.deliveryFee}</td>
-            <td>1</td>
-            <td>${currencySymbol}${order.delivery_fee.toFixed(2)}</td>
-            <td>${currencySymbol}${order.delivery_fee.toFixed(2)}</td>
+            <td class="text-right">1</td>
+            <td class="text-right amount">${currencySymbol}${order.delivery_fee.toFixed(2)}</td>
+            <td class="text-right amount">${currencySymbol}${order.delivery_fee.toFixed(2)}</td>
           </tr>
           ` : ''}
         </tbody>
@@ -258,15 +389,15 @@ async function generateInvoicePDF(order: any, invoiceNumber: string, t: any, cur
       <div class="totals">
         <div class="total-row">
           <span>${t.subtotal}:</span>
-          <span>${currencySymbol}${(order.total_amount / (1 + (order.shops.vat_rate || 19) / 100)).toFixed(2)}</span>
+          <span class="amount">${currencySymbol}${totalWithoutVat.toFixed(2)}</span>
         </div>
         <div class="total-row">
-          <span>${t.vat} (${order.shops.vat_rate || 19}%):</span>
-          <span>${currencySymbol}${(order.total_amount - (order.total_amount / (1 + (order.shops.vat_rate || 19) / 100))).toFixed(2)}</span>
+          <span>${t.vat} (${vatRate}%):</span>
+          <span class="amount">${currencySymbol}${vatAmount.toFixed(2)}</span>
         </div>
         <div class="total-row grand-total">
           <span>${t.grandTotal}:</span>
-          <span>${currencySymbol}${order.total_amount.toFixed(2)}</span>
+          <span class="amount">${currencySymbol}${order.total_amount.toFixed(2)}</span>
         </div>
       </div>
 
@@ -277,6 +408,7 @@ async function generateInvoicePDF(order: any, invoiceNumber: string, t: any, cur
         <p><strong>${t.iban}:</strong> ${order.shops.bank_accounts.iban}</p>
         ${order.shops.bank_accounts.bic ? `<p><strong>${t.bic}:</strong> ${order.shops.bank_accounts.bic}</p>` : ''}
         <p><strong>${t.paymentReference}:</strong> ${invoiceNumber}</p>
+        <p><strong>Zahlungsziel:</strong> ${t.dueDays}</p>
       </div>
       ` : ''}
 
@@ -287,8 +419,8 @@ async function generateInvoicePDF(order: any, invoiceNumber: string, t: any, cur
     </html>
   `;
 
-  // Convert HTML to PDF bytes (this is a simplified placeholder)
-  // In a real implementation, you would use a library like Puppeteer or similar
+  // Convert HTML to PDF bytes (simplified implementation)
+  // In a production environment, you would use a proper HTML-to-PDF library
   const encoder = new TextEncoder();
   return encoder.encode(htmlContent);
 }
