@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import {
@@ -23,7 +22,8 @@ import {
   FileText, 
   Calendar,
   Download,
-  Send
+  Send,
+  DollarSign
 } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 
@@ -149,6 +149,10 @@ export function OrderDetailsDialog({ order, open, onOpenChange, onOrderUpdate }:
     }
   };
 
+  const markAsPaid = async () => {
+    await updateOrderStatus('paid');
+  };
+
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'pending':
@@ -223,6 +227,17 @@ export function OrderDetailsDialog({ order, open, onOpenChange, onOrderUpdate }:
                     <Button onClick={sendInvoice} disabled={updating}>
                       <Send className="h-4 w-4 mr-2" />
                       Rechnung versenden
+                    </Button>
+                  )}
+
+                  {order.status === 'invoice_sent' && (
+                    <Button 
+                      onClick={markAsPaid} 
+                      disabled={updating}
+                      className="bg-green-600 hover:bg-green-700 text-white"
+                    >
+                      <DollarSign className="h-4 w-4 mr-2" />
+                      Als bezahlt markieren
                     </Button>
                   )}
                   
