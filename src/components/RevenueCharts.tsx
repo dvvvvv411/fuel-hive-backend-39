@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -454,11 +453,11 @@ export function RevenueCharts() {
                     return null;
                   }}
                 />
-                <Bar 
-                  dataKey="revenue" 
-                  fill={(entry) => entry.color || '#3B82F6'}
-                  radius={[4, 4, 0, 0]}
-                />
+                <Bar dataKey="revenue" radius={[4, 4, 0, 0]}>
+                  {shopData.map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={entry.color} />
+                  ))}
+                </Bar>
               </BarChart>
             </ResponsiveContainer>
           </div>
