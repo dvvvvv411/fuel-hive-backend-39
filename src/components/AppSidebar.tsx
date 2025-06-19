@@ -1,4 +1,3 @@
-
 import { useLocation, useNavigate } from 'react-router-dom';
 import { User } from '@supabase/supabase-js';
 import {
@@ -14,7 +13,7 @@ import {
   SidebarMenuItem,
 } from '@/components/ui/sidebar';
 import { Button } from '@/components/ui/button';
-import { Store, FileText, CreditCard, LayoutDashboard, LogOut, Fuel, Mail, Banknote } from 'lucide-react';
+import { Store, FileText, CreditCard, LayoutDashboard, LogOut, Fuel, Mail, Banknote, Eye } from 'lucide-react';
 
 const navigationItems = [
   {
@@ -52,6 +51,12 @@ const navigationItems = [
     url: "/dashboard",
     icon: Mail,
     value: "resend-configs"
+  },
+  {
+    title: "Invoice Preview",
+    url: "/dashboard",
+    icon: Eye,
+    value: "preview"
   },
 ];
 

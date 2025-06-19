@@ -11,7 +11,8 @@ import { OrdersList } from '@/components/OrdersList';
 import { BankAccountsList } from '@/components/BankAccountsList';
 import { PaymentMethodsList } from '@/components/PaymentMethodsList';
 import { ResendConfigsList } from '@/components/ResendConfigsList';
-import { Store, CreditCard, FileText, TrendingUp, Mail, Banknote } from 'lucide-react';
+import { InvoicePreview } from '@/components/InvoicePreview';
+import { Store, CreditCard, FileText, TrendingUp, Mail, Banknote, Eye } from 'lucide-react';
 
 const Dashboard = () => {
   const [activeTab, setActiveTab] = useState('overview');
@@ -50,6 +51,8 @@ const Dashboard = () => {
         return <PaymentMethodsList />;
       case 'resend-configs':
         return <ResendConfigsList />;
+      case 'preview':
+        return <InvoicePreview />;
       default:
         return (
           <div className="space-y-8">
@@ -177,6 +180,15 @@ const Dashboard = () => {
                         <span className="font-medium">Email Configuration</span>
                       </div>
                     </button>
+                    <button 
+                      onClick={() => setActiveTab('preview')}
+                      className="w-full text-left p-3 rounded-lg border border-gray-200 hover:bg-gray-50 transition-colors"
+                    >
+                      <div className="flex items-center gap-3">
+                        <Eye className="h-5 w-5 text-teal-600" />
+                        <span className="font-medium">Invoice Preview</span>
+                      </div>
+                    </button>
                   </div>
                 </CardContent>
               </Card>
@@ -203,6 +215,7 @@ const Dashboard = () => {
               {activeTab === 'overview' ? 'Dashboard' : 
                activeTab === 'resend-configs' ? 'Resend Configuration' :
                activeTab === 'payment-methods' ? 'Payment Methods' :
+               activeTab === 'preview' ? 'Invoice Preview' :
                activeTab.replace('-', ' ')}
             </h2>
           </div>
