@@ -1,1 +1,5 @@
+
 project_id = "luhhnsvwtnmxztcmdxyq"
+
+[functions.create-order-token]
+verify_jwt = false
