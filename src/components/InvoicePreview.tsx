@@ -379,13 +379,6 @@ export function InvoicePreview() {
               {isGenerating ? 'Generating...' : 'Generate PDF'}
             </Button>
           </div>
-          
-          {/* Debug info for logo state */}
-          {process.env.NODE_ENV === 'development' && (
-            <div className="mt-4 p-2 bg-gray-100 rounded text-xs">
-              <strong>Debug Info:</strong> Logo State: {logoState} | Retry Count: {logoRetryCount} | URL: {logoUrl}
-            </div>
-          )}
         </CardContent>
       </Card>
 
