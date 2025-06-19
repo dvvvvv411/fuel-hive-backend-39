@@ -143,18 +143,23 @@ export function OrderDetailsDialog({ order, open, onOpenChange, onOrderUpdate }:
     try {
       setUpdating(true);
       
+      console.log('Starting invoice generation for order:', order.id);
+      
       const { data, error } = await supabase.functions.invoke('generate-invoice', {
         body: { order_id: order.id }
       });
 
       if (error) throw error;
 
+      console.log('Invoice generation completed:', data);
+
       toast({
-        title: 'Rechnung wird generiert',
-        description: 'Die Rechnung wird im Hintergrund erstellt',
+        title: 'Rechnung generiert',
+        description: 'Die Rechnung wurde erfolgreich erstellt',
       });
       
-      // Send confirmation email with invoice and update status to invoice_sent directly
+      // Now send the confirmation email with invoice and set status to invoice_sent
+      console.log('Sending confirmation email with invoice');
       await sendOrderConfirmationEmail('instant_confirmation', true);
       
     } catch (error) {
@@ -175,9 +180,11 @@ export function OrderDetailsDialog({ order, open, onOpenChange, onOrderUpdate }:
       
       if (order.invoice_pdf_generated) {
         // Send email with existing invoice and update status to invoice_sent
+        console.log('Sending existing invoice via email');
         await sendOrderConfirmationEmail('instant_confirmation', true);
       } else {
         // Generate and send invoice
+        console.log('Generating new invoice and sending');
         await generateInvoice();
       }
       

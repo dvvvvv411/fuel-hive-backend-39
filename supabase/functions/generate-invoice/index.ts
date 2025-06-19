@@ -1,4 +1,3 @@
-
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { jsPDF } from "https://esm.sh/jspdf@2.5.1";
@@ -260,7 +259,8 @@ const handler = async (req: Request): Promise<Response> => {
 
     const publicUrl = urlData.publicUrl;
 
-    // Update order with invoice information
+    // Update order with invoice information - DO NOT change status here
+    // Let the frontend handle status updates through the email sending flow
     const { error: updateError } = await supabase
       .from('orders')
       .update({
