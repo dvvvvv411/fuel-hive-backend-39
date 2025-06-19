@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -408,6 +407,52 @@ export function ShopDialog({ open, onOpenChange, onSuccess, shop }: ShopDialogPr
                   <SelectItem value="instant">Sofort</SelectItem>
                 </SelectContent>
               </Select>
+            </div>
+          </div>
+
+          {/* Unternehmensdetails Section */}
+          <div className="border-t pt-6">
+            <h3 className="text-lg font-semibold mb-4">Unternehmensdetails</h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="vat_number">USt-IdNr (USTID)</Label>
+                <Input
+                  id="vat_number"
+                  value={formData.vat_number}
+                  onChange={(e) => handleInputChange('vat_number', e.target.value)}
+                  placeholder="DE123456789"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="business_owner">Geschäftsinhaber</Label>
+                <Input
+                  id="business_owner"
+                  value={formData.business_owner}
+                  onChange={(e) => handleInputChange('business_owner', e.target.value)}
+                  placeholder="Max Mustermann"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="court_name">Amtsgericht</Label>
+                <Input
+                  id="court_name"
+                  value={formData.court_name}
+                  onChange={(e) => handleInputChange('court_name', e.target.value)}
+                  placeholder="Amtsgericht Berlin"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="registration_number">Handelsregisternummer</Label>
+                <Input
+                  id="registration_number"
+                  value={formData.registration_number}
+                  onChange={(e) => handleInputChange('registration_number', e.target.value)}
+                  placeholder="HRB 12345"
+                />
+              </div>
             </div>
           </div>
 
