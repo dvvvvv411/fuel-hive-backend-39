@@ -167,11 +167,6 @@ export function BankAccountSelectionDialog({
     setSelectedBankAccount('');
   };
 
-  const maskIban = (iban: string) => {
-    if (iban.length <= 8) return iban;
-    return iban.substring(0, 4) + '*'.repeat(iban.length - 8) + iban.substring(iban.length - 4);
-  };
-
   const getUsageColor = (percentage: number) => {
     if (percentage >= 90) return 'bg-red-500';
     if (percentage >= 70) return 'bg-yellow-500';
@@ -239,7 +234,7 @@ export function BankAccountSelectionDialog({
                               </div>
                               <div className="text-right">
                                 <code className="text-xs bg-gray-100 px-2 py-1 rounded">
-                                  {maskIban(account.iban)}
+                                  {account.iban}
                                 </code>
                               </div>
                             </div>

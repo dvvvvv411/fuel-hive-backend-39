@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -24,6 +25,8 @@ interface BankAccount {
   use_anyname: boolean;
   daily_limit: number | null;
   created_at: string;
+  is_temporary: boolean;
+  temp_order_number: string | null;
 }
 
 interface Shop {
@@ -91,11 +94,6 @@ export function BankAccountsList() {
     } finally {
       setLoading(false);
     }
-  };
-
-  const maskIban = (iban: string) => {
-    if (iban.length <= 8) return iban;
-    return iban.substring(0, 4) + '*'.repeat(iban.length - 8) + iban.substring(iban.length - 4);
   };
 
   const getShopsUsingAccount = (accountId: string) => {
@@ -181,6 +179,10 @@ export function BankAccountsList() {
     setDetailsDialogOpen(true);
   };
 
+  // Filter accounts into regular and temporary
+  const regularBankAccounts = bankAccounts.filter(account => !account.is_temporary);
+  const temporaryBankAccounts = bankAccounts.filter(account => account.is_temporary);
+
   if (loading) {
     return <div className="text-center py-8">Bankkonten werden geladen...</div>;
   }
@@ -198,7 +200,8 @@ export function BankAccountsList() {
         </Button>
       </div>
 
-      {bankAccounts.length === 0 ? (
+      {/* Regular Bank Accounts */}
+      {regularBankAccounts.length === 0 ? (
         <Card>
           <CardContent className="flex flex-col items-center justify-center py-12">
             <CreditCard className="h-12 w-12 text-gray-400 mb-4" />
@@ -215,9 +218,9 @@ export function BankAccountsList() {
       ) : (
         <Card>
           <CardHeader>
-            <CardTitle>Bankkonten ({bankAccounts.length})</CardTitle>
+            <CardTitle>Normale Bankkonten ({regularBankAccounts.length})</CardTitle>
             <CardDescription>
-              Übersicht aller konfigurierten Bankkonten mit Tageslimits und aktueller Nutzung
+              Übersicht aller konfigurierten normalen Bankkonten mit Tageslimits und aktueller Nutzung
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -236,7 +239,7 @@ export function BankAccountsList() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {bankAccounts.map((account) => {
+                {regularBankAccounts.map((account) => {
                   const shopsUsing = getShopsUsingAccount(account.id);
                   return (
                     <TableRow key={account.id}>
@@ -254,7 +257,7 @@ export function BankAccountsList() {
                       </TableCell>
                       <TableCell>
                         <code className="text-sm bg-gray-100 px-2 py-1 rounded">
-                          {maskIban(account.iban)}
+                          {account.iban}
                         </code>
                       </TableCell>
                       <TableCell>{account.currency}</TableCell>
@@ -349,6 +352,96 @@ export function BankAccountsList() {
                     </TableRow>
                   );
                 })}
+              </TableBody>
+            </Table>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Temporary Bank Accounts */}
+      {temporaryBankAccounts.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Temporäre Bankkonten ({temporaryBankAccounts.length})</CardTitle>
+            <CardDescription>
+              Temporäre Bankkonten die für spezifische Bestellungen erstellt wurden
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Kontoname</TableHead>
+                  <TableHead>Bank</TableHead>
+                  <TableHead>IBAN</TableHead>
+                  <TableHead>Währung</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead>Bestellnummer</TableHead>
+                  <TableHead>Aktionen</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {temporaryBankAccounts.map((account) => (
+                  <TableRow key={account.id}>
+                    <TableCell>
+                      <div>
+                        <div className="font-medium">{account.account_name}</div>
+                        <div className="text-sm text-gray-500">{account.account_holder}</div>
+                        <Badge variant="outline" className="mt-1 bg-orange-50 text-orange-700 border-orange-200">
+                          Temporär
+                        </Badge>
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex items-center">
+                        <Building className="h-4 w-4 mr-2 text-gray-500" />
+                        {account.bank_name}
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <code className="text-sm bg-gray-100 px-2 py-1 rounded">
+                        {account.iban}
+                      </code>
+                    </TableCell>
+                    <TableCell>{account.currency}</TableCell>
+                    <TableCell>
+                      <Badge 
+                        variant={account.active ? "default" : "secondary"}
+                        className="cursor-pointer"
+                        onClick={() => toggleAccountStatus(account)}
+                      >
+                        {account.active ? "Aktiv" : "Inaktiv"}
+                      </Badge>
+                    </TableCell>
+                    <TableCell>
+                      {account.temp_order_number ? (
+                        <code className="text-xs bg-blue-100 px-2 py-1 rounded text-blue-800">
+                          #{account.temp_order_number}
+                        </code>
+                      ) : (
+                        <span className="text-gray-500 text-sm">-</span>
+                      )}
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex items-center gap-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleViewDetails(account)}
+                        >
+                          <Eye className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => deleteAccount(account)}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))}
               </TableBody>
             </Table>
           </CardContent>
