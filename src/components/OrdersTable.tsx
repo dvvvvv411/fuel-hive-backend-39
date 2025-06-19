@@ -529,6 +529,19 @@ export function OrdersTable() {
     return order.temp_order_number || order.order_number;
   };
 
+  const checkAddressDifference = (order: Order) => {
+    // Check if billing address is different from delivery address
+    const billingStreet = order.billing_street || '';
+    const billingCity = order.billing_city || '';
+    const billingPostcode = order.billing_postcode || '';
+    
+    const isDifferent = billingStreet !== order.delivery_street || 
+                       billingCity !== order.delivery_city || 
+                       billingPostcode !== order.delivery_postcode;
+    
+    return isDifferent;
+  };
+
   const totalPages = Math.ceil(totalCount / itemsPerPage);
 
   const handleShopChange = (shopId: string, checked: boolean) => {
@@ -688,6 +701,7 @@ export function OrdersTable() {
                   <TableHead>Kunde</TableHead>
                   <TableHead>Telefon</TableHead>
                   <TableHead>Adresse</TableHead>
+                  <TableHead>Abw.</TableHead>
                   <TableHead>Produkt</TableHead>
                   <TableHead>Menge (L)</TableHead>
                   <TableHead>Gesamtpreis</TableHead>
@@ -701,13 +715,13 @@ export function OrdersTable() {
               <TableBody>
                 {loading ? (
                   <TableRow>
-                    <TableCell colSpan={13} className="text-center py-8">
+                    <TableCell colSpan={14} className="text-center py-8">
                       Lade Bestellungen...
                     </TableCell>
                   </TableRow>
                 ) : orders.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={13} className="text-center py-8">
+                    <TableCell colSpan={14} className="text-center py-8">
                       {showHidden ? 'Keine ausgeblendeten Bestellungen gefunden' : 'Keine Bestellungen gefunden'}
                     </TableCell>
                   </TableRow>
@@ -715,6 +729,7 @@ export function OrdersTable() {
                   orders.map((order) => {
                     const address = formatAddress(order);
                     const { dateStr, timeStr } = formatDateTime(order.created_at);
+                    const hasAddressDifference = checkAddressDifference(order);
                     return (
                       <TableRow key={order.id}>
                         <TableCell className="font-medium">
@@ -746,6 +761,14 @@ export function OrdersTable() {
                           <div className="text-sm">
                             <div>{address.street}</div>
                             <div>{address.cityPostcode}</div>
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex justify-center">
+                            <div 
+                              className={`w-3 h-3 rounded-full ${hasAddressDifference ? 'bg-green-500' : 'bg-red-500'}`}
+                              title={hasAddressDifference ? 'Rechnungsadresse weicht ab' : 'Rechnungsadresse identisch'}
+                            />
                           </div>
                         </TableCell>
                         <TableCell>{order.product}</TableCell>
