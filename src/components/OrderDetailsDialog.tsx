@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import {
@@ -134,7 +133,7 @@ export function OrderDetailsDialog({ order, open, onOpenChange, onOrderUpdate }:
       console.error('Error sending email:', error);
       toast({
         title: 'Fehler',
-        description: 'E-Mail konnte nicht versendet werden',
+        description: `E-Mail konnte nicht versendet werden: ${error.message || 'Unbekannter Fehler'}`,
         variant: 'destructive',
       });
     } finally {
@@ -198,7 +197,7 @@ export function OrderDetailsDialog({ order, open, onOpenChange, onOrderUpdate }:
       console.error('Error sending invoice:', error);
       toast({
         title: 'Fehler',
-        description: 'Rechnung konnte nicht versendet werden',
+        description: `Rechnung konnte nicht versendet werden: ${error.message || 'Unbekannter Fehler'}`,
         variant: 'destructive',
       });
     } finally {
@@ -214,7 +213,7 @@ export function OrderDetailsDialog({ order, open, onOpenChange, onOrderUpdate }:
       console.error('Error sending order receipt email:', error);
       toast({
         title: 'Fehler',
-        description: 'Bestelleingang-E-Mail konnte nicht versendet werden',
+        description: `Bestelleingang-E-Mail konnte nicht versendet werden: ${error.message || 'Unbekannter Fehler'}`,
         variant: 'destructive',
       });
     } finally {
