@@ -1,3 +1,4 @@
+
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { jsPDF } from "https://esm.sh/jspdf@2.5.1";
@@ -93,6 +94,8 @@ const handler = async (req: Request): Promise<Response> => {
     if (!invoiceNumber) {
       invoiceNumber = `INV-${new Date().getFullYear()}-${Date.now()}`;
     }
+
+    console.log('Creating PDF for invoice:', invoiceNumber);
 
     // Create PDF document
     const doc = new jsPDF();
@@ -231,12 +234,16 @@ const handler = async (req: Request): Promise<Response> => {
       }
     }
 
+    console.log('PDF created successfully, preparing upload');
+
     // Generate PDF as base64
     const pdfBase64 = doc.output('dataurlstring').split(',')[1];
     const pdfBuffer = Uint8Array.from(atob(pdfBase64), c => c.charCodeAt(0));
 
     // Upload to Supabase Storage
     const fileName = `${invoiceNumber}-${order_id}.pdf`;
+    console.log('Uploading PDF to storage:', fileName);
+    
     const { data: uploadData, error: uploadError } = await supabase.storage
       .from('invoices')
       .upload(fileName, pdfBuffer, {
@@ -246,11 +253,13 @@ const handler = async (req: Request): Promise<Response> => {
 
     if (uploadError) {
       console.error('Error uploading PDF:', uploadError);
-      return new Response(JSON.stringify({ error: 'Failed to upload PDF' }), {
+      return new Response(JSON.stringify({ error: 'Failed to upload PDF', details: uploadError.message }), {
         status: 500,
         headers: { 'Content-Type': 'application/json', ...corsHeaders },
       });
     }
+
+    console.log('PDF uploaded successfully:', uploadData);
 
     // Get public URL
     const { data: urlData } = supabase.storage
@@ -258,6 +267,7 @@ const handler = async (req: Request): Promise<Response> => {
       .getPublicUrl(fileName);
 
     const publicUrl = urlData.publicUrl;
+    console.log('Public URL generated:', publicUrl);
 
     // Update order with invoice information - DO NOT change status here
     // Let the frontend handle status updates through the email sending flow

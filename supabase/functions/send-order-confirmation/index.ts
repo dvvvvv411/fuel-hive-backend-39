@@ -203,7 +203,7 @@ const handler = async (req: Request): Promise<Response> => {
 
   try {
     const { order_id, include_invoice, email_type }: EmailRequest = await req.json();
-    console.log('Sending confirmation email for order:', order_id, 'Type:', email_type);
+    console.log('Sending confirmation email for order:', order_id, 'Type:', email_type, 'Include invoice:', include_invoice);
 
     // Get order with shop and resend config
     const { data: order, error: orderError } = await supabase
@@ -266,10 +266,13 @@ const handler = async (req: Request): Promise<Response> => {
     // Add PDF attachment for instant orders with invoices
     if (include_invoice && order.invoice_pdf_url && email_type === 'instant_confirmation') {
       try {
+        console.log('Adding PDF attachment for invoice:', order.invoice_number);
+        
         // Download PDF from Supabase Storage
+        const fileName = order.invoice_pdf_url.split('/').pop() || '';
         const { data: pdfData, error: downloadError } = await supabase.storage
           .from('invoices')
-          .download(order.invoice_pdf_url.split('/').pop() || '');
+          .download(fileName);
 
         if (!downloadError && pdfData) {
           // Convert blob to base64
@@ -293,9 +296,34 @@ const handler = async (req: Request): Promise<Response> => {
     }
 
     // Send email
+    console.log('Sending email to:', order.customer_email);
     const emailResponse = await resend.emails.send(emailPayload);
 
+    if (emailResponse.error) {
+      console.error('Error sending email:', emailResponse.error);
+      throw new Error(`Failed to send email: ${emailResponse.error.message}`);
+    }
+
     console.log('Email sent successfully:', emailResponse);
+
+    // Update order status to invoice_sent if this is an instant confirmation with invoice
+    if (email_type === 'instant_confirmation' && include_invoice) {
+      console.log('Updating order status to invoice_sent');
+      const { error: statusUpdateError } = await supabase
+        .from('orders')
+        .update({ 
+          status: 'invoice_sent',
+          invoice_sent: true 
+        })
+        .eq('id', order_id);
+
+      if (statusUpdateError) {
+        console.error('Error updating order status:', statusUpdateError);
+        // Don't fail the entire request for status update error
+      } else {
+        console.log('Order status updated to invoice_sent');
+      }
+    }
 
     return new Response(JSON.stringify({
       success: true,
@@ -303,6 +331,7 @@ const handler = async (req: Request): Promise<Response> => {
       email_type,
       sent_to: order.customer_email,
       attachment_included: !!emailPayload.attachments,
+      status_updated: email_type === 'instant_confirmation' && include_invoice,
       sent_at: new Date().toISOString()
     }), {
       status: 200,

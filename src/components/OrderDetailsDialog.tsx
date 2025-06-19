@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import {
@@ -107,6 +108,8 @@ export function OrderDetailsDialog({ order, open, onOpenChange, onOrderUpdate }:
     try {
       setUpdating(true);
       
+      console.log('Sending email:', emailType, 'with invoice:', includeInvoice);
+      
       const { data, error } = await supabase.functions.invoke('send-order-confirmation', {
         body: {
           order_id: order.id,
@@ -117,15 +120,15 @@ export function OrderDetailsDialog({ order, open, onOpenChange, onOrderUpdate }:
 
       if (error) throw error;
 
+      console.log('Email sent successfully:', data);
+
       toast({
         title: 'E-Mail versendet',
-        description: `Bestätigungsmail wurde erfolgreich an ${order.customer_email} gesendet`,
+        description: `E-Mail wurde erfolgreich an ${order.customer_email} gesendet`,
       });
 
-      // Update status to invoice_sent when sending invoice email
-      if (includeInvoice) {
-        await updateOrderStatus('invoice_sent');
-      }
+      // Refresh order data to get updated status
+      onOrderUpdate();
       
     } catch (error) {
       console.error('Error sending email:', error);
@@ -149,7 +152,10 @@ export function OrderDetailsDialog({ order, open, onOpenChange, onOrderUpdate }:
         body: { order_id: order.id }
       });
 
-      if (error) throw error;
+      if (error) {
+        console.error('Invoice generation error:', error);
+        throw error;
+      }
 
       console.log('Invoice generation completed:', data);
 
@@ -158,7 +164,7 @@ export function OrderDetailsDialog({ order, open, onOpenChange, onOrderUpdate }:
         description: 'Die Rechnung wurde erfolgreich erstellt',
       });
       
-      // Now send the confirmation email with invoice and set status to invoice_sent
+      // Now send the confirmation email with invoice
       console.log('Sending confirmation email with invoice');
       await sendOrderConfirmationEmail('instant_confirmation', true);
       
@@ -166,7 +172,7 @@ export function OrderDetailsDialog({ order, open, onOpenChange, onOrderUpdate }:
       console.error('Error generating invoice:', error);
       toast({
         title: 'Fehler',
-        description: 'Rechnung konnte nicht generiert werden',
+        description: `Rechnung konnte nicht generiert werden: ${error.message || 'Unbekannter Fehler'}`,
         variant: 'destructive',
       });
     } finally {
@@ -179,7 +185,7 @@ export function OrderDetailsDialog({ order, open, onOpenChange, onOrderUpdate }:
       setUpdating(true);
       
       if (order.invoice_pdf_generated) {
-        // Send email with existing invoice and update status to invoice_sent
+        // Send email with existing invoice
         console.log('Sending existing invoice via email');
         await sendOrderConfirmationEmail('instant_confirmation', true);
       } else {
