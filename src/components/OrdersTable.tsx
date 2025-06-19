@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Pagination, PaginationContent, PaginationItem, PaginationLink, PaginationNext, PaginationPrevious } from '@/components/ui/pagination';
-import { Search, Filter, FileText, Eye, Download } from 'lucide-react';
+import { Search, Filter, FileText, Eye, Download, DollarSign } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import { OrderDetailsDialog } from './OrderDetailsDialog';
 import { BankAccountSelectionDialog } from './BankAccountSelectionDialog';
@@ -199,6 +199,10 @@ export function OrdersTable() {
         variant: 'destructive',
       });
     }
+  };
+
+  const markAsPaid = async (orderId: string) => {
+    await updateOrderStatus(orderId, 'paid');
   };
 
   const generateInvoice = async (orderId: string, bankAccountId?: string) => {
@@ -485,6 +489,16 @@ export function OrdersTable() {
                               >
                                 <FileText className="h-4 w-4 mr-1" />
                                 Rechnung
+                              </Button>
+                            )}
+
+                            {order.status === 'invoice_sent' && (
+                              <Button
+                                size="sm"
+                                onClick={() => markAsPaid(order.id)}
+                                className="bg-green-600 hover:bg-green-700 text-white"
+                              >
+                                <DollarSign className="h-4 w-4" />
                               </Button>
                             )}
                             
