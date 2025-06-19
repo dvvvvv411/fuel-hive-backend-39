@@ -1,4 +1,3 @@
-
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
@@ -417,6 +416,41 @@ function hexToRgb(hex: string): { r: number; g: number; b: number } {
   } : { r: 37, g: 99, b: 235 }; // Default blue
 }
 
+// Helper function to fetch and convert logo to base64
+async function fetchLogoAsBase64(logoUrl: string): Promise<string | null> {
+  try {
+    console.log('Fetching logo from URL:', logoUrl);
+    
+    const response = await fetch(logoUrl);
+    if (!response.ok) {
+      console.error('Failed to fetch logo:', response.status, response.statusText);
+      return null;
+    }
+    
+    const contentType = response.headers.get('content-type') || '';
+    if (!contentType.startsWith('image/')) {
+      console.error('URL does not point to an image:', contentType);
+      return null;
+    }
+    
+    const arrayBuffer = await response.arrayBuffer();
+    const uint8Array = new Uint8Array(arrayBuffer);
+    
+    // Convert to base64
+    let binary = '';
+    for (let i = 0; i < uint8Array.byteLength; i++) {
+      binary += String.fromCharCode(uint8Array[i]);
+    }
+    const base64 = btoa(binary);
+    
+    console.log('Logo converted to base64, size:', base64.length, 'characters');
+    return `data:${contentType};base64,${base64}`;
+  } catch (error) {
+    console.error('Error fetching logo:', error);
+    return null;
+  }
+}
+
 const serve_handler = async (req: Request): Promise<Response> => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -635,13 +669,38 @@ async function generateInvoicePDF(order: any, invoiceNumber: string, t: any, cur
     
     let yPos = margin; // Start position
     
-    // HEADER SECTION - Modern layout with logo space and company details
-    // Logo placeholder (left side)
-    doc.setFillColor(240, 240, 240);
-    doc.rect(margin, yPos, 40, 25, 'F');
-    doc.setFontSize(8);
-    doc.setTextColor(120, 120, 120);
-    doc.text('LOGO', margin + 20, yPos + 13.5, { align: 'center' });
+    // HEADER SECTION - Modern layout with logo and company details
+    let logoBase64 = null;
+    
+    // Try to fetch and embed the actual logo
+    if (order.shops.logo_url) {
+      console.log('Attempting to fetch logo from:', order.shops.logo_url);
+      logoBase64 = await fetchLogoAsBase64(order.shops.logo_url);
+    }
+    
+    if (logoBase64) {
+      // Display actual logo
+      try {
+        console.log('Adding logo to PDF');
+        doc.addImage(logoBase64, 'JPEG', margin, yPos, 40, 25);
+      } catch (logoError) {
+        console.error('Error adding logo to PDF:', logoError);
+        // Fall back to placeholder if logo fails to render
+        doc.setFillColor(240, 240, 240);
+        doc.rect(margin, yPos, 40, 25, 'F');
+        doc.setFontSize(8);
+        doc.setTextColor(120, 120, 120);
+        doc.text('LOGO', margin + 20, yPos + 13.5, { align: 'center' });
+      }
+    } else {
+      // Logo placeholder (left side) - fallback
+      console.log('Using logo placeholder');
+      doc.setFillColor(240, 240, 240);
+      doc.rect(margin, yPos, 40, 25, 'F');
+      doc.setFontSize(8);
+      doc.setTextColor(120, 120, 120);
+      doc.text('LOGO', margin + 20, yPos + 13.5, { align: 'center' });
+    }
     
     // Company name and details (center-right)
     const companyStartX = margin + 50;
@@ -928,7 +987,7 @@ async function generateInvoicePDF(order: any, invoiceNumber: string, t: any, cur
     doc.setTextColor(rgb.r, rgb.g, rgb.b);
     doc.text(t.thankYou, col4X, footerY + 4);
     
-    console.log('PDF content created with modern design and language', language, ', converting to bytes...');
+    console.log('PDF content created with logo support and language', language, ', converting to bytes...');
     
     // Get PDF as array buffer
     const pdfArrayBuffer = doc.output('arraybuffer');
