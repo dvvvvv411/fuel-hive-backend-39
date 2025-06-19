@@ -154,10 +154,7 @@ export function OrderDetailsDialog({ order, open, onOpenChange, onOrderUpdate }:
         description: 'Die Rechnung wird im Hintergrund erstellt',
       });
       
-      // Update status to confirmed after generation
-      await updateOrderStatus('confirmed');
-      
-      // Send confirmation email with invoice and update status to invoice_sent
+      // Send confirmation email with invoice and update status to invoice_sent directly
       await sendOrderConfirmationEmail('instant_confirmation', true);
       
     } catch (error) {

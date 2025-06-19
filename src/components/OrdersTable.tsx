@@ -265,7 +265,7 @@ export function OrdersTable() {
       case 'pending':
         return 'Neu';
       case 'confirmed':
-        return 'Exchanged';
+        return 'Bestätigt';
       case 'invoice_sent':
         return 'Rechnung versendet';
       case 'paid':
@@ -399,7 +399,7 @@ export function OrdersTable() {
                     { value: 'pending', label: 'Neu' },
                     { value: 'invoice_sent', label: 'Rechnung versendet' },
                     { value: 'paid', label: 'Bezahlt' },
-                    { value: 'confirmed', label: 'Exchanged' },
+                    { value: 'confirmed', label: 'Bestätigt' },
                     { value: 'cancelled', label: 'Down' }
                   ].map((status) => (
                     <div key={status.value} className="flex items-center space-x-2">
@@ -526,7 +526,7 @@ export function OrdersTable() {
                               <SelectItem value="pending">Neu</SelectItem>
                               <SelectItem value="invoice_sent">Rechnung versendet</SelectItem>
                               <SelectItem value="paid">Bezahlt</SelectItem>
-                              <SelectItem value="confirmed">Exchanged</SelectItem>
+                              <SelectItem value="confirmed">Bestätigt</SelectItem>
                               <SelectItem value="cancelled">Down</SelectItem>
                             </SelectContent>
                           </Select>
