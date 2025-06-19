@@ -14,7 +14,7 @@ interface TemporaryBankAccountFormProps {
     iban: string;
     bic?: string;
     currency: string;
-    temp_order_number?: string;
+    new_order_number?: string;
   }) => void;
   loading?: boolean;
   defaultOrderNumber: string;
@@ -33,14 +33,15 @@ export function TemporaryBankAccountForm({
     iban: '',
     bic: '',
     currency: 'EUR',
-    temp_order_number: defaultOrderNumber
+    new_order_number: ''
   });
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     onSubmit({
       ...formData,
-      bic: formData.bic || undefined
+      bic: formData.bic || undefined,
+      new_order_number: formData.new_order_number || undefined
     });
   };
 
@@ -153,17 +154,17 @@ export function TemporaryBankAccountForm({
           </div>
 
           <div>
-            <Label htmlFor="temp_order_number" className="text-sm font-medium">
-              Bestellnummer für diese Rechnung
+            <Label htmlFor="new_order_number" className="text-sm font-medium">
+              Neue Bestellnummer (optional)
             </Label>
             <Input
-              id="temp_order_number"
-              value={formData.temp_order_number}
-              onChange={(e) => handleInputChange('temp_order_number', e.target.value)}
-              placeholder={defaultOrderNumber}
+              id="new_order_number"
+              value={formData.new_order_number}
+              onChange={(e) => handleInputChange('new_order_number', e.target.value)}
+              placeholder={`Z.B. ${defaultOrderNumber}-TEMP`}
             />
             <p className="text-xs text-gray-500 mt-1">
-              Leer lassen, um die ursprüngliche Bestellnummer zu verwenden
+              Leer lassen, um die ursprüngliche Bestellnummer ({defaultOrderNumber}) zu behalten
             </p>
           </div>
 

@@ -38,6 +38,7 @@ interface BankAccountSelectionDialogProps {
   onOpenChange: (open: boolean) => void;
   onBankAccountSelected: (bankAccountId: string) => void;
   orderNumber: string;
+  orderId: string;
 }
 
 export function BankAccountSelectionDialog({
@@ -45,6 +46,7 @@ export function BankAccountSelectionDialog({
   onOpenChange,
   onBankAccountSelected,
   orderNumber,
+  orderId,
 }: BankAccountSelectionDialogProps) {
   const [bankAccounts, setBankAccounts] = useState<BankAccountWithUsage[]>([]);
   const [selectedBankAccount, setSelectedBankAccount] = useState<string>('');
@@ -104,10 +106,27 @@ export function BankAccountSelectionDialog({
     iban: string;
     bic?: string;
     currency: string;
-    temp_order_number?: string;
+    new_order_number?: string;
   }) => {
     try {
       setCreatingTempAccount(true);
+
+      // Update order number if provided
+      if (bankAccountData.new_order_number) {
+        console.log('Updating order number from', orderNumber, 'to', bankAccountData.new_order_number);
+        
+        const { error: updateError } = await supabase
+          .from('orders')
+          .update({ order_number: bankAccountData.new_order_number })
+          .eq('id', orderId);
+
+        if (updateError) {
+          console.error('Error updating order number:', updateError);
+          throw updateError;
+        }
+        
+        console.log('Order number updated successfully');
+      }
 
       // Create temporary bank account
       const { data: newBankAccount, error: bankError } = await supabase
@@ -121,7 +140,7 @@ export function BankAccountSelectionDialog({
           currency: bankAccountData.currency,
           country: 'DE',
           is_temporary: true,
-          temp_order_number: bankAccountData.temp_order_number || orderNumber,
+          used_for_order_id: orderId,
           active: true
         })
         .select()
@@ -137,7 +156,7 @@ export function BankAccountSelectionDialog({
 
       toast({
         title: 'Erfolg',
-        description: 'Temporäres Bankkonto erstellt und Rechnung wird generiert',
+        description: `Temporäres Bankkonto erstellt${bankAccountData.new_order_number ? ' und Bestellnummer aktualisiert' : ''}, Rechnung wird generiert`,
       });
 
     } catch (error) {
