@@ -1,11 +1,10 @@
-
 import { useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { MoreHorizontal, Edit, Trash2, CheckCircle, XCircle, Globe, Phone } from 'lucide-react';
+import { MoreHorizontal, Edit, Trash2, CheckCircle, XCircle, Phone } from 'lucide-react';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -213,15 +212,9 @@ export function ShopsTable({ shops, onShopsChange }: ShopsTableProps) {
                     </TableCell>
                     <TableCell>
                       {shop.company_website ? (
-                        <a 
-                          href={shop.company_website} 
-                          target="_blank" 
-                          rel="noopener noreferrer"
-                          className="flex items-center text-blue-600 hover:text-blue-800 text-sm"
-                        >
-                          <Globe className="h-3 w-3 mr-1" />
-                          Website
-                        </a>
+                        <div className="text-sm text-blue-600">
+                          {shop.company_website}
+                        </div>
                       ) : (
                         <span className="text-gray-400 text-sm">-</span>
                       )}
