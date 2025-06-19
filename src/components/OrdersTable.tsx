@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -19,6 +18,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuTrigger } from '@/compon
 interface Order {
   id: string;
   order_number: string;
+  temp_order_number: string | null;
   customer_name: string;
   customer_email: string;
   customer_phone: string | null;
@@ -62,6 +62,11 @@ interface Order {
       account_holder: string;
       iban: string;
     };
+  };
+  temp_bank_accounts?: {
+    account_name: string;
+    account_holder: string;
+    iban: string;
   };
 }
 
@@ -129,6 +134,11 @@ export function OrdersTable() {
               account_holder,
               iban
             )
+          ),
+          temp_bank_accounts:bank_accounts!used_for_order_id(
+            account_name,
+            account_holder,
+            iban
           )
         `, { count: 'exact' });
 
@@ -293,11 +303,11 @@ export function OrdersTable() {
         console.log('Invoice email sent successfully:', emailData);
       }
 
-      // Update local state directly instead of refetching all orders
+      // Update local state to reflect the changes, including temporary bank account info
       setOrders(prevOrders => 
         prevOrders.map(order => {
           if (order.id === orderId) {
-            return {
+            const updatedOrder = {
               ...order,
               status: 'invoice_sent',
               invoice_sent: true,
@@ -307,6 +317,15 @@ export function OrdersTable() {
               invoice_generation_date: invoiceData.generated_at || new Date().toISOString(),
               invoice_date: new Date().toISOString().split('T')[0]
             };
+
+            // If a temporary bank account was used, update the display
+            if (bankAccountId && orderData.processing_mode === 'manual') {
+              // The temporary bank account will now be loaded in the next refresh via the query
+              // For now, we'll refresh the data to get the updated bank account info
+              setTimeout(() => fetchOrders(), 1000);
+            }
+
+            return updatedOrder;
           }
           return order;
         })
@@ -392,6 +411,11 @@ export function OrdersTable() {
   };
 
   const getBankAccountInfo = (order: Order) => {
+    // Check for temporary bank account first
+    if (order.temp_bank_accounts && Array.isArray(order.temp_bank_accounts) && order.temp_bank_accounts.length > 0) {
+      return order.temp_bank_accounts[0].account_name;
+    }
+    
     // If processing_mode is 'manual' and no invoice has been generated yet
     if (order.processing_mode === 'manual' && !order.invoice_number) {
       return 'Noch nicht zugewiesen';
@@ -404,6 +428,10 @@ export function OrdersTable() {
     }
     
     return 'Kein Bankkonto';
+  };
+
+  const getDisplayOrderNumber = (order: Order) => {
+    return order.temp_order_number || order.order_number;
   };
 
   const totalPages = Math.ceil(totalCount / itemsPerPage);
@@ -592,7 +620,14 @@ export function OrdersTable() {
                           </div>
                         </TableCell>
                         <TableCell className="font-medium">
-                          #{order.order_number}
+                          <div>
+                            <div>#{getDisplayOrderNumber(order)}</div>
+                            {order.temp_order_number && (
+                              <div className="text-xs text-gray-500">
+                                Original: #{order.order_number}
+                              </div>
+                            )}
+                          </div>
                         </TableCell>
                         <TableCell>
                           <div>
@@ -784,7 +819,7 @@ export function OrdersTable() {
           open={showPDFViewer}
           onOpenChange={setShowPDFViewer}
           pdfUrl={selectedPDFOrder.invoice_pdf_url!}
-          orderNumber={selectedPDFOrder.order_number}
+          orderNumber={getDisplayOrderNumber(selectedPDFOrder)}
         />
       )}
     </div>

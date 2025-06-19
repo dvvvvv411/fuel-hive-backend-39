@@ -1,3 +1,4 @@
+
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { Resend } from "npm:resend@2.0.0";
@@ -207,8 +208,8 @@ const generateInvoiceEmailTemplate = (order: any, bankData: any, language: strin
   const accentColor = order.shops?.accent_color || '#2563eb';
   const translatedProduct = t.products[order.product] || order.product;
   
-  // Set variables correctly - invoiceNumber is the order number, recipientName depends on use_anyname
-  const invoiceNumber = order.order_number;
+  // Use temp_order_number if available, otherwise use original order_number
+  const invoiceNumber = order.temp_order_number || order.order_number;
   const recipientName = bankData?.use_anyname ? shopName : (bankData?.account_holder || shopName);
   
   // Debug logging to check values
@@ -219,6 +220,8 @@ const generateInvoiceEmailTemplate = (order: any, bankData: any, language: strin
   console.log('- use_anyname:', bankData?.use_anyname);
   console.log('- account_holder:', bankData?.account_holder);
   console.log('- language:', language);
+  console.log('- temp_order_number:', order.temp_order_number);
+  console.log('- original order_number:', order.order_number);
   
   const subject = interpolateString(t.invoiceSubject, {
     shopName: shopName
@@ -328,7 +331,7 @@ const generateInvoiceEmailTemplate = (order: any, bankData: any, language: strin
                         <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
                           <tr>
                             <td style="padding: 8px 0; color: #6b7280; font-size: 15px; font-weight: 600; width: 40%;">${t.orderNumber}</td>
-                            <td style="padding: 8px 0; color: #111827; font-size: 15px; font-weight: 700;">${order.order_number}</td>
+                            <td style="padding: 8px 0; color: #111827; font-size: 15px; font-weight: 700;">${invoiceNumber}</td>
                           </tr>
                           <tr>
                             <td style="padding: 8px 0; color: #6b7280; font-size: 15px; font-weight: 600;">${t.invoiceDate}</td>
@@ -469,25 +472,51 @@ const handler = async (req: Request): Promise<Response> => {
     const language = detectLanguage(order);
     console.log('Detected language:', language);
 
-    // Get bank data for invoice emails
+    // Get bank data for invoice emails - prioritize temporary bank accounts
     let bankData = null;
-    if (include_invoice && order.shops?.bank_account_id) {
-      try {
-        const { data: bank, error: bankError } = await supabase
+    if (include_invoice) {
+      console.log('Looking for bank account data for invoice email...');
+      
+      // First, check for temporary bank account associated with this order
+      const { data: tempBankAccount, error: tempBankError } = await supabase
+        .from('bank_accounts')
+        .select('account_holder, bank_name, iban, bic, use_anyname, account_name')
+        .eq('is_temporary', true)
+        .eq('used_for_order_id', order_id)
+        .eq('active', true)
+        .maybeSingle();
+
+      if (tempBankError) {
+        console.warn('Error fetching temporary bank account:', tempBankError);
+      }
+
+      if (tempBankAccount) {
+        console.log('Using temporary bank account for email:', tempBankAccount.account_name);
+        bankData = {
+          ...tempBankAccount,
+          account_holder: tempBankAccount.use_anyname ? order.shops.company_name : tempBankAccount.account_holder
+        };
+      } else if (order.shops?.bank_account_id) {
+        console.log('No temporary bank account found, using shop default bank account');
+        // Fallback to shop's default bank account
+        const { data: defaultBank, error: bankError } = await supabase
           .from('bank_accounts')
-          .select('account_holder, bank_name, iban, bic, use_anyname')
+          .select('account_holder, bank_name, iban, bic, use_anyname, account_name')
           .eq('id', order.shops.bank_account_id)
           .eq('active', true)
           .single();
 
-        if (!bankError && bank) {
+        if (!bankError && defaultBank) {
+          console.log('Using shop default bank account:', defaultBank.account_name);
           bankData = {
-            ...bank,
-            account_holder: bank.use_anyname ? order.shops.company_name : bank.account_holder
+            ...defaultBank,
+            account_holder: defaultBank.use_anyname ? order.shops.company_name : defaultBank.account_holder
           };
+        } else {
+          console.warn('Could not fetch shop default bank data:', bankError);
         }
-      } catch (bankError) {
-        console.warn('Could not fetch bank data:', bankError);
+      } else {
+        console.warn('No bank account configured for shop and no temporary bank account found');
       }
     }
 
@@ -511,7 +540,7 @@ const handler = async (req: Request): Promise<Response> => {
     let attachmentAdded = false;
     if (include_invoice && order.invoice_pdf_url) {
       try {
-        console.log('Adding PDF attachment for invoice:', order.order_number);
+        console.log('Adding PDF attachment for invoice:', order.temp_order_number || order.order_number);
         
         // Download PDF from Supabase Storage
         const fileName = order.invoice_pdf_url.split('/').pop() || '';
@@ -541,8 +570,9 @@ const handler = async (req: Request): Promise<Response> => {
         console.log('Base64 conversion completed, length:', base64.length, 'characters');
 
         const t = getTranslations(language);
+        const orderNumberForFilename = order.temp_order_number || order.order_number;
         emailPayload.attachments = [{
-          filename: `${t.invoiceFilename}-${order.order_number}.pdf`,
+          filename: `${t.invoiceFilename}-${orderNumberForFilename}.pdf`,
           content: base64,
           content_type: 'application/pdf',
         }];
@@ -601,6 +631,7 @@ const handler = async (req: Request): Promise<Response> => {
       attachment_included: attachmentAdded,
       attachment_attempted: include_invoice && !!order.invoice_pdf_url,
       bank_data_included: !!bankData,
+      bank_account_used: bankData?.account_name || 'none',
       status_updated: statusUpdated,
       sent_at: new Date().toISOString()
     }), {
