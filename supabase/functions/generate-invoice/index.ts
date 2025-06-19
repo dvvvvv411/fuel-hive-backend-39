@@ -1,3 +1,4 @@
+
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
@@ -924,8 +925,8 @@ const serve_handler = async (req: Request): Promise<Response> => {
       invoiceNumber = `${currentYear}-${nextNumber.toString().padStart(4, '0')}`;
     }
 
-    // Create localized filename
-    const filename = `${t.invoice.toLowerCase()}_${invoiceNumber.replace('/', '_')}_${finalLanguage}.pdf`;
+    // Create localized filename using order number instead of invoice number
+    const filename = `${t.invoice.toLowerCase()}_${order.order_number}_${finalLanguage}.pdf`;
 
     console.log('Generating responsive PDF with filename:', filename);
 
