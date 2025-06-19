@@ -203,14 +203,17 @@ export function InvoicePreview() {
 
     setIsGenerating(true);
     try {
-      // Create a sample order for PDF generation
+      // Create a sample order for PDF generation with correct field names
       const { data: order, error } = await supabase
         .from('orders')
         .insert({
           shop_id: selectedShop.id,
+          order_number: sampleData.orderNumber,
           customer_name: sampleData.customerName,
           customer_email: 'sample@example.com',
           customer_phone: '+49123456789',
+          delivery_first_name: 'Max',
+          delivery_last_name: 'Mustermann',
           delivery_street: sampleData.deliveryStreet,
           delivery_postcode: sampleData.deliveryPostcode,
           delivery_city: sampleData.deliveryCity,
@@ -218,9 +221,12 @@ export function InvoicePreview() {
           price_per_liter: sampleData.pricePerLiter,
           base_price: sampleData.basePrice,
           delivery_fee: sampleData.deliveryFee,
+          amount: totalAmount,
           total_amount: totalAmount,
           status: 'completed',
-          processing_mode: 'manual'
+          processing_mode: 'manual',
+          payment_method: 'bank_transfer',
+          product: 'heating_oil'
         })
         .select()
         .single();
