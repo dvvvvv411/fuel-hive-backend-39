@@ -12,14 +12,11 @@ import { BankAccountsList } from '@/components/BankAccountsList';
 import { PaymentMethodsList } from '@/components/PaymentMethodsList';
 import { ResendConfigsList } from '@/components/ResendConfigsList';
 import { InvoicePreview } from '@/components/InvoicePreview';
-import { DashboardStats } from '@/components/DashboardStats';
-import { Store, CreditCard, FileText, TrendingUp, Mail, Banknote, Eye } from 'lucide-react';
 import { ShopPerformanceTables } from '@/components/ShopPerformanceTables';
 import { BankAccountPerformance } from '@/components/BankAccountPerformance';
 import { PaymentMethodAnalysis } from '@/components/PaymentMethodAnalysis';
 import { StatusPipelineAnalysis } from '@/components/StatusPipelineAnalysis';
 import { RevenueCharts } from '@/components/RevenueCharts';
-import { BarChart3 } from 'lucide-react';
 
 const Dashboard = () => {
   const [activeTab, setActiveTab] = useState('overview');
@@ -74,124 +71,9 @@ const Dashboard = () => {
               <p className="text-gray-600 mt-2">Welcome to your heating oil admin dashboard</p>
             </div>
 
-            <DashboardStats />
-
             <ShopPerformanceTables />
 
             <RevenueCharts />
-
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              <Card className="bg-white shadow-sm border border-gray-200">
-                <CardHeader>
-                  <CardTitle className="text-lg font-semibold text-gray-900">Recent Activity</CardTitle>
-                  <CardDescription>Latest updates from your heating oil business</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="text-center py-8">
-                    <p className="text-gray-500">No recent activity</p>
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card className="bg-white shadow-sm border border-gray-200">
-                <CardHeader>
-                  <CardTitle className="text-lg font-semibold text-gray-900">Quick Actions</CardTitle>
-                  <CardDescription>Common tasks and shortcuts</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-3">
-                    <button 
-                      onClick={() => setActiveTab('shops')}
-                      className="w-full text-left p-3 rounded-lg border border-gray-200 hover:bg-gray-50 transition-colors"
-                    >
-                      <div className="flex items-center gap-3">
-                        <Store className="h-5 w-5 text-blue-600" />
-                        <span className="font-medium">Manage Shops</span>
-                      </div>
-                    </button>
-                    <button 
-                      onClick={() => setActiveTab('orders')}
-                      className="w-full text-left p-3 rounded-lg border border-gray-200 hover:bg-gray-50 transition-colors"
-                    >
-                      <div className="flex items-center gap-3">
-                        <FileText className="h-5 w-5 text-green-600" />
-                        <span className="font-medium">View Orders</span>
-                      </div>
-                    </button>
-                    <button 
-                      onClick={() => setActiveTab('bank-accounts')}
-                      className="w-full text-left p-3 rounded-lg border border-gray-200 hover:bg-gray-50 transition-colors"
-                    >
-                      <div className="flex items-center gap-3">
-                        <CreditCard className="h-5 w-5 text-purple-600" />
-                        <span className="font-medium">Manage Bank Accounts</span>
-                      </div>
-                    </button>
-                    <button 
-                      onClick={() => setActiveTab('payment-methods')}
-                      className="w-full text-left p-3 rounded-lg border border-gray-200 hover:bg-gray-50 transition-colors"
-                    >
-                      <div className="flex items-center gap-3">
-                        <Banknote className="h-5 w-5 text-indigo-600" />
-                        <span className="font-medium">Payment Methods</span>
-                      </div>
-                    </button>
-                    <button 
-                      onClick={() => setActiveTab('resend-configs')}
-                      className="w-full text-left p-3 rounded-lg border border-gray-200 hover:bg-gray-50 transition-colors"
-                    >
-                      <div className="flex items-center gap-3">
-                        <Mail className="h-5 w-5 text-orange-600" />
-                        <span className="font-medium">Email Configuration</span>
-                      </div>
-                    </button>
-                    <button 
-                      onClick={() => setActiveTab('preview')}
-                      className="w-full text-left p-3 rounded-lg border border-gray-200 hover:bg-gray-50 transition-colors"
-                    >
-                      <div className="flex items-center gap-3">
-                        <Eye className="h-5 w-5 text-teal-600" />
-                        <span className="font-medium">Invoice Preview</span>
-                      </div>
-                    </button>
-                    
-                    {/* Analytics Actions */}
-                    <div className="pt-3 border-t border-gray-200">
-                      <h4 className="text-sm font-medium text-gray-700 mb-3">Analytics & Reports</h4>
-                      <div className="space-y-2">
-                        <button 
-                          onClick={() => setActiveTab('bank-analytics')}
-                          className="w-full text-left p-3 rounded-lg border border-gray-200 hover:bg-gray-50 transition-colors"
-                        >
-                          <div className="flex items-center gap-3">
-                            <CreditCard className="h-5 w-5 text-blue-600" />
-                            <span className="font-medium">Bank Performance</span>
-                          </div>
-                        </button>
-                        <button 
-                          onClick={() => setActiveTab('payment-analytics')}
-                          className="w-full text-left p-3 rounded-lg border border-gray-200 hover:bg-gray-50 transition-colors"
-                        >
-                          <div className="flex items-center gap-3">
-                            <BarChart3 className="h-5 w-5 text-purple-600" />
-                            <span className="font-medium">Payment Analysis</span>
-                          </div>
-                        </button>
-                        <button 
-                          onClick={() => setActiveTab('status-analytics')}
-                          className="w-full text-left p-3 rounded-lg border border-gray-200 hover:bg-gray-50 transition-colors"
-                        >
-                          <div className="flex items-center gap-3">
-                            <TrendingUp className="h-5 w-5 text-green-600" />
-                            <span className="font-medium">Status Pipeline</span>
-                          </div>
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
           </div>
         );
     }
