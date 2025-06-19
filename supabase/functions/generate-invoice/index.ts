@@ -494,7 +494,8 @@ const serve_handler = async (req: Request): Promise<Response> => {
             account_holder,
             iban,
             bic,
-            bank_name
+            bank_name,
+            use_anyname
           )
         )
       `)
@@ -653,10 +654,6 @@ async function generateInvoicePDF(order: any, invoiceNumber: string, t: any, cur
     const totalWithoutVat = order.total_amount / (1 + vatRate / 100);
     const vatAmount = order.total_amount - totalWithoutVat;
     
-    // Calculate due date (14 days from now)
-    const dueDate = new Date();
-    dueDate.setDate(dueDate.getDate() + 14);
-    
     // Check if delivery and billing addresses are different
     const hasDifferentAddresses = 
       order.billing_street && 
@@ -784,25 +781,16 @@ async function generateInvoicePDF(order: any, invoiceNumber: string, t: any, cur
       doc.text(`${order.delivery_postcode} ${order.delivery_city}`, leftColumnX, yPos);
     }
     
-    // RIGHT COLUMN - Invoice Details
+    // RIGHT COLUMN - Invoice Details (reduced fields)
     yPos = columnStartY;
     doc.setFontSize(10);
     doc.setTextColor(0, 0, 0);
     
     const labelWidth = 35;
     
-    doc.text(`${t.invoiceNumber}:`, rightColumnX, yPos);
-    doc.setFont("helvetica", "bold");
-    doc.text(invoiceNumber, rightColumnX + labelWidth, yPos);
-    doc.setFont("helvetica", "normal");
-    yPos += 6;
-    
+    // Removed invoice number, due date, and payment term
     doc.text(`${t.invoiceDate}:`, rightColumnX, yPos);
     doc.text(new Date().toLocaleDateString(language === 'en' ? 'en-US' : 'de-DE'), rightColumnX + labelWidth, yPos);
-    yPos += 6;
-    
-    doc.text(`${t.dueDate}:`, rightColumnX, yPos);
-    doc.text(dueDate.toLocaleDateString(language === 'en' ? 'en-US' : 'de-DE'), rightColumnX + labelWidth, yPos);
     yPos += 6;
     
     doc.text(`${t.orderNumber}:`, rightColumnX, yPos);
@@ -911,8 +899,13 @@ async function generateInvoicePDF(order: any, invoiceNumber: string, t: any, cur
       
       const paymentLabelWidth = 30;
       
+      // Use shop name if use_anyname is enabled, otherwise use account holder
+      const accountHolderName = order.shops.bank_accounts.use_anyname 
+        ? order.shops.name 
+        : order.shops.bank_accounts.account_holder;
+      
       doc.text(`${t.accountHolder}:`, margin + 3, yPos);
-      doc.text(order.shops.bank_accounts.account_holder, margin + 3 + paymentLabelWidth, yPos);
+      doc.text(accountHolderName, margin + 3 + paymentLabelWidth, yPos);
       yPos += 5;
       
       doc.text(`${t.iban}:`, margin + 3, yPos);
@@ -925,12 +918,12 @@ async function generateInvoicePDF(order: any, invoiceNumber: string, t: any, cur
         yPos += 5;
       }
       
+      // Use order number instead of invoice number for payment reference
       doc.text(`${t.paymentReference}:`, margin + 3, yPos);
-      doc.text(invoiceNumber, margin + 3 + paymentLabelWidth, yPos);
+      doc.text(order.order_number, margin + 3 + paymentLabelWidth, yPos);
       yPos += 5;
       
-      doc.text(`${t.paymentTerm}:`, margin + 3, yPos);
-      doc.text(t.dueDays, margin + 3 + paymentLabelWidth, yPos);
+      // Removed payment term
     }
     
     // FOOTER - 4 columns with modern styling

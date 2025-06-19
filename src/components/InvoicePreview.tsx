@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -29,6 +30,7 @@ interface Shop {
     iban: string;
     bic?: string;
     bank_name?: string;
+    use_anyname?: boolean;
   };
 }
 
@@ -91,7 +93,8 @@ export function InvoicePreview() {
             account_holder,
             iban,
             bic,
-            bank_name
+            bank_name,
+            use_anyname
           )
         `);
 
@@ -136,8 +139,6 @@ export function InvoicePreview() {
   const vatAmount = totalAmount - totalWithoutVat;
 
   const currentDate = new Date();
-  const dueDate = new Date();
-  dueDate.setDate(dueDate.getDate() + 14);
 
   const accentColor = selectedShop?.accent_color || '#2563eb';
   
@@ -391,19 +392,11 @@ export function InvoicePreview() {
                 </div>
               </div>
 
-              {/* Right column - Invoice details */}
+              {/* Right column - Invoice details (reduced fields) */}
               <div className="space-y-2 text-sm">
-                <div className="flex">
-                  <span className="w-32 font-medium">{t.invoiceNumber}:</span>
-                  <span className="font-bold">{sampleData.invoiceNumber}</span>
-                </div>
                 <div className="flex">
                   <span className="w-32 font-medium">{t.invoiceDate}:</span>
                   <span>{currentDate.toLocaleDateString(language === 'en' ? 'en-US' : 'de-DE')}</span>
-                </div>
-                <div className="flex">
-                  <span className="w-32 font-medium">{t.dueDate}:</span>
-                  <span>{dueDate.toLocaleDateString(language === 'en' ? 'en-US' : 'de-DE')}</span>
                 </div>
                 <div className="flex">
                   <span className="w-32 font-medium">{t.orderNumber}:</span>
@@ -474,7 +467,7 @@ export function InvoicePreview() {
                   <div className="bg-gray-50 p-4 space-y-2 text-sm">
                     <div className="flex">
                       <span className="w-32 font-medium">{t.accountHolder}:</span>
-                      <span>{selectedShop.bank_accounts.account_holder}</span>
+                      <span>{selectedShop.bank_accounts.use_anyname ? selectedShop.name : selectedShop.bank_accounts.account_holder}</span>
                     </div>
                     <div className="flex">
                       <span className="w-32 font-medium">{t.iban}:</span>
@@ -488,11 +481,7 @@ export function InvoicePreview() {
                     )}
                     <div className="flex">
                       <span className="w-32 font-medium">{t.paymentReference}:</span>
-                      <span>{sampleData.invoiceNumber}</span>
-                    </div>
-                    <div className="flex">
-                      <span className="w-32 font-medium">{t.paymentTerm || 'Payment Term'}:</span>
-                      <span>{t.dueDays}</span>
+                      <span>{sampleData.orderNumber}</span>
                     </div>
                   </div>
                 </div>
