@@ -22,7 +22,10 @@ export type Database = {
           daily_limit: number | null
           iban: string
           id: string
+          is_temporary: boolean
+          temp_order_number: string | null
           use_anyname: boolean
+          used_for_order_id: string | null
         }
         Insert: {
           account_holder: string
@@ -36,7 +39,10 @@ export type Database = {
           daily_limit?: number | null
           iban: string
           id?: string
+          is_temporary?: boolean
+          temp_order_number?: string | null
           use_anyname?: boolean
+          used_for_order_id?: string | null
         }
         Update: {
           account_holder?: string
@@ -50,9 +56,20 @@ export type Database = {
           daily_limit?: number | null
           iban?: string
           id?: string
+          is_temporary?: boolean
+          temp_order_number?: string | null
           use_anyname?: boolean
+          used_for_order_id?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "bank_accounts_used_for_order_id_fkey"
+            columns: ["used_for_order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       order_tokens: {
         Row: {
@@ -143,6 +160,7 @@ export type Database = {
           product: string
           shop_id: string
           status: string
+          temp_order_number: string | null
           total_amount: number
           use_same_address: boolean
         }
@@ -184,6 +202,7 @@ export type Database = {
           product: string
           shop_id: string
           status?: string
+          temp_order_number?: string | null
           total_amount: number
           use_same_address?: boolean
         }
@@ -225,6 +244,7 @@ export type Database = {
           product?: string
           shop_id?: string
           status?: string
+          temp_order_number?: string | null
           total_amount?: number
           use_same_address?: boolean
         }

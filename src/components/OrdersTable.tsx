@@ -217,16 +217,50 @@ export function OrdersTable() {
 
   const generateInvoice = async (orderId: string, bankAccountId?: string) => {
     try {
-      console.log('Calling generate-invoice edge function for order:', orderId);
+      console.log('Calling generate-invoice edge function for order:', orderId, 'with bank account:', bankAccountId);
       
       toast({
         title: 'Rechnung wird generiert',
         description: 'Die Rechnung wird erstellt und per E-Mail versendet',
       });
 
+      // Get the order to check if it's a manual order
+      const { data: orderData, error: orderError } = await supabase
+        .from('orders')
+        .select('processing_mode, temp_order_number')
+        .eq('id', orderId)
+        .single();
+
+      if (orderError) {
+        console.error('Error fetching order data:', orderError);
+        throw orderError;
+      }
+
+      // Update the bank account association for temporary accounts if this is a manual order
+      if (orderData.processing_mode === 'manual' && bankAccountId) {
+        const { error: updateError } = await supabase
+          .from('bank_accounts')
+          .update({ 
+            used_for_order_id: orderId,
+            temp_order_number: orderData.temp_order_number || null
+          })
+          .eq('id', bankAccountId)
+          .eq('is_temporary', true);
+
+        if (updateError) {
+          console.error('Error updating temporary bank account:', updateError);
+          // Don't fail the invoice generation, just log the error
+        } else {
+          console.log('Updated temporary bank account association for order:', orderId);
+        }
+      }
+
       // Call the edge function to generate the invoice
       const { data: invoiceData, error: invoiceError } = await supabase.functions.invoke('generate-invoice', {
-        body: { order_id: orderId }
+        body: { 
+          order_id: orderId,
+          bank_account_id: bankAccountId 
+        }
       });
 
       if (invoiceError) {

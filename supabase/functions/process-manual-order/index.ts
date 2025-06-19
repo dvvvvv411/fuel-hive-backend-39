@@ -9,6 +9,7 @@ const corsHeaders = {
 
 interface ProcessOrderRequest {
   order_id: string;
+  temp_order_number?: string;
 }
 
 const handler = async (req: Request): Promise<Response> => {
@@ -29,8 +30,23 @@ const handler = async (req: Request): Promise<Response> => {
   );
 
   try {
-    const { order_id }: ProcessOrderRequest = await req.json();
-    console.log('Processing manual order:', order_id);
+    const { order_id, temp_order_number }: ProcessOrderRequest = await req.json();
+    console.log('Processing manual order:', order_id, 'with temp order number:', temp_order_number);
+
+    // Update the order with temporary order number if provided
+    if (temp_order_number) {
+      const { error: updateError } = await supabase
+        .from('orders')
+        .update({ temp_order_number })
+        .eq('id', order_id);
+
+      if (updateError) {
+        console.error('Error updating order with temp order number:', updateError);
+        // Don't fail the process, just log the error
+      } else {
+        console.log('Updated order with temporary order number:', temp_order_number);
+      }
+    }
 
     // Get order details
     const { data: order, error: orderError } = await supabase
@@ -90,6 +106,7 @@ const handler = async (req: Request): Promise<Response> => {
     return new Response(JSON.stringify({
       success: true,
       order_number: order.order_number,
+      temp_order_number: temp_order_number || order.order_number,
       processing_mode: 'manual',
       email_sent: !!order.shops?.resend_configs?.resend_api_key,
       processed_at: new Date().toISOString(),
