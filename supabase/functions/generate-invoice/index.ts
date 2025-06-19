@@ -128,133 +128,244 @@ const handler = async (req: Request): Promise<Response> => {
     
     console.log(`Generating invoice in language: ${language}`);
 
-    // Generate responsive PDF
-    console.log('[LOGO] Rendering responsive logo at (20, 20)');
-    
+    // Create PDF with professional styling matching InvoicePreview
     const doc = new jsPDF();
+    const accentColor = order.shops?.accent_color || '#2563eb';
     
-    // Logo handling
+    // Convert hex color to RGB for jsPDF
+    const hexToRgb = (hex: string) => {
+      const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+      return result ? {
+        r: parseInt(result[1], 16),
+        g: parseInt(result[2], 16),
+        b: parseInt(result[3], 16)
+      } : { r: 37, g: 99, b: 235 }; // Default blue
+    };
+    
+    const accentRgb = hexToRgb(accentColor);
+
+    // Logo handling (if available)
     if (order.shops?.logo_url) {
       try {
-        console.log('[LOGO] Logo processed: format=PNG, base64=253648 chars');
-        console.log('[LOGO] PNG dimensions: 828x496');
-        console.log('[LOGO] Original dimensions: 828x496');
-        console.log('[LOGO] Calculating proportions: original 828x496, max 25.0x18.0');
-        console.log('[LOGO] Final proportions: 25.0x15.0mm with offsets (0.0, 1.5)');
-        console.log('[LOGO] Rendering at (20.00, 21.51) size 25.00x14.98');
-        console.log('[LOGO] Logo rendered successfully');
+        const logoResponse = await fetch(order.shops.logo_url);
+        if (logoResponse.ok) {
+          const logoBuffer = await logoResponse.arrayBuffer();
+          const logoBase64 = btoa(String.fromCharCode(...new Uint8Array(logoBuffer)));
+          
+          // Calculate logo dimensions (max 40x30mm)
+          const maxWidth = 40;
+          const maxHeight = 30;
+          
+          doc.addImage(`data:image/png;base64,${logoBase64}`, 'PNG', 20, 20, maxWidth, maxHeight);
+          console.log('Logo added successfully');
+        }
       } catch (logoError) {
         console.error('Error processing logo:', logoError);
       }
     }
 
-    // Text wrapping function for company names
-    const wrapText = (text: string, maxWidth: number, fontSize: number = 12): string[] => {
-      const avgCharWidth = fontSize * 0.6; // Approximate character width
-      const maxChars = Math.floor(maxWidth / avgCharWidth);
-      
-      console.log(`[WRAP] Text "${text}" (${(text.length * avgCharWidth).toFixed(1)}mm) exceeds max width ${maxWidth.toFixed(1)}mm, wrapping...`);
-      
-      const words = text.split(' ');
-      const lines: string[] = [];
-      let currentLine = '';
-      
-      for (const word of words) {
-        const testLine = currentLine ? `${currentLine} ${word}` : word;
-        if (testLine.length <= maxChars) {
-          currentLine = testLine;
-        } else {
-          if (currentLine) {
-            lines.push(currentLine);
-            currentLine = word;
-          } else {
-            lines.push(word);
-          }
-        }
-      }
-      
-      if (currentLine) {
-        lines.push(currentLine);
-      }
-      
-      console.log(`[WRAP] Wrapped into ${lines.length} lines:`, lines);
-      return lines;
-    };
-
-    // Company details with text wrapping
-    const companyLines = wrapText(order.shops?.company_name || '', 139.0, 14);
-    
-    doc.setFontSize(14);
+    // Company details section
+    doc.setTextColor(accentRgb.r, accentRgb.g, accentRgb.b);
+    doc.setFontSize(18);
     doc.setFont(undefined, 'bold');
-    companyLines.forEach((line, index) => {
-      doc.text(line, 20, 60 + (index * 6));
-    });
+    doc.text(order.shops?.company_name || '', 70, 30);
     
-    // Invoice header
-    doc.setFontSize(20);
-    doc.setFont(undefined, 'bold');
-    doc.text(t.invoice, 20, 100);
-    
-    // Invoice details
+    // Company address and details
+    doc.setTextColor(100, 100, 100);
     doc.setFontSize(10);
     doc.setFont(undefined, 'normal');
+    let yPos = 40;
     
-    const currentDate = new Date().toLocaleDateString(language === 'de' ? 'de-DE' : 'en-US');
-    const dueDate = new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toLocaleDateString(language === 'de' ? 'de-DE' : 'en-US');
+    doc.text(order.shops?.company_address || '', 70, yPos);
+    yPos += 5;
+    doc.text(`${order.shops?.company_postcode} ${order.shops?.company_city}`, 70, yPos);
+    yPos += 5;
     
-    doc.text(`${t.invoiceNumber}: ${invoiceNumber}`, 20, 115);
-    doc.text(`${t.invoiceDate}: ${currentDate}`, 20, 125);
-    doc.text(`${t.dueDate}: ${dueDate}`, 20, 135);
-    doc.text(`${t.orderNumber}: ${order.order_number}`, 20, 145);
-    
-    // Customer details
-    doc.setFont(undefined, 'bold');
-    doc.text(t.customerDetails, 20, 165);
-    doc.setFont(undefined, 'normal');
-    doc.text(order.customer_name, 20, 175);
-    doc.text(`${order.delivery_street}`, 20, 185);
-    doc.text(`${order.delivery_postcode} ${order.delivery_city}`, 20, 195);
-    
-    // Item details
-    doc.setFont(undefined, 'bold');
-    doc.text(t.description, 20, 220);
-    doc.text(t.quantity, 100, 220);
-    doc.text(t.unitPrice, 130, 220);
-    doc.text(t.total, 160, 220);
-    
-    doc.setFont(undefined, 'normal');
-    doc.text(t.heatingOilDelivery, 20, 235);
-    doc.text(`${order.liters} ${t.liters}`, 100, 235);
-    doc.text(`${order.price_per_liter.toFixed(2)} ${t.currency}`, 130, 235);
-    doc.text(`${order.total_amount.toFixed(2)} ${t.currency}`, 160, 235);
-    
-    // Totals
-    const subtotal = order.total_amount / (1 + (order.shops?.vat_rate || 19) / 100);
-    const vatAmount = order.total_amount - subtotal;
-    
-    doc.text(`${t.subtotal}: ${subtotal.toFixed(2)} ${t.currency}`, 130, 255);
-    doc.text(`${t.vat} (${order.shops?.vat_rate || 19}%): ${vatAmount.toFixed(2)} ${t.currency}`, 130, 265);
-    doc.setFont(undefined, 'bold');
-    doc.text(`${t.grandTotal}: ${order.total_amount.toFixed(2)} ${t.currency}`, 130, 275);
-    
-    // Bank details
-    doc.setFont(undefined, 'bold');
-    doc.text(t.bankDetails, 20, 295);
-    doc.setFont(undefined, 'normal');
-    doc.text(`${t.accountHolder}: ${bankAccount.account_holder}`, 20, 305);
-    doc.text(`${t.iban}: ${bankAccount.iban}`, 20, 315);
-    if (bankAccount.bic) {
-      doc.text(`${t.bic}: ${bankAccount.bic}`, 20, 325);
+    if (order.shops?.company_phone) {
+      doc.text(`${t.phone || 'Phone'}: ${order.shops.company_phone}`, 70, yPos);
+      yPos += 5;
     }
-    doc.text(`${t.paymentReference}: ${order.order_number}`, 20, 335);
     
-    console.log('Responsive PDF content created with text wrapping for company names, converting to bytes...');
+    doc.text(`${t.email || 'Email'}: ${order.shops?.company_email}`, 70, yPos);
+    yPos += 5;
+    
+    if (order.shops?.company_website) {
+      doc.text(`${t.website || 'Website'}: ${order.shops.company_website}`, 70, yPos);
+      yPos += 5;
+    }
+    
+    if (order.shops?.vat_number) {
+      doc.text(`USt-IdNr: ${order.shops.vat_number}`, 70, yPos);
+    }
+
+    // Invoice title
+    doc.setTextColor(accentRgb.r, accentRgb.g, accentRgb.b);
+    doc.setFontSize(24);
+    doc.setFont(undefined, 'bold');
+    doc.text(t.invoice, 20, 80);
+
+    // Customer address section
+    doc.setTextColor(0, 0, 0);
+    doc.setFontSize(12);
+    doc.setFont(undefined, 'bold');
+    doc.text(t.customerDetails || 'Customer Details', 20, 100);
+    
+    doc.setFont(undefined, 'normal');
+    doc.setFontSize(10);
+    doc.text(order.customer_name, 20, 110);
+    doc.text(order.delivery_street, 20, 118);
+    doc.text(`${order.delivery_postcode} ${order.delivery_city}`, 20, 126);
+
+    // Invoice details (right side)
+    const currentDate = new Date().toLocaleDateString(language === 'en' ? 'en-US' : 'de-DE');
+    const dueDate = new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toLocaleDateString(language === 'en' ? 'en-US' : 'de-DE');
+    
+    doc.setFontSize(10);
+    doc.text(`${t.invoiceDate}: ${currentDate}`, 130, 110);
+    doc.text(`${t.orderNumber}: ${order.order_number}`, 130, 118);
+    doc.text(`${t.orderDate}: ${currentDate}`, 130, 126);
+
+    // Items table header with accent color background
+    const tableTop = 150;
+    doc.setFillColor(accentRgb.r, accentRgb.g, accentRgb.b);
+    doc.rect(20, tableTop, 170, 10, 'F');
+    
+    doc.setTextColor(255, 255, 255);
+    doc.setFontSize(10);
+    doc.setFont(undefined, 'bold');
+    doc.text(t.description, 25, tableTop + 6);
+    doc.text(t.quantity, 90, tableTop + 6);
+    doc.text(t.unitPrice, 120, tableTop + 6);
+    doc.text(t.total, 160, tableTop + 6);
+
+    // Items table content
+    doc.setTextColor(0, 0, 0);
+    doc.setFont(undefined, 'normal');
+    doc.setFillColor(248, 248, 248);
+    doc.rect(20, tableTop + 10, 170, 8, 'F');
+    
+    doc.text(t.heatingOilDelivery, 25, tableTop + 16);
+    doc.text(`${order.liters} ${t.liters}`, 90, tableTop + 16);
+    doc.text(`${t.currency}${order.price_per_liter.toFixed(3)}`, 120, tableTop + 16);
+    doc.text(`${t.currency}${order.base_price.toFixed(2)}`, 160, tableTop + 16);
+
+    // Delivery fee row (if applicable)
+    let nextRowY = tableTop + 18;
+    if (order.delivery_fee > 0) {
+      doc.text(t.deliveryFee, 25, nextRowY + 8);
+      doc.text('1', 90, nextRowY + 8);
+      doc.text(`${t.currency}${order.delivery_fee.toFixed(2)}`, 120, nextRowY + 8);
+      doc.text(`${t.currency}${order.delivery_fee.toFixed(2)}`, 160, nextRowY + 8);
+      nextRowY += 10;
+    }
+
+    // Totals section
+    const totalsY = nextRowY + 20;
+    const vatRate = order.shops?.vat_rate || 19;
+    const totalWithoutVat = order.total_amount / (1 + vatRate / 100);
+    const vatAmount = order.total_amount - totalWithoutVat;
+
+    // Totals box with background
+    doc.setFillColor(248, 248, 248);
+    doc.rect(130, totalsY, 60, 30, 'F');
+    
+    doc.setFontSize(10);
+    doc.text(`${t.subtotal}: ${t.currency}${totalWithoutVat.toFixed(2)}`, 135, totalsY + 8);
+    doc.text(`${t.vat} (${vatRate}%): ${t.currency}${vatAmount.toFixed(2)}`, 135, totalsY + 16);
+    
+    doc.setFont(undefined, 'bold');
+    doc.setTextColor(accentRgb.r, accentRgb.g, accentRgb.b);
+    doc.setFontSize(12);
+    doc.text(`${t.grandTotal}: ${t.currency}${order.total_amount.toFixed(2)}`, 135, totalsY + 26);
+
+    // Payment details section
+    const paymentY = totalsY + 50;
+    doc.setTextColor(255, 255, 255);
+    doc.setFillColor(accentRgb.r, accentRgb.g, accentRgb.b);
+    doc.rect(20, paymentY, 170, 10, 'F');
+    
+    doc.setFontSize(12);
+    doc.setFont(undefined, 'bold');
+    doc.text(t.paymentDetails, 25, paymentY + 6);
+
+    // Payment details content
+    doc.setTextColor(0, 0, 0);
+    doc.setFillColor(248, 248, 248);
+    doc.rect(20, paymentY + 10, 170, 25, 'F');
+    
+    doc.setFontSize(10);
+    doc.setFont(undefined, 'normal');
+    const accountHolder = bankAccount.use_anyname ? order.shops?.name : bankAccount.account_holder;
+    doc.text(`${t.accountHolder}: ${accountHolder}`, 25, paymentY + 18);
+    doc.text(`${t.iban}: ${bankAccount.iban}`, 25, paymentY + 24);
+    
+    if (bankAccount.bic) {
+      doc.text(`${t.bic}: ${bankAccount.bic}`, 25, paymentY + 30);
+    }
+    
+    doc.text(`${t.paymentReference}: ${order.order_number}`, 25, paymentY + (bankAccount.bic ? 36 : 30));
+
+    // Footer section
+    const footerY = 250;
+    doc.setFillColor(248, 248, 248);
+    doc.rect(0, footerY, 210, 47, 'F');
+    
+    doc.setTextColor(100, 100, 100);
+    doc.setFontSize(8);
+    
+    // Four column footer
+    const colWidth = 47;
+    let colX = 10;
+    
+    // Column 1: Company
+    doc.setFont(undefined, 'bold');
+    doc.text(order.shops?.company_name || '', colX, footerY + 8);
+    doc.setFont(undefined, 'normal');
+    doc.text(order.shops?.company_address || '', colX, footerY + 13);
+    doc.text(`${order.shops?.company_postcode} ${order.shops?.company_city}`, colX, footerY + 17);
+    
+    // Column 2: Contact
+    colX += colWidth;
+    doc.setFont(undefined, 'bold');
+    doc.text('Kontakt', colX, footerY + 8);
+    doc.setFont(undefined, 'normal');
+    if (order.shops?.company_phone) {
+      doc.text(order.shops.company_phone, colX, footerY + 13);
+    }
+    doc.text(order.shops?.company_email || '', colX, footerY + 17);
+    if (order.shops?.company_website) {
+      doc.text(order.shops.company_website, colX, footerY + 21);
+    }
+    
+    // Column 3: Bank
+    colX += colWidth;
+    doc.setFont(undefined, 'bold');
+    doc.text('Bankinformationen', colX, footerY + 8);
+    doc.setFont(undefined, 'normal');
+    doc.text(accountHolder || '', colX, footerY + 13);
+    doc.text(bankAccount.iban, colX, footerY + 17);
+    if (bankAccount.bic) {
+      doc.text(bankAccount.bic, colX, footerY + 21);
+    }
+    
+    // Column 4: Business data
+    colX += colWidth;
+    doc.setFont(undefined, 'bold');
+    doc.text('Geschäftsdaten', colX, footerY + 8);
+    doc.setFont(undefined, 'normal');
+    if (order.shops?.business_owner) {
+      doc.text(order.shops.business_owner, colX, footerY + 13);
+    }
+    if (order.shops?.vat_number) {
+      doc.text(order.shops.vat_number, colX, footerY + 17);
+    }
+
+    console.log('Professional PDF generated with styled template matching InvoicePreview');
     
     const pdfOutput = doc.output('arraybuffer');
     const pdfBytes = new Uint8Array(pdfOutput);
     
-    console.log(`PDF conversion completed, size: ${pdfBytes.length} bytes`);
-    console.log(`Responsive PDF generated successfully, size: ${pdfBytes.length} bytes`);
+    console.log(`PDF generated successfully, size: ${pdfBytes.length} bytes`);
 
     // Upload PDF to Supabase Storage
     const fileName = `rechnung_${invoiceNumber}_${language}.pdf`;
