@@ -22,6 +22,8 @@ interface Shop {
   language: string;
   currency: string;
   vat_rate: number;
+  accent_color?: string;
+  support_phone?: string;
   bank_accounts?: {
     account_holder: string;
     iban: string;
@@ -74,6 +76,8 @@ export function InvoicePreview() {
           language,
           currency,
           vat_rate,
+          accent_color,
+          support_phone,
           bank_accounts(
             account_holder,
             iban,
@@ -111,7 +115,10 @@ export function InvoicePreview() {
     customerName: 'Max Mustermann',
     deliveryStreet: 'Musterstraße 123',
     deliveryPostcode: '12345',
-    deliveryCity: 'Musterstadt'
+    deliveryCity: 'Musterstadt',
+    billingStreet: 'Rechnungsstraße 456',
+    billingPostcode: '54321',
+    billingCity: 'Rechnungsstadt'
   };
 
   const vatRate = selectedShop?.vat_rate || 19;
@@ -122,6 +129,11 @@ export function InvoicePreview() {
   const currentDate = new Date();
   const dueDate = new Date();
   dueDate.setDate(dueDate.getDate() + 14);
+
+  const accentColor = selectedShop?.accent_color || '#2563eb';
+  
+  // Check if addresses are different for preview
+  const hasDifferentAddresses = sampleData.billingStreet !== sampleData.deliveryStreet;
 
   const handleGeneratePDF = async () => {
     if (!selectedShop) {
@@ -277,40 +289,64 @@ export function InvoicePreview() {
         <CardContent className="p-0">
           <div className="invoice-preview bg-white p-8 font-sans text-sm leading-relaxed" style={{ width: '210mm', minHeight: '297mm', margin: '0 auto', boxShadow: '0 0 20px rgba(0,0,0,0.1)' }}>
             
-            {/* Company Header */}
-            <div className="mb-8">
-              <h1 className="text-2xl font-bold text-blue-600 mb-3">{selectedShop.company_name}</h1>
-              <div className="text-gray-600 text-sm space-y-1">
-                <div>{selectedShop.company_address}</div>
-                <div>{selectedShop.company_postcode} {selectedShop.company_city}</div>
-                {selectedShop.company_phone && <div>Tel: {selectedShop.company_phone}</div>}
-                <div>E-Mail: {selectedShop.company_email}</div>
-                {selectedShop.company_website && <div>Web: {selectedShop.company_website}</div>}
-                {selectedShop.vat_number && <div>USt-IdNr: {selectedShop.vat_number}</div>}
+            {/* Modern Header */}
+            <div className="flex items-start mb-12">
+              {/* Logo placeholder */}
+              <div className="w-20 h-16 bg-gray-100 border-2 border-dashed border-gray-300 flex items-center justify-center mr-6">
+                <span className="text-xs text-gray-500">LOGO</span>
               </div>
-            </div>
-
-            {/* Customer Address */}
-            <div className="flex justify-between mb-12">
-              <div className="w-1/2"></div>
-              <div className="w-1/2 text-right">
-                <div className="font-medium">{sampleData.customerName}</div>
-                <div>{sampleData.deliveryStreet}</div>
-                <div>{sampleData.deliveryPostcode} {sampleData.deliveryCity}</div>
+              
+              {/* Company details */}
+              <div>
+                <h1 className="text-xl font-bold mb-2" style={{ color: accentColor }}>{selectedShop.company_name}</h1>
+                <div className="text-gray-600 text-xs space-y-1">
+                  <div>{selectedShop.company_address}</div>
+                  <div>{selectedShop.company_postcode} {selectedShop.company_city}</div>
+                  {selectedShop.company_phone && <div>{t.phone || 'Phone'}: {selectedShop.company_phone}</div>}
+                  <div>{t.email || 'Email'}: {selectedShop.company_email}</div>
+                  {selectedShop.company_website && <div>{t.website || 'Website'}: {selectedShop.company_website}</div>}
+                  {selectedShop.vat_number && <div>USt-IdNr: {selectedShop.vat_number}</div>}
+                </div>
               </div>
             </div>
 
             {/* Invoice Title */}
             <div className="mb-8">
-              <h2 className="text-3xl font-bold text-blue-600">{t.invoice}</h2>
+              <h2 className="text-3xl font-bold" style={{ color: accentColor }}>{t.invoice}</h2>
             </div>
 
-            {/* Invoice Details */}
+            {/* Two-column layout for addresses and invoice details */}
             <div className="grid grid-cols-2 gap-8 mb-8">
-              <div className="space-y-2">
+              {/* Left column - Addresses */}
+              <div className="space-y-6">
+                {/* Billing Address */}
+                {hasDifferentAddresses && (
+                  <div>
+                    <h3 className="font-medium mb-2" style={{ color: accentColor }}>{t.billingAddress}</h3>
+                    <div className="text-sm">
+                      <div className="font-medium">{sampleData.customerName}</div>
+                      <div>{sampleData.billingStreet}</div>
+                      <div>{sampleData.billingPostcode} {sampleData.billingCity}</div>
+                    </div>
+                  </div>
+                )}
+                
+                {/* Delivery Address */}
+                <div>
+                  {hasDifferentAddresses && <h3 className="font-medium mb-2" style={{ color: accentColor }}>{t.deliveryAddress}</h3>}
+                  <div className="text-sm">
+                    <div className="font-medium">{sampleData.customerName}</div>
+                    <div>{sampleData.deliveryStreet}</div>
+                    <div>{sampleData.deliveryPostcode} {sampleData.deliveryCity}</div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Right column - Invoice details */}
+              <div className="space-y-2 text-sm">
                 <div className="flex">
                   <span className="w-32 font-medium">{t.invoiceNumber}:</span>
-                  <span>{sampleData.invoiceNumber}</span>
+                  <span className="font-bold">{sampleData.invoiceNumber}</span>
                 </div>
                 <div className="flex">
                   <span className="w-32 font-medium">{t.invoiceDate}:</span>
@@ -320,43 +356,41 @@ export function InvoicePreview() {
                   <span className="w-32 font-medium">{t.dueDate}:</span>
                   <span>{dueDate.toLocaleDateString(language === 'en' ? 'en-US' : 'de-DE')}</span>
                 </div>
-              </div>
-              <div className="space-y-2">
                 <div className="flex">
-                  <span className="w-32 font-medium">{t.orderNumber || 'Order Number'}:</span>
+                  <span className="w-32 font-medium">{t.orderNumber}:</span>
                   <span>{sampleData.orderNumber}</span>
                 </div>
                 <div className="flex">
-                  <span className="w-32 font-medium">{t.orderDate || 'Order Date'}:</span>
+                  <span className="w-32 font-medium">{t.orderDate}:</span>
                   <span>{currentDate.toLocaleDateString(language === 'en' ? 'en-US' : 'de-DE')}</span>
                 </div>
               </div>
             </div>
 
-            {/* Items Table */}
+            {/* Items Table with modern styling */}
             <div className="mb-8">
               <table className="w-full border-collapse">
                 <thead>
-                  <tr className="bg-blue-600 text-white">
-                    <th className="border border-gray-300 p-3 text-left">{t.description}</th>
-                    <th className="border border-gray-300 p-3 text-center">{t.quantity}</th>
-                    <th className="border border-gray-300 p-3 text-right">{t.unitPrice}</th>
-                    <th className="border border-gray-300 p-3 text-right">{t.total}</th>
+                  <tr style={{ backgroundColor: accentColor }}>
+                    <th className="p-3 text-left text-white text-sm">{t.description}</th>
+                    <th className="p-3 text-center text-white text-sm">{t.quantity}</th>
+                    <th className="p-3 text-right text-white text-sm">{t.unitPrice}</th>
+                    <th className="p-3 text-right text-white text-sm">{t.total}</th>
                   </tr>
                 </thead>
                 <tbody>
-                  <tr>
-                    <td className="border border-gray-300 p-3">{t.heatingOilDelivery}</td>
-                    <td className="border border-gray-300 p-3 text-center">{sampleData.liters} {t.liters}</td>
-                    <td className="border border-gray-300 p-3 text-right">{t.currency}{sampleData.pricePerLiter.toFixed(3)}</td>
-                    <td className="border border-gray-300 p-3 text-right">{t.currency}{sampleData.basePrice.toFixed(2)}</td>
+                  <tr className="bg-gray-50">
+                    <td className="p-3 text-sm">{t.heatingOilDelivery}</td>
+                    <td className="p-3 text-center text-sm">{sampleData.liters} {t.liters}</td>
+                    <td className="p-3 text-right text-sm">{t.currency}{sampleData.pricePerLiter.toFixed(3)}</td>
+                    <td className="p-3 text-right text-sm">{t.currency}{sampleData.basePrice.toFixed(2)}</td>
                   </tr>
                   {sampleData.deliveryFee > 0 && (
                     <tr>
-                      <td className="border border-gray-300 p-3">{t.deliveryFee}</td>
-                      <td className="border border-gray-300 p-3 text-center">1</td>
-                      <td className="border border-gray-300 p-3 text-right">{t.currency}{sampleData.deliveryFee.toFixed(2)}</td>
-                      <td className="border border-gray-300 p-3 text-right">{t.currency}{sampleData.deliveryFee.toFixed(2)}</td>
+                      <td className="p-3 text-sm">{t.deliveryFee}</td>
+                      <td className="p-3 text-center text-sm">1</td>
+                      <td className="p-3 text-right text-sm">{t.currency}{sampleData.deliveryFee.toFixed(2)}</td>
+                      <td className="p-3 text-right text-sm">{t.currency}{sampleData.deliveryFee.toFixed(2)}</td>
                     </tr>
                   )}
                 </tbody>
@@ -365,56 +399,86 @@ export function InvoicePreview() {
 
             {/* Totals */}
             <div className="flex justify-end mb-8">
-              <div className="w-64 space-y-2">
-                <div className="flex justify-between">
+              <div className="w-64 bg-gray-50 border rounded-lg p-4 space-y-2">
+                <div className="flex justify-between text-sm">
                   <span>{t.subtotal}:</span>
                   <span>{t.currency}{totalWithoutVat.toFixed(2)}</span>
                 </div>
-                <div className="flex justify-between">
+                <div className="flex justify-between text-sm">
                   <span>{t.vat} ({vatRate}%):</span>
                   <span>{t.currency}{vatAmount.toFixed(2)}</span>
                 </div>
-                <div className="flex justify-between font-bold text-lg text-blue-600 border-t pt-2">
+                <div className="flex justify-between font-bold text-lg pt-2 border-t" style={{ color: accentColor }}>
                   <span>{t.grandTotal}:</span>
                   <span>{t.currency}{totalAmount.toFixed(2)}</span>
                 </div>
               </div>
             </div>
 
-            {/* Payment Details */}
+            {/* Payment Details Card */}
             {selectedShop.bank_accounts && (
               <div className="mb-8">
-                <h3 className="text-lg font-bold text-blue-600 mb-4">{t.paymentDetails}</h3>
-                <div className="space-y-2">
-                  <div className="flex">
-                    <span className="w-32 font-medium">{t.accountHolder}:</span>
-                    <span>{selectedShop.bank_accounts.account_holder}</span>
+                <div className="border rounded-lg overflow-hidden">
+                  <div className="p-3 text-white text-lg font-bold" style={{ backgroundColor: accentColor }}>
+                    {t.paymentDetails}
                   </div>
-                  <div className="flex">
-                    <span className="w-32 font-medium">{t.iban}:</span>
-                    <span>{selectedShop.bank_accounts.iban}</span>
-                  </div>
-                  {selectedShop.bank_accounts.bic && (
+                  <div className="bg-gray-50 p-4 space-y-2 text-sm">
                     <div className="flex">
-                      <span className="w-32 font-medium">{t.bic}:</span>
-                      <span>{selectedShop.bank_accounts.bic}</span>
+                      <span className="w-32 font-medium">{t.accountHolder}:</span>
+                      <span>{selectedShop.bank_accounts.account_holder}</span>
                     </div>
-                  )}
-                  <div className="flex">
-                    <span className="w-32 font-medium">{t.paymentReference}:</span>
-                    <span>{sampleData.invoiceNumber}</span>
-                  </div>
-                  <div className="flex">
-                    <span className="w-32 font-medium">Zahlungsziel:</span>
-                    <span>{t.dueDays}</span>
+                    <div className="flex">
+                      <span className="w-32 font-medium">{t.iban}:</span>
+                      <span>{selectedShop.bank_accounts.iban}</span>
+                    </div>
+                    {selectedShop.bank_accounts.bic && (
+                      <div className="flex">
+                        <span className="w-32 font-medium">{t.bic}:</span>
+                        <span>{selectedShop.bank_accounts.bic}</span>
+                      </div>
+                    )}
+                    <div className="flex">
+                      <span className="w-32 font-medium">{t.paymentReference}:</span>
+                      <span>{sampleData.invoiceNumber}</span>
+                    </div>
+                    <div className="flex">
+                      <span className="w-32 font-medium">{t.paymentTerm || 'Payment Term'}:</span>
+                      <span>{t.dueDays}</span>
+                    </div>
                   </div>
                 </div>
               </div>
             )}
 
-            {/* Footer */}
-            <div className="mt-12 pt-4 text-gray-600 text-center">
-              {t.thankYou}
+            {/* Modern 4-column Footer */}
+            <div className="mt-16 pt-4 bg-gray-50 -mx-8 px-8 pb-4">
+              <div className="grid grid-cols-4 gap-6 text-xs text-gray-600">
+                {/* Contact */}
+                <div>
+                  <h4 className="font-bold text-gray-800 mb-2">Kontakt</h4>
+                  <div>{selectedShop.company_email}</div>
+                  {selectedShop.support_phone && <div>{selectedShop.support_phone}</div>}
+                </div>
+                
+                {/* Legal */}
+                <div>
+                  <h4 className="font-bold text-gray-800 mb-2">Rechtliches</h4>
+                  {selectedShop.vat_number && <div>USt-IdNr: {selectedShop.vat_number}</div>}
+                </div>
+                
+                {/* Registration */}
+                <div>
+                  <h4 className="font-bold text-gray-800 mb-2">Registrierung</h4>
+                  <div className="text-xs">Registration details</div>
+                </div>
+                
+                {/* Thank you */}
+                <div>
+                  <div className="font-bold text-right" style={{ color: accentColor }}>
+                    {t.thankYou}
+                  </div>
+                </div>
+              </div>
             </div>
 
           </div>
