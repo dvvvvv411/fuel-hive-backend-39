@@ -40,6 +40,19 @@ export interface EmailTranslations {
   deliveryFee: string;
   totalAmount: string;
   
+  // Contact text
+  contactText: string;
+  invoiceContactText: string;
+  
+  // VAT label
+  vatLabel: string;
+  
+  // Unit labels
+  liters: string;
+  
+  // Invoice filename
+  invoiceFilename: string;
+  
   // Product translations
   products: {
     [key: string]: string;
@@ -82,6 +95,15 @@ const translations: { [key: string]: EmailTranslations } = {
     pricePerLiter: "Preis pro Liter:",
     deliveryFee: "Liefergebühr:",
     totalAmount: "Gesamtbetrag:",
+    
+    contactText: "Bei Fragen kontaktieren Sie uns gerne unter",
+    invoiceContactText: "Bei Fragen zu Ihrer Rechnung kontaktieren Sie uns gerne unter",
+    
+    vatLabel: "USt-IdNr:",
+    
+    liters: "Liter",
+    
+    invoiceFilename: "Rechnung",
     
     products: {
       'heating_oil': 'Heizöl',
@@ -131,6 +153,15 @@ const translations: { [key: string]: EmailTranslations } = {
     deliveryFee: "Delivery Fee:",
     totalAmount: "Total Amount:",
     
+    contactText: "If you have any questions, please contact us at",
+    invoiceContactText: "If you have any questions about your invoice, please contact us at",
+    
+    vatLabel: "VAT ID:",
+    
+    liters: "Liters",
+    
+    invoiceFilename: "Invoice",
+    
     products: {
       'heating_oil': 'Heating Oil',
       'diesel': 'Diesel',
@@ -178,6 +209,15 @@ const translations: { [key: string]: EmailTranslations } = {
     pricePerLiter: "Prix par litre :",
     deliveryFee: "Frais de livraison :",
     totalAmount: "Montant total :",
+    
+    contactText: "Pour toute question, contactez-nous à",
+    invoiceContactText: "Pour toute question concernant votre facture, contactez-nous à",
+    
+    vatLabel: "N° TVA :",
+    
+    liters: "Litres",
+    
+    invoiceFilename: "Facture",
     
     products: {
       'heating_oil': 'Fioul domestique',
@@ -227,6 +267,15 @@ const translations: { [key: string]: EmailTranslations } = {
     deliveryFee: "Spese di consegna:",
     totalAmount: "Importo totale:",
     
+    contactText: "Per domande, contattaci a",
+    invoiceContactText: "Per domande sulla tua fattura, contattaci a",
+    
+    vatLabel: "P.IVA:",
+    
+    liters: "Litri",
+    
+    invoiceFilename: "Fattura",
+    
     products: {
       'heating_oil': 'Gasolio da riscaldamento',
       'diesel': 'Diesel',
@@ -274,6 +323,15 @@ const translations: { [key: string]: EmailTranslations } = {
     pricePerLiter: "Precio por litro:",
     deliveryFee: "Gastos de envío:",
     totalAmount: "Importe total:",
+    
+    contactText: "Para preguntas, contáctanos en",
+    invoiceContactText: "Para preguntas sobre tu factura, contáctanos en",
+    
+    vatLabel: "CIF:",
+    
+    liters: "Litros",
+    
+    invoiceFilename: "Factura",
     
     products: {
       'heating_oil': 'Gasóleo de calefacción',
@@ -323,6 +381,15 @@ const translations: { [key: string]: EmailTranslations } = {
     deliveryFee: "Opłata za dostawę:",
     totalAmount: "Kwota całkowita:",
     
+    contactText: "W przypadku pytań skontaktuj się z nami pod adresem",
+    invoiceContactText: "W przypadku pytań dotyczących faktury skontaktuj się z nami pod adresem",
+    
+    vatLabel: "NIP:",
+    
+    liters: "Litrów",
+    
+    invoiceFilename: "Faktura",
+    
     products: {
       'heating_oil': 'Olej opałowy',
       'diesel': 'Diesel',
@@ -370,6 +437,15 @@ const translations: { [key: string]: EmailTranslations } = {
     pricePerLiter: "Prijs per liter:",
     deliveryFee: "Bezorgkosten:",
     totalAmount: "Totaalbedrag:",
+    
+    contactText: "Voor vragen kunt u contact met ons opnemen via",
+    invoiceContactText: "Voor vragen over uw factuur kunt u contact met ons opnemen via",
+    
+    vatLabel: "BTW-nr:",
+    
+    liters: "Liter",
+    
+    invoiceFilename: "Factuur",
     
     products: {
       'heating_oil': 'Stookolie',

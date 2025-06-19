@@ -1,4 +1,3 @@
-
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { Resend } from "npm:resend@2.0.0";
@@ -101,7 +100,7 @@ const generateConfirmationEmailTemplate = (order: any, language: string = 'de') 
                           </tr>
                           <tr>
                             <td style="padding: 8px 0; color: #6b7280; font-size: 15px; font-weight: 600;">${t.quantity}</td>
-                            <td style="padding: 8px 0; color: #111827; font-size: 15px; font-weight: 700;">${order.liters} ${language === 'en' ? 'Liters' : 'Liter'}</td>
+                            <td style="padding: 8px 0; color: #111827; font-size: 15px; font-weight: 700;">${order.liters} ${t.liters}</td>
                           </tr>
                           <tr>
                             <td style="padding: 8px 0; color: #6b7280; font-size: 15px; font-weight: 600;">${t.pricePerLiter}</td>
@@ -153,7 +152,7 @@ const generateConfirmationEmailTemplate = (order: any, language: string = 'de') 
                   </table>
 
                   <p style="margin: 0 0 16px 0; color: #374151; font-size: 16px; line-height: 1.6;">
-                    ${language === 'de' ? 'Bei Fragen kontaktieren Sie uns gerne unter' : language === 'en' ? 'If you have any questions, please contact us at' : language === 'fr' ? 'Pour toute question, contactez-nous à' : language === 'it' ? 'Per domande, contattaci a' : language === 'es' ? 'Para preguntas, contáctanos en' : language === 'pl' ? 'W przypadku pytań skontaktuj się z nami pod adresem' : 'Voor vragen kunt u contact met ons opnemen via'} ${order.shops?.company_email}.
+                    ${t.contactText} ${order.shops?.company_email}.
                   </p>
 
                   <p style="margin: 32px 0 0 0; color: #374151; font-size: 16px; line-height: 1.6; text-align: center;">
@@ -173,7 +172,7 @@ const generateConfirmationEmailTemplate = (order: any, language: string = 'de') 
                     <div>
                       ${order.shops?.company_address || ''} • ${order.shops?.company_postcode || ''} ${order.shops?.company_city || ''}
                     </div>
-                    ${order.shops?.vat_number ? `<div style="margin-top: 8px;">${language === 'de' ? 'USt-IdNr:' : language === 'en' ? 'VAT ID:' : language === 'fr' ? 'N° TVA:' : language === 'it' ? 'P.IVA:' : language === 'es' ? 'CIF:' : language === 'pl' ? 'NIP:' : 'BTW-nr:'} ${order.shops.vat_number}</div>` : ''}
+                    ${order.shops?.vat_number ? `<div style="margin-top: 8px;">${t.vatLabel} ${order.shops.vat_number}</div>` : ''}
                   </div>
                 </td>
               </tr>
@@ -327,7 +326,7 @@ const generateInvoiceEmailTemplate = (order: any, bankData: any, language: strin
                           </tr>
                           <tr>
                             <td style="padding: 8px 0; color: #6b7280; font-size: 15px; font-weight: 600;">${t.quantity}</td>
-                            <td style="padding: 8px 0; color: #111827; font-size: 15px; font-weight: 700;">${order.liters} ${language === 'en' ? 'Liters' : 'Liter'}</td>
+                            <td style="padding: 8px 0; color: #111827; font-size: 15px; font-weight: 700;">${order.liters} ${t.liters}</td>
                           </tr>
                           <tr style="border-top: 2px solid ${accentColor};">
                             <td style="padding: 16px 0 8px 0; color: ${accentColor}; font-size: 18px; font-weight: 700;">${t.invoiceAmount}</td>
@@ -350,7 +349,7 @@ const generateInvoiceEmailTemplate = (order: any, bankData: any, language: strin
                   </table>
 
                   <p style="margin: 0 0 16px 0; color: #374151; font-size: 16px; line-height: 1.6;">
-                    ${language === 'de' ? 'Bei Fragen zu Ihrer Rechnung kontaktieren Sie uns gerne unter' : language === 'en' ? 'If you have any questions about your invoice, please contact us at' : language === 'fr' ? 'Pour toute question concernant votre facture, contactez-nous à' : language === 'it' ? 'Per domande sulla tua fattura, contattaci a' : language === 'es' ? 'Para preguntas sobre tu factura, contáctanos en' : language === 'pl' ? 'W przypadku pytań dotyczących faktury skontaktuj się z nami pod adresem' : 'Voor vragen over uw factuur kunt u contact met ons opnemen via'} ${order.shops?.company_email}.
+                    ${t.invoiceContactText} ${order.shops?.company_email}.
                   </p>
 
                   <p style="margin: 32px 0 0 0; color: #374151; font-size: 16px; line-height: 1.6; text-align: center;">
@@ -370,7 +369,7 @@ const generateInvoiceEmailTemplate = (order: any, bankData: any, language: strin
                     <div>
                       ${order.shops?.company_address || ''} • ${order.shops?.company_postcode || ''} ${order.shops?.company_city || ''}
                     </div>
-                    ${order.shops?.vat_number ? `<div style="margin-top: 8px;">${language === 'de' ? 'USt-IdNr:' : language === 'en' ? 'VAT ID:' : language === 'fr' ? 'N° TVA:' : language === 'it' ? 'P.IVA:' : language === 'es' ? 'CIF:' : language === 'pl' ? 'NIP:' : 'BTW-nr:'} ${order.shops.vat_number}</div>` : ''}
+                    ${order.shops?.vat_number ? `<div style="margin-top: 8px;">${t.vatLabel} ${order.shops.vat_number}</div>` : ''}
                   </div>
                 </td>
               </tr>
@@ -510,8 +509,9 @@ const handler = async (req: Request): Promise<Response> => {
           const arrayBuffer = await pdfData.arrayBuffer();
           const base64 = btoa(String.fromCharCode(...new Uint8Array(arrayBuffer)));
 
+          const t = getTranslations(language);
           emailPayload.attachments = [{
-            filename: `${language === 'de' ? 'Rechnung' : language === 'en' ? 'Invoice' : language === 'fr' ? 'Facture' : language === 'it' ? 'Fattura' : language === 'es' ? 'Factura' : language === 'pl' ? 'Faktura' : 'Factuur'}-${order.order_number}.pdf`,
+            filename: `${t.invoiceFilename}-${order.order_number}.pdf`,
             content: base64,
             content_type: 'application/pdf',
           }];
