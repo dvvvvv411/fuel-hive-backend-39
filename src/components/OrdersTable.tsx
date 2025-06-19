@@ -810,7 +810,6 @@ export function OrdersTable() {
           onOpenChange={setShowBankAccountDialog}
           onBankAccountSelected={handleBankAccountSelected}
           orderNumber={selectedOrderForInvoice.order_number}
-          orderId={selectedOrderForInvoice.id}
         />
       )}
 
