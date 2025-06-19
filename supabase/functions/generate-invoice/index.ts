@@ -926,7 +926,7 @@ async function generateInvoicePDF(order: any, invoiceNumber: string, t: any, cur
       // Removed payment term
     }
     
-    // FOOTER - 4 columns with modern styling
+    // FOOTER - 4 columns with updated information
     const footerY = pageHeight - 35;
     
     // Footer background stripe
@@ -942,43 +942,53 @@ async function generateInvoicePDF(order: any, invoiceNumber: string, t: any, cur
     doc.setFontSize(8);
     doc.setTextColor(80, 80, 80);
     
-    // Column 1: Contact
+    // Column 1: Company name and address
     doc.setFont("helvetica", "bold");
-    doc.text('Kontakt', col1X, footerY);
+    doc.text(order.shops.company_name, col1X, footerY);
     doc.setFont("helvetica", "normal");
-    doc.text(order.shops.company_email, col1X, footerY + 4);
-    if (order.shops.support_phone) {
-      doc.text(order.shops.support_phone, col1X, footerY + 8);
+    doc.text(order.shops.company_address, col1X, footerY + 4);
+    doc.text(`${order.shops.company_postcode} ${order.shops.company_city}`, col1X, footerY + 8);
+    
+    // Column 2: Contact information
+    doc.setFont("helvetica", "bold");
+    doc.text('Kontakt', col2X, footerY);
+    doc.setFont("helvetica", "normal");
+    if (order.shops.company_phone) {
+      doc.text(`Tel.: ${order.shops.company_phone}`, col2X, footerY + 4);
+    }
+    doc.text(`Email: ${order.shops.company_email}`, col2X, footerY + 8);
+    if (order.shops.company_website) {
+      doc.text(`Website: ${order.shops.company_website}`, col2X, footerY + 12);
     }
     
-    // Column 2: Legal
+    // Column 3: Bank information
+    if (order.shops.bank_accounts) {
+      doc.setFont("helvetica", "bold");
+      doc.text('Bankinformationen', col3X, footerY);
+      doc.setFont("helvetica", "normal");
+      
+      // Use shop name if use_anyname is enabled, otherwise use account holder
+      const accountHolderName = order.shops.bank_accounts.use_anyname 
+        ? order.shops.name 
+        : order.shops.bank_accounts.account_holder;
+      
+      doc.text(`Kontoinhaber: ${accountHolderName}`, col3X, footerY + 4);
+      doc.text(`IBAN: ${order.shops.bank_accounts.iban}`, col3X, footerY + 8);
+      if (order.shops.bank_accounts.bic) {
+        doc.text(`BIC: ${order.shops.bank_accounts.bic}`, col3X, footerY + 12);
+      }
+    }
+    
+    // Column 4: Business owner and VAT ID
     doc.setFont("helvetica", "bold");
-    doc.text('Rechtliches', col2X, footerY);
+    doc.text('Geschäftsdaten', col4X, footerY);
     doc.setFont("helvetica", "normal");
     if (order.shops.business_owner) {
-      doc.text(`Inhaber: ${order.shops.business_owner}`, col2X, footerY + 4);
+      doc.text(`Geschäftsinhaber: ${order.shops.business_owner}`, col4X, footerY + 4);
     }
     if (order.shops.vat_number) {
-      doc.text(`USt-IdNr: ${order.shops.vat_number}`, col2X, footerY + 8);
+      doc.text(`USt-IdNr: ${order.shops.vat_number}`, col4X, footerY + 8);
     }
-    
-    // Column 3: Registration
-    if (order.shops.court_name || order.shops.registration_number) {
-      doc.setFont("helvetica", "bold");
-      doc.text('Registrierung', col3X, footerY);
-      doc.setFont("helvetica", "normal");
-      if (order.shops.court_name) {
-        doc.text(order.shops.court_name, col3X, footerY + 4);
-      }
-      if (order.shops.registration_number) {
-        doc.text(`Nr: ${order.shops.registration_number}`, col3X, footerY + 8);
-      }
-    }
-    
-    // Column 4: Thank you message
-    doc.setFont("helvetica", "bold");
-    doc.setTextColor(rgb.r, rgb.g, rgb.b);
-    doc.text(t.thankYou, col4X, footerY + 4);
     
     console.log('PDF content created with logo support and language', language, ', converting to bytes...');
     

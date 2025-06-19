@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -19,6 +18,7 @@ interface Shop {
   company_email: string;
   company_website?: string;
   vat_number?: string;
+  business_owner?: string;
   language: string;
   currency: string;
   vat_rate: number;
@@ -83,6 +83,7 @@ export function InvoicePreview() {
           company_email,
           company_website,
           vat_number,
+          business_owner,
           language,
           currency,
           vat_rate,
@@ -491,30 +492,38 @@ export function InvoicePreview() {
             {/* Modern 4-column Footer */}
             <div className="mt-16 pt-4 bg-gray-50 -mx-8 px-8 pb-4">
               <div className="grid grid-cols-4 gap-6 text-xs text-gray-600">
-                {/* Contact */}
+                {/* Column 1: Company name and address */}
+                <div>
+                  <h4 className="font-bold text-gray-800 mb-2">{selectedShop.company_name}</h4>
+                  <div>{selectedShop.company_address}</div>
+                  <div>{selectedShop.company_postcode} {selectedShop.company_city}</div>
+                </div>
+                
+                {/* Column 2: Contact information */}
                 <div>
                   <h4 className="font-bold text-gray-800 mb-2">Kontakt</h4>
-                  <div>{selectedShop.company_email}</div>
-                  {selectedShop.support_phone && <div>{selectedShop.support_phone}</div>}
+                  {selectedShop.company_phone && <div>Tel.: {selectedShop.company_phone}</div>}
+                  <div>Email: {selectedShop.company_email}</div>
+                  {selectedShop.company_website && <div>Website: {selectedShop.company_website}</div>}
                 </div>
                 
-                {/* Legal */}
+                {/* Column 3: Bank information */}
                 <div>
-                  <h4 className="font-bold text-gray-800 mb-2">Rechtliches</h4>
+                  <h4 className="font-bold text-gray-800 mb-2">Bankinformationen</h4>
+                  {selectedShop.bank_accounts && (
+                    <>
+                      <div>Kontoinhaber: {selectedShop.bank_accounts.use_anyname ? selectedShop.name : selectedShop.bank_accounts.account_holder}</div>
+                      <div>IBAN: {selectedShop.bank_accounts.iban}</div>
+                      {selectedShop.bank_accounts.bic && <div>BIC: {selectedShop.bank_accounts.bic}</div>}
+                    </>
+                  )}
+                </div>
+                
+                {/* Column 4: Business owner and VAT ID */}
+                <div>
+                  <h4 className="font-bold text-gray-800 mb-2">Geschäftsdaten</h4>
+                  {selectedShop.business_owner && <div>Geschäftsinhaber: {selectedShop.business_owner}</div>}
                   {selectedShop.vat_number && <div>USt-IdNr: {selectedShop.vat_number}</div>}
-                </div>
-                
-                {/* Registration */}
-                <div>
-                  <h4 className="font-bold text-gray-800 mb-2">Registrierung</h4>
-                  <div className="text-xs">Registration details</div>
-                </div>
-                
-                {/* Thank you */}
-                <div>
-                  <div className="font-bold text-right" style={{ color: accentColor }}>
-                    {t.thankYou}
-                  </div>
                 </div>
               </div>
             </div>
