@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -7,7 +8,7 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Pagination, PaginationContent, PaginationItem, PaginationLink, PaginationNext, PaginationPrevious } from '@/components/ui/pagination';
-import { Search, Filter, FileText, Eye, Download, DollarSign } from 'lucide-react';
+import { Search, Filter, FileText, Eye, Download, DollarSign, Check } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import { OrderDetailsDialog } from './OrderDetailsDialog';
 import { BankAccountSelectionDialog } from './BankAccountSelectionDialog';
@@ -203,6 +204,10 @@ export function OrdersTable() {
 
   const markAsPaid = async (orderId: string) => {
     await updateOrderStatus(orderId, 'paid');
+  };
+
+  const markAsExchanged = async (orderId: string) => {
+    await updateOrderStatus(orderId, 'confirmed');
   };
 
   const generateInvoice = async (orderId: string, bankAccountId?: string) => {
@@ -499,6 +504,16 @@ export function OrdersTable() {
                                 className="bg-green-600 hover:bg-green-700 text-white"
                               >
                                 <DollarSign className="h-4 w-4" />
+                              </Button>
+                            )}
+
+                            {order.status === 'paid' && (
+                              <Button
+                                size="sm"
+                                onClick={() => markAsExchanged(order.id)}
+                                className="bg-green-600 hover:bg-green-700 text-white"
+                              >
+                                <Check className="h-4 w-4" />
                               </Button>
                             )}
                             
