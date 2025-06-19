@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import {
@@ -27,6 +26,7 @@ import {
   DollarSign
 } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
+import { PDFViewerDialog } from './PDFViewerDialog';
 
 interface Order {
   id: string;
@@ -75,6 +75,7 @@ interface OrderDetailsDialogProps {
 
 export function OrderDetailsDialog({ order, open, onOpenChange, onOrderUpdate }: OrderDetailsDialogProps) {
   const [updating, setUpdating] = useState(false);
+  const [showPDFViewer, setShowPDFViewer] = useState(false);
 
   const updateOrderStatus = async (newStatus: string) => {
     try {
@@ -261,361 +262,373 @@ export function OrderDetailsDialog({ order, open, onOpenChange, onOrderUpdate }:
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <FileText className="h-5 w-5" />
-            Bestellung #{order.order_number}
-          </DialogTitle>
-          <DialogDescription>
-            Detailansicht der Bestellung vom {new Date(order.created_at).toLocaleDateString('de-DE')}
-          </DialogDescription>
-        </DialogHeader>
+    <>
+      <Dialog open={open} onOpenChange={onOpenChange}>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <FileText className="h-5 w-5" />
+              Bestellung #{order.order_number}
+            </DialogTitle>
+            <DialogDescription>
+              Detailansicht der Bestellung vom {new Date(order.created_at).toLocaleDateString('de-DE')}
+            </DialogDescription>
+          </DialogHeader>
 
-        <div className="grid gap-6">
-          {/* Status and Actions */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-lg">Status & Aktionen</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-4">
-                  <span className="font-medium">Aktueller Status:</span>
-                  <Badge className={getStatusColor(order.status)}>
-                    {getStatusLabel(order.status)}
-                  </Badge>
-                </div>
-                
-                <div className="flex gap-2 flex-wrap">
-                  {order.status === 'pending' && (
-                    <>
-                      <Button 
-                        variant="outline"
-                        onClick={sendOrderReceiptEmail} 
-                        disabled={updating}
-                        size="sm"
-                      >
-                        <Mail className="h-4 w-4 mr-2" />
-                        Eingangsbestätigung senden
-                      </Button>
-                      <Button onClick={generateInvoice} disabled={updating} size="sm">
-                        <FileText className="h-4 w-4 mr-2" />
-                        Rechnung erstellen
-                      </Button>
-                    </>
-                  )}
+          <div className="grid gap-6">
+            {/* Status and Actions */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-lg">Status & Aktionen</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-4">
+                    <span className="font-medium">Aktueller Status:</span>
+                    <Badge className={getStatusColor(order.status)}>
+                      {getStatusLabel(order.status)}
+                    </Badge>
+                  </div>
                   
-                  {order.status === 'confirmed' && (
-                    <Button onClick={sendInvoice} disabled={updating} size="sm">
-                      <Send className="h-4 w-4 mr-2" />
-                      Rechnung versenden
-                    </Button>
-                  )}
-
-                  {order.status === 'invoice_sent' && (
-                    <>
-                      <Button 
-                        variant="outline"
-                        onClick={() => sendOrderConfirmationEmail('instant_confirmation', true)} 
-                        disabled={updating || !order.invoice_pdf_generated}
-                        size="sm"
-                      >
+                  <div className="flex gap-2 flex-wrap">
+                    {order.status === 'pending' && (
+                      <>
+                        <Button 
+                          variant="outline"
+                          onClick={sendOrderReceiptEmail} 
+                          disabled={updating}
+                          size="sm"
+                        >
+                          <Mail className="h-4 w-4 mr-2" />
+                          Eingangsbestätigung senden
+                        </Button>
+                        <Button onClick={generateInvoice} disabled={updating} size="sm">
+                          <FileText className="h-4 w-4 mr-2" />
+                          Rechnung erstellen
+                        </Button>
+                      </>
+                    )}
+                    
+                    {order.status === 'confirmed' && (
+                      <Button onClick={sendInvoice} disabled={updating} size="sm">
                         <Send className="h-4 w-4 mr-2" />
-                        Rechnung erneut senden
+                        Rechnung versenden
                       </Button>
-                      <Button 
-                        onClick={markAsPaid} 
-                        disabled={updating}
-                        className="bg-green-600 hover:bg-green-700 text-white"
+                    )}
+
+                    {order.status === 'invoice_sent' && (
+                      <>
+                        <Button 
+                          variant="outline"
+                          onClick={() => sendOrderConfirmationEmail('instant_confirmation', true)} 
+                          disabled={updating || !order.invoice_pdf_generated}
+                          size="sm"
+                        >
+                          <Send className="h-4 w-4 mr-2" />
+                          Rechnung erneut senden
+                        </Button>
+                        <Button 
+                          onClick={markAsPaid} 
+                          disabled={updating}
+                          className="bg-green-600 hover:bg-green-700 text-white"
+                          size="sm"
+                        >
+                          <DollarSign className="h-4 w-4 mr-2" />
+                          Als bezahlt markieren
+                        </Button>
+                      </>
+                    )}
+                    
+                    {order.invoice_pdf_url && (
+                      <Button
+                        variant="outline"
+                        onClick={() => setShowPDFViewer(true)}
                         size="sm"
                       >
-                        <DollarSign className="h-4 w-4 mr-2" />
-                        Als bezahlt markieren
+                        <Download className="h-4 w-4 mr-2" />
+                        PDF anzeigen
                       </Button>
-                    </>
-                  )}
+                    )}
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-4">
+                  <span className="font-medium">Status ändern:</span>
+                  <Select value={order.status} onValueChange={updateOrderStatus} disabled={updating}>
+                    <SelectTrigger className="w-48">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="pending">Neu</SelectItem>
+                      <SelectItem value="confirmed">Bestätigt</SelectItem>
+                      <SelectItem value="invoice_sent">Rechnung versendet</SelectItem>
+                      <SelectItem value="paid">Bezahlt</SelectItem>
+                      <SelectItem value="cancelled">Storniert</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Email Actions */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Mail className="h-4 w-4" />
+                  E-Mail-Aktionen
+                </CardTitle>
+                <CardDescription>
+                  Versenden Sie E-Mails an den Kunden für verschiedene Bestellstatus
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  <Button 
+                    variant="outline" 
+                    onClick={sendOrderReceiptEmail} 
+                    disabled={updating}
+                    className="w-full"
+                  >
+                    <Mail className="h-4 w-4 mr-2" />
+                    Bestelleingang bestätigen
+                  </Button>
                   
-                  {order.invoice_pdf_url && (
-                    <Button
-                      variant="outline"
-                      onClick={() => window.open(order.invoice_pdf_url!, '_blank')}
-                      size="sm"
-                    >
-                      <Download className="h-4 w-4 mr-2" />
-                      PDF herunterladen
-                    </Button>
-                  )}
+                  <Button 
+                    variant="outline" 
+                    onClick={() => sendOrderConfirmationEmail('instant_confirmation', order.invoice_pdf_generated)} 
+                    disabled={updating || !order.invoice_pdf_generated}
+                    className="w-full"
+                  >
+                    <Send className="h-4 w-4 mr-2" />
+                    Bestellbestätigung mit Rechnung
+                  </Button>
                 </div>
-              </div>
-
-              <div className="flex items-center gap-4">
-                <span className="font-medium">Status ändern:</span>
-                <Select value={order.status} onValueChange={updateOrderStatus} disabled={updating}>
-                  <SelectTrigger className="w-48">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="pending">Neu</SelectItem>
-                    <SelectItem value="confirmed">Bestätigt</SelectItem>
-                    <SelectItem value="invoice_sent">Rechnung versendet</SelectItem>
-                    <SelectItem value="paid">Bezahlt</SelectItem>
-                    <SelectItem value="cancelled">Storniert</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Email Actions */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Mail className="h-4 w-4" />
-                E-Mail-Aktionen
-              </CardTitle>
-              <CardDescription>
-                Versenden Sie E-Mails an den Kunden für verschiedene Bestellstatus
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                <Button 
-                  variant="outline" 
-                  onClick={sendOrderReceiptEmail} 
-                  disabled={updating}
-                  className="w-full"
-                >
-                  <Mail className="h-4 w-4 mr-2" />
-                  Bestelleingang bestätigen
-                </Button>
                 
-                <Button 
-                  variant="outline" 
-                  onClick={() => sendOrderConfirmationEmail('instant_confirmation', order.invoice_pdf_generated)} 
-                  disabled={updating || !order.invoice_pdf_generated}
-                  className="w-full"
-                >
-                  <Send className="h-4 w-4 mr-2" />
-                  Bestellbestätigung mit Rechnung
-                </Button>
-              </div>
-              
-              <p className="text-sm text-gray-600">
-                E-Mails werden an <strong>{order.customer_email}</strong> gesendet
-              </p>
-            </CardContent>
-          </Card>
-
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {/* Customer Information */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <User className="h-4 w-4" />
-                  Kundeninformationen
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                <div className="flex items-center gap-2">
-                  <User className="h-4 w-4 text-gray-500" />
-                  <span className="font-medium">{order.customer_name}</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Mail className="h-4 w-4 text-gray-500" />
-                  <span>{order.customer_email}</span>
-                </div>
-                {order.customer_phone && (
-                  <div className="flex items-center gap-2">
-                    <Phone className="h-4 w-4 text-gray-500" />
-                    <span>{order.customer_phone}</span>
-                  </div>
-                )}
-                {order.customer_address && (
-                  <div className="flex items-center gap-2">
-                    <MapPin className="h-4 w-4 text-gray-500" />
-                    <span>{order.customer_address}</span>
-                  </div>
-                )}
+                <p className="text-sm text-gray-600">
+                  E-Mails werden an <strong>{order.customer_email}</strong> gesendet
+                </p>
               </CardContent>
             </Card>
 
-            {/* Order Information */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Package className="h-4 w-4" />
-                  Bestellinformationen
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                <div className="flex justify-between">
-                  <span className="text-gray-500">Shop:</span>
-                  <span className="font-medium">{order.shops?.name}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-500">Produkt:</span>
-                  <span className="font-medium">{order.product}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-500">Menge:</span>
-                  <span className="font-medium">{order.liters} L</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-500">Preis pro Liter:</span>
-                  <span className="font-medium">€{order.price_per_liter.toFixed(2)}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-500">Liefergebühr:</span>
-                  <span className="font-medium">€{order.delivery_fee.toFixed(2)}</span>
-                </div>
-                <Separator />
-                <div className="flex justify-between text-lg font-semibold">
-                  <span>Gesamtbetrag:</span>
-                  <span>€{order.total_amount.toFixed(2)}</span>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-
-          {/* Delivery Address */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <MapPin className="h-4 w-4" />
-                Lieferadresse
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-2">
-                <div className="font-medium">
-                  {order.delivery_first_name} {order.delivery_last_name}
-                </div>
-                <div>{order.delivery_street}</div>
-                <div>
-                  {order.delivery_postcode} {order.delivery_city}
-                </div>
-                {order.delivery_phone && (
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              {/* Customer Information */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <User className="h-4 w-4" />
+                    Kundeninformationen
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-3">
                   <div className="flex items-center gap-2">
-                    <Phone className="h-4 w-4 text-gray-500" />
-                    <span>{order.delivery_phone}</span>
+                    <User className="h-4 w-4 text-gray-500" />
+                    <span className="font-medium">{order.customer_name}</span>
                   </div>
-                )}
-              </div>
-            </CardContent>
-          </Card>
+                  <div className="flex items-center gap-2">
+                    <Mail className="h-4 w-4 text-gray-500" />
+                    <span>{order.customer_email}</span>
+                  </div>
+                  {order.customer_phone && (
+                    <div className="flex items-center gap-2">
+                      <Phone className="h-4 w-4 text-gray-500" />
+                      <span>{order.customer_phone}</span>
+                    </div>
+                  )}
+                  {order.customer_address && (
+                    <div className="flex items-center gap-2">
+                      <MapPin className="h-4 w-4 text-gray-500" />
+                      <span>{order.customer_address}</span>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
 
-          {/* Billing Address (if different) */}
-          {!order.use_same_address && order.billing_street && (
+              {/* Order Information */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Package className="h-4 w-4" />
+                    Bestellinformationen
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  <div className="flex justify-between">
+                    <span className="text-gray-500">Shop:</span>
+                    <span className="font-medium">{order.shops?.name}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-500">Produkt:</span>
+                    <span className="font-medium">{order.product}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-500">Menge:</span>
+                    <span className="font-medium">{order.liters} L</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-500">Preis pro Liter:</span>
+                    <span className="font-medium">€{order.price_per_liter.toFixed(2)}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-500">Liefergebühr:</span>
+                    <span className="font-medium">€{order.delivery_fee.toFixed(2)}</span>
+                  </div>
+                  <Separator />
+                  <div className="flex justify-between text-lg font-semibold">
+                    <span>Gesamtbetrag:</span>
+                    <span>€{order.total_amount.toFixed(2)}</span>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+
+            {/* Delivery Address */}
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
-                  <FileText className="h-4 w-4" />
-                  Rechnungsadresse
+                  <MapPin className="h-4 w-4" />
+                  Lieferadresse
                 </CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="space-y-2">
                   <div className="font-medium">
-                    {order.billing_first_name} {order.billing_last_name}
+                    {order.delivery_first_name} {order.delivery_last_name}
                   </div>
-                  <div>{order.billing_street}</div>
+                  <div>{order.delivery_street}</div>
                   <div>
-                    {order.billing_postcode} {order.billing_city}
+                    {order.delivery_postcode} {order.delivery_city}
                   </div>
+                  {order.delivery_phone && (
+                    <div className="flex items-center gap-2">
+                      <Phone className="h-4 w-4 text-gray-500" />
+                      <span>{order.delivery_phone}</span>
+                    </div>
+                  )}
                 </div>
               </CardContent>
             </Card>
-          )}
 
-          {/* Payment and Invoice Information */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {/* Billing Address (if different) */}
+            {!order.use_same_address && order.billing_street && (
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <FileText className="h-4 w-4" />
+                    Rechnungsadresse
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-2">
+                    <div className="font-medium">
+                      {order.billing_first_name} {order.billing_last_name}
+                    </div>
+                    <div>{order.billing_street}</div>
+                    <div>
+                      {order.billing_postcode} {order.billing_city}
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Payment and Invoice Information */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <CreditCard className="h-4 w-4" />
+                    Zahlungsinformationen
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="flex justify-between">
+                    <span className="text-gray-500">Zahlungsmethode:</span>
+                    <span className="font-medium">{order.payment_method}</span>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <FileText className="h-4 w-4" />
+                    Rechnungsinformationen
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  {order.invoice_number && (
+                    <div className="flex justify-between">
+                      <span className="text-gray-500">Rechnungsnummer:</span>
+                      <span className="font-medium">{order.invoice_number}</span>
+                    </div>
+                  )}
+                  
+                  <div className="flex justify-between">
+                    <span className="text-gray-500">PDF Status:</span>
+                    <Badge variant={order.invoice_pdf_generated ? "default" : "outline"}>
+                      {order.invoice_pdf_generated ? "Erstellt" : "Nicht erstellt"}
+                    </Badge>
+                  </div>
+                  
+                  <div className="flex justify-between">
+                    <span className="text-gray-500">Versendet:</span>
+                    <Badge variant={order.invoice_sent ? "default" : "outline"}>
+                      {order.invoice_sent ? "Ja" : "Nein"}
+                    </Badge>
+                  </div>
+
+                  {order.invoice_date && (
+                    <div className="flex justify-between">
+                      <span className="text-gray-500">Rechnungsdatum:</span>
+                      <span className="font-medium">
+                        {new Date(order.invoice_date).toLocaleDateString('de-DE')}
+                      </span>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </div>
+
+            {/* Order Timeline */}
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
-                  <CreditCard className="h-4 w-4" />
-                  Zahlungsinformationen
+                  <Calendar className="h-4 w-4" />
+                  Bestellverlauf
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="flex justify-between">
-                  <span className="text-gray-500">Zahlungsmethode:</span>
-                  <span className="font-medium">{order.payment_method}</span>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <FileText className="h-4 w-4" />
-                  Rechnungsinformationen
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                {order.invoice_number && (
+                <div className="space-y-2">
                   <div className="flex justify-between">
-                    <span className="text-gray-500">Rechnungsnummer:</span>
-                    <span className="font-medium">{order.invoice_number}</span>
-                  </div>
-                )}
-                
-                <div className="flex justify-between">
-                  <span className="text-gray-500">PDF Status:</span>
-                  <Badge variant={order.invoice_pdf_generated ? "default" : "outline"}>
-                    {order.invoice_pdf_generated ? "Erstellt" : "Nicht erstellt"}
-                  </Badge>
-                </div>
-                
-                <div className="flex justify-between">
-                  <span className="text-gray-500">Versendet:</span>
-                  <Badge variant={order.invoice_sent ? "default" : "outline"}>
-                    {order.invoice_sent ? "Ja" : "Nein"}
-                  </Badge>
-                </div>
-
-                {order.invoice_date && (
-                  <div className="flex justify-between">
-                    <span className="text-gray-500">Rechnungsdatum:</span>
+                    <span className="text-gray-500">Bestellung erstellt:</span>
                     <span className="font-medium">
-                      {new Date(order.invoice_date).toLocaleDateString('de-DE')}
+                      {new Date(order.created_at).toLocaleString('de-DE')}
                     </span>
                   </div>
-                )}
+                  {order.invoice_date && (
+                    <div className="flex justify-between">
+                      <span className="text-gray-500">Rechnung erstellt:</span>
+                      <span className="font-medium">
+                        {new Date(order.invoice_date).toLocaleString('de-DE')}
+                      </span>
+                    </div>
+                  )}
+                </div>
               </CardContent>
             </Card>
           </div>
+        </DialogContent>
+      </Dialog>
 
-          {/* Order Timeline */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Calendar className="h-4 w-4" />
-                Bestellverlauf
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-2">
-                <div className="flex justify-between">
-                  <span className="text-gray-500">Bestellung erstellt:</span>
-                  <span className="font-medium">
-                    {new Date(order.created_at).toLocaleString('de-DE')}
-                  </span>
-                </div>
-                {order.invoice_date && (
-                  <div className="flex justify-between">
-                    <span className="text-gray-500">Rechnung erstellt:</span>
-                    <span className="font-medium">
-                      {new Date(order.invoice_date).toLocaleString('de-DE')}
-                    </span>
-                  </div>
-                )}
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-      </DialogContent>
-    </Dialog>
+      {/* PDF Viewer Dialog */}
+      {order.invoice_pdf_url && (
+        <PDFViewerDialog
+          open={showPDFViewer}
+          onOpenChange={setShowPDFViewer}
+          pdfUrl={order.invoice_pdf_url}
+          orderNumber={order.order_number}
+        />
+      )}
+    </>
   );
 }
