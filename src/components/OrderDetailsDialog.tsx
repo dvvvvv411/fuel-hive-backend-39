@@ -103,10 +103,52 @@ export function OrderDetailsDialog({ order, open, onOpenChange, onOrderUpdate }:
     }
   };
 
+  const sendOrderConfirmationEmail = async (emailType: 'manual_confirmation' | 'instant_confirmation', includeInvoice: boolean = false) => {
+    try {
+      setUpdating(true);
+      
+      const { data, error } = await supabase.functions.invoke('send-order-confirmation', {
+        body: {
+          order_id: order.id,
+          include_invoice: includeInvoice,
+          email_type: emailType
+        }
+      });
+
+      if (error) throw error;
+
+      toast({
+        title: 'E-Mail versendet',
+        description: `Bestätigungsmail wurde erfolgreich an ${order.customer_email} gesendet`,
+      });
+
+      // If sending invoice email, update status accordingly
+      if (emailType === 'instant_confirmation' || includeInvoice) {
+        await updateOrderStatus('invoice_sent');
+      }
+      
+    } catch (error) {
+      console.error('Error sending email:', error);
+      toast({
+        title: 'Fehler',
+        description: 'E-Mail konnte nicht versendet werden',
+        variant: 'destructive',
+      });
+    } finally {
+      setUpdating(false);
+    }
+  };
+
   const generateInvoice = async () => {
     try {
       setUpdating(true);
-      // This would typically call an edge function to generate the PDF
+      
+      const { data, error } = await supabase.functions.invoke('generate-invoice', {
+        body: { order_id: order.id }
+      });
+
+      if (error) throw error;
+
       toast({
         title: 'Rechnung wird generiert',
         description: 'Die Rechnung wird im Hintergrund erstellt',
@@ -114,6 +156,10 @@ export function OrderDetailsDialog({ order, open, onOpenChange, onOrderUpdate }:
       
       // Update status to confirmed
       await updateOrderStatus('confirmed');
+      
+      // Send confirmation email with invoice
+      await sendOrderConfirmationEmail('instant_confirmation', true);
+      
     } catch (error) {
       console.error('Error generating invoice:', error);
       toast({
@@ -129,19 +175,36 @@ export function OrderDetailsDialog({ order, open, onOpenChange, onOrderUpdate }:
   const sendInvoice = async () => {
     try {
       setUpdating(true);
-      // This would typically call an edge function to send the invoice
-      toast({
-        title: 'Rechnung wird versendet',
-        description: 'Die Rechnung wird per E-Mail versendet',
-      });
       
-      // Always update status to invoice_sent when sending invoice
-      await updateOrderStatus('invoice_sent');
+      if (order.invoice_pdf_generated) {
+        // Send email with existing invoice
+        await sendOrderConfirmationEmail('instant_confirmation', true);
+      } else {
+        // Generate and send invoice
+        await generateInvoice();
+      }
+      
     } catch (error) {
       console.error('Error sending invoice:', error);
       toast({
         title: 'Fehler',
         description: 'Rechnung konnte nicht versendet werden',
+        variant: 'destructive',
+      });
+    } finally {
+      setUpdating(false);
+    }
+  };
+
+  const sendOrderReceiptEmail = async () => {
+    try {
+      setUpdating(true);
+      await sendOrderConfirmationEmail('manual_confirmation', false);
+    } catch (error) {
+      console.error('Error sending order receipt email:', error);
+      toast({
+        title: 'Fehler',
+        description: 'Bestelleingang-E-Mail konnte nicht versendet werden',
         variant: 'destructive',
       });
     } finally {
@@ -175,13 +238,13 @@ export function OrderDetailsDialog({ order, open, onOpenChange, onOrderUpdate }:
       case 'pending':
         return 'Neu';
       case 'confirmed':
-        return 'Exchanged';
+        return 'Bestätigt';
       case 'invoice_sent':
         return 'Rechnung versendet';
       case 'paid':
         return 'Bezahlt';
       case 'cancelled':
-        return 'Down';
+        return 'Storniert';
       default:
         return status;
     }
@@ -215,16 +278,27 @@ export function OrderDetailsDialog({ order, open, onOpenChange, onOrderUpdate }:
                   </Badge>
                 </div>
                 
-                <div className="flex gap-2">
+                <div className="flex gap-2 flex-wrap">
                   {order.status === 'pending' && (
-                    <Button onClick={generateInvoice} disabled={updating}>
-                      <FileText className="h-4 w-4 mr-2" />
-                      Rechnung generieren
-                    </Button>
+                    <>
+                      <Button 
+                        variant="outline"
+                        onClick={sendOrderReceiptEmail} 
+                        disabled={updating}
+                        size="sm"
+                      >
+                        <Mail className="h-4 w-4 mr-2" />
+                        Eingangsbestätigung senden
+                      </Button>
+                      <Button onClick={generateInvoice} disabled={updating} size="sm">
+                        <FileText className="h-4 w-4 mr-2" />
+                        Rechnung generieren & senden
+                      </Button>
+                    </>
                   )}
                   
-                  {(order.invoice_pdf_generated || order.status === 'pending') && (
-                    <Button onClick={sendInvoice} disabled={updating}>
+                  {order.status === 'confirmed' && (
+                    <Button onClick={sendInvoice} disabled={updating} size="sm">
                       <Send className="h-4 w-4 mr-2" />
                       Rechnung versenden
                     </Button>
@@ -235,6 +309,7 @@ export function OrderDetailsDialog({ order, open, onOpenChange, onOrderUpdate }:
                       onClick={markAsPaid} 
                       disabled={updating}
                       className="bg-green-600 hover:bg-green-700 text-white"
+                      size="sm"
                     >
                       <DollarSign className="h-4 w-4 mr-2" />
                       Als bezahlt markieren
@@ -245,6 +320,7 @@ export function OrderDetailsDialog({ order, open, onOpenChange, onOrderUpdate }:
                     <Button
                       variant="outline"
                       onClick={() => window.open(order.invoice_pdf_url!, '_blank')}
+                      size="sm"
                     >
                       <Download className="h-4 w-4 mr-2" />
                       PDF herunterladen
@@ -261,13 +337,53 @@ export function OrderDetailsDialog({ order, open, onOpenChange, onOrderUpdate }:
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="pending">Neu</SelectItem>
+                    <SelectItem value="confirmed">Bestätigt</SelectItem>
                     <SelectItem value="invoice_sent">Rechnung versendet</SelectItem>
                     <SelectItem value="paid">Bezahlt</SelectItem>
-                    <SelectItem value="confirmed">Exchanged</SelectItem>
-                    <SelectItem value="cancelled">Down</SelectItem>
+                    <SelectItem value="cancelled">Storniert</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
+            </CardContent>
+          </Card>
+
+          {/* Email Actions */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Mail className="h-4 w-4" />
+                E-Mail-Aktionen
+              </CardTitle>
+              <CardDescription>
+                Versenden Sie E-Mails an den Kunden für verschiedene Bestellstatus
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <Button 
+                  variant="outline" 
+                  onClick={sendOrderReceiptEmail} 
+                  disabled={updating}
+                  className="w-full"
+                >
+                  <Mail className="h-4 w-4 mr-2" />
+                  Bestelleingang bestätigen
+                </Button>
+                
+                <Button 
+                  variant="outline" 
+                  onClick={() => sendOrderConfirmationEmail('instant_confirmation', order.invoice_pdf_generated)} 
+                  disabled={updating || !order.invoice_pdf_generated}
+                  className="w-full"
+                >
+                  <Send className="h-4 w-4 mr-2" />
+                  Bestellbestätigung mit Rechnung
+                </Button>
+              </div>
+              
+              <p className="text-sm text-gray-600">
+                E-Mails werden an <strong>{order.customer_email}</strong> gesendet
+              </p>
             </CardContent>
           </Card>
 

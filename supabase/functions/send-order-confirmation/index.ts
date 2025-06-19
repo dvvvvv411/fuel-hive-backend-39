@@ -14,6 +14,176 @@ interface EmailRequest {
   email_type: 'instant_confirmation' | 'manual_confirmation';
 }
 
+const generateEmailTemplate = (order: any, emailType: string) => {
+  const shopName = order.shops?.company_name || order.shops?.name || 'Heizöl-Service';
+  const accentColor = order.shops?.accent_color || '#2563eb';
+  const logoUrl = order.shops?.logo_url;
+  
+  const isInstant = emailType === 'instant_confirmation';
+  
+  const subject = isInstant 
+    ? `Bestellbestätigung ${order.order_number} - Ihre Heizöl-Bestellung`
+    : `Bestelleingang ${order.order_number} - Ihre Heizöl-Bestellung`;
+
+  const statusMessage = isInstant
+    ? 'Ihre Bestellung wird automatisch bearbeitet. Die Rechnung finden Sie im Anhang dieser E-Mail.'
+    : 'Ihre Bestellung wird manuell geprüft. Sie erhalten eine Bestätigung und Rechnung, sobald Ihre Bestellung bearbeitet wurde.';
+
+  const invoiceInfo = isInstant && order.invoice_number
+    ? `<li><strong>Rechnungsnummer:</strong> ${order.invoice_number}</li>`
+    : '';
+
+  const htmlContent = `
+    <!DOCTYPE html>
+    <html lang="de">
+    <head>
+      <meta charset="UTF-8">
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <title>${subject}</title>
+      <!--[if mso]>
+      <noscript>
+        <xml>
+          <o:OfficeDocumentSettings>
+            <o:PixelsPerInch>96</o:PixelsPerInch>
+          </o:OfficeDocumentSettings>
+        </xml>
+      </noscript>
+      <![endif]-->
+    </head>
+    <body style="margin: 0; padding: 0; background-color: #f8fafc; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;">
+      <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="background-color: #f8fafc;">
+        <tr>
+          <td align="center" style="padding: 40px 20px;">
+            <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="600" style="max-width: 600px; background-color: #ffffff; border-radius: 8px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);">
+              
+              <!-- Header -->
+              <tr>
+                <td style="padding: 40px 40px 20px 40px; text-align: center; background: linear-gradient(135deg, ${accentColor} 0%, ${accentColor}CC 100%); border-radius: 8px 8px 0 0;">
+                  ${logoUrl ? `<img src="${logoUrl}" alt="${shopName}" style="max-height: 60px; margin-bottom: 20px;">` : ''}
+                  <h1 style="margin: 0; color: #ffffff; font-size: 28px; font-weight: 700; line-height: 1.2;">
+                    ${isInstant ? 'Bestellung bestätigt!' : 'Bestellung erhalten!'}
+                  </h1>
+                </td>
+              </tr>
+
+              <!-- Content -->
+              <tr>
+                <td style="padding: 40px;">
+                  <p style="margin: 0 0 24px 0; color: #374151; font-size: 16px; line-height: 1.6;">
+                    Liebe/r ${order.delivery_first_name} ${order.delivery_last_name},
+                  </p>
+                  
+                  <p style="margin: 0 0 32px 0; color: #374151; font-size: 16px; line-height: 1.6;">
+                    ${isInstant 
+                      ? 'vielen Dank für Ihre Bestellung! Ihre Heizöl-Bestellung wurde erfolgreich aufgegeben und wird automatisch bearbeitet.'
+                      : 'vielen Dank für Ihre Bestellung! Wir haben Ihre Heizöl-Bestellung erhalten und werden sie schnellstmöglich bearbeiten.'
+                    }
+                  </p>
+
+                  <!-- Order Details Box -->
+                  <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="background-color: #f9fafb; border-radius: 8px; border: 1px solid #e5e7eb; margin-bottom: 32px;">
+                    <tr>
+                      <td style="padding: 24px;">
+                        <h2 style="margin: 0 0 20px 0; color: #111827; font-size: 20px; font-weight: 600;">
+                          Bestelldetails
+                        </h2>
+                        <ul style="margin: 0; padding: 0; list-style: none;">
+                          <li style="margin-bottom: 12px; color: #374151; font-size: 15px;">
+                            <strong>Bestellnummer:</strong> ${order.order_number}
+                          </li>
+                          ${invoiceInfo}
+                          <li style="margin-bottom: 12px; color: #374151; font-size: 15px;">
+                            <strong>Produkt:</strong> ${order.product}
+                          </li>
+                          <li style="margin-bottom: 12px; color: #374151; font-size: 15px;">
+                            <strong>Menge:</strong> ${order.liters} Liter
+                          </li>
+                          <li style="margin-bottom: 12px; color: #374151; font-size: 15px;">
+                            <strong>Preis pro Liter:</strong> €${order.price_per_liter.toFixed(2)}
+                          </li>
+                          ${order.delivery_fee > 0 ? `
+                          <li style="margin-bottom: 12px; color: #374151; font-size: 15px;">
+                            <strong>Liefergebühr:</strong> €${order.delivery_fee.toFixed(2)}
+                          </li>
+                          ` : ''}
+                          <li style="margin-bottom: 0; color: #111827; font-size: 16px; font-weight: 600; padding-top: 12px; border-top: 1px solid #e5e7eb;">
+                            <strong>Gesamtbetrag:</strong> €${order.total_amount.toFixed(2)}
+                          </li>
+                        </ul>
+                      </td>
+                    </tr>
+                  </table>
+
+                  <!-- Delivery Address Box -->
+                  <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="background-color: #f9fafb; border-radius: 8px; border: 1px solid #e5e7eb; margin-bottom: 32px;">
+                    <tr>
+                      <td style="padding: 24px;">
+                        <h2 style="margin: 0 0 16px 0; color: #111827; font-size: 18px; font-weight: 600;">
+                          Lieferadresse
+                        </h2>
+                        <div style="color: #374151; font-size: 15px; line-height: 1.5;">
+                          <div style="font-weight: 600; margin-bottom: 4px;">
+                            ${order.delivery_first_name} ${order.delivery_last_name}
+                          </div>
+                          <div>${order.delivery_street}</div>
+                          <div>${order.delivery_postcode} ${order.delivery_city}</div>
+                          ${order.delivery_phone ? `<div style="margin-top: 8px;">Tel: ${order.delivery_phone}</div>` : ''}
+                        </div>
+                      </td>
+                    </tr>
+                  </table>
+
+                  <!-- Status Box -->
+                  <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="background-color: ${isInstant ? '#ecfdf5' : '#fef3c7'}; border-radius: 8px; border: 1px solid ${isInstant ? '#10b981' : '#f59e0b'}; margin-bottom: 32px;">
+                    <tr>
+                      <td style="padding: 20px;">
+                        <div style="color: ${isInstant ? '#047857' : '#92400e'}; font-size: 15px; line-height: 1.6;">
+                          <strong>Status:</strong> ${statusMessage}
+                        </div>
+                      </td>
+                    </tr>
+                  </table>
+
+                  <p style="margin: 0 0 8px 0; color: #374151; font-size: 16px; line-height: 1.6;">
+                    Bei Fragen kontaktieren Sie uns gerne:
+                  </p>
+                  <p style="margin: 0 0 32px 0; color: ${accentColor}; font-size: 16px; font-weight: 600;">
+                    ${order.shops?.company_email}
+                    ${order.shops?.support_phone ? ` • ${order.shops.support_phone}` : ''}
+                  </p>
+
+                  <p style="margin: 0; color: #374151; font-size: 16px; line-height: 1.6;">
+                    Mit freundlichen Grüßen<br>
+                    <strong>${shopName}</strong>
+                  </p>
+                </td>
+              </tr>
+
+              <!-- Footer -->
+              <tr>
+                <td style="padding: 24px 40px; background-color: #f9fafb; border-radius: 0 0 8px 8px; border-top: 1px solid #e5e7eb;">
+                  <div style="text-align: center; color: #6b7280; font-size: 13px; line-height: 1.5;">
+                    <div style="margin-bottom: 8px;">
+                      <strong>${shopName}</strong>
+                    </div>
+                    <div>
+                      ${order.shops?.company_address || ''} • ${order.shops?.company_postcode || ''} ${order.shops?.company_city || ''}
+                    </div>
+                    ${order.shops?.vat_number ? `<div style="margin-top: 8px;">USt-IdNr: ${order.shops.vat_number}</div>` : ''}
+                  </div>
+                </td>
+              </tr>
+            </table>
+          </td>
+        </tr>
+      </table>
+    </body>
+    </html>
+  `;
+
+  return { subject, htmlContent };
+};
+
 const handler = async (req: Request): Promise<Response> => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
@@ -44,6 +214,14 @@ const handler = async (req: Request): Promise<Response> => {
           name,
           company_name,
           company_email,
+          company_phone,
+          company_address,
+          company_city,
+          company_postcode,
+          vat_number,
+          logo_url,
+          accent_color,
+          support_phone,
           resend_configs (
             resend_api_key,
             from_email,
@@ -74,68 +252,8 @@ const handler = async (req: Request): Promise<Response> => {
     // Initialize Resend
     const resend = new Resend(resendConfig.resend_api_key);
 
-    // Prepare email content based on type
-    let subject: string;
-    let htmlContent: string;
-
-    if (email_type === 'instant_confirmation') {
-      subject = `Bestellbestätigung ${order.order_number} - Ihre Heizöl-Bestellung`;
-      htmlContent = `
-        <h1>Vielen Dank für Ihre Bestellung!</h1>
-        <p>Ihre Heizöl-Bestellung wurde erfolgreich aufgegeben und wird automatisch bearbeitet.</p>
-        
-        <h2>Bestelldetails:</h2>
-        <ul>
-          <li><strong>Bestellnummer:</strong> ${order.order_number}</li>
-          <li><strong>Rechnungsnummer:</strong> ${order.invoice_number || 'Wird generiert'}</li>
-          <li><strong>Produkt:</strong> ${order.product}</li>
-          <li><strong>Menge:</strong> ${order.liters} Liter</li>
-          <li><strong>Gesamtbetrag:</strong> €${order.total_amount.toFixed(2)}</li>
-        </ul>
-        
-        <h2>Lieferadresse:</h2>
-        <p>
-          ${order.delivery_first_name} ${order.delivery_last_name}<br>
-          ${order.delivery_street}<br>
-          ${order.delivery_postcode} ${order.delivery_city}
-        </p>
-        
-        <p><strong>Status:</strong> Ihre Bestellung wird automatisch bearbeitet. Die Rechnung finden Sie im Anhang dieser E-Mail.</p>
-        
-        <p>Bei Fragen kontaktieren Sie uns gerne unter ${order.shops?.company_email}</p>
-        
-        <p>Mit freundlichen Grüßen<br>
-        ${order.shops?.company_name || order.shops?.name}</p>
-      `;
-    } else {
-      subject = `Bestelleingang ${order.order_number} - Ihre Heizöl-Bestellung`;
-      htmlContent = `
-        <h1>Vielen Dank für Ihre Bestellung!</h1>
-        <p>Wir haben Ihre Heizöl-Bestellung erhalten und werden sie schnellstmöglich bearbeiten.</p>
-        
-        <h2>Bestelldetails:</h2>
-        <ul>
-          <li><strong>Bestellnummer:</strong> ${order.order_number}</li>
-          <li><strong>Produkt:</strong> ${order.product}</li>
-          <li><strong>Menge:</strong> ${order.liters} Liter</li>
-          <li><strong>Gesamtbetrag:</strong> €${order.total_amount.toFixed(2)}</li>
-        </ul>
-        
-        <h2>Lieferadresse:</h2>
-        <p>
-          ${order.delivery_first_name} ${order.delivery_last_name}<br>
-          ${order.delivery_street}<br>
-          ${order.delivery_postcode} ${order.delivery_city}
-        </p>
-        
-        <p><strong>Status:</strong> Ihre Bestellung wird manuell geprüft. Sie erhalten eine Bestätigung und Rechnung, sobald Ihre Bestellung bearbeitet wurde.</p>
-        
-        <p>Bei Fragen kontaktieren Sie uns gerne unter ${order.shops?.company_email}</p>
-        
-        <p>Mit freundlichen Grüßen<br>
-        ${order.shops?.company_name || order.shops?.name}</p>
-      `;
-    }
+    // Generate email template
+    const { subject, htmlContent } = generateEmailTemplate(order, email_type);
 
     // Prepare email payload
     const emailPayload: any = {
