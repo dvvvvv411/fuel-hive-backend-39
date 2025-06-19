@@ -4,7 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { MoreHorizontal, Edit, Trash2, CheckCircle, XCircle, Phone } from 'lucide-react';
+import { MoreHorizontal, Edit, Trash2, CheckCircle, XCircle, Phone, Copy } from 'lucide-react';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -117,6 +117,22 @@ export function ShopsTable({ shops, onShopsChange }: ShopsTableProps) {
     }
   };
 
+  const copyToClipboard = async (text: string) => {
+    try {
+      await navigator.clipboard.writeText(text);
+      toast({
+        title: 'Kopiert',
+        description: 'UUID wurde in die Zwischenablage kopiert',
+      });
+    } catch (error) {
+      toast({
+        title: 'Fehler',
+        description: 'Fehler beim Kopieren in die Zwischenablage',
+        variant: 'destructive',
+      });
+    }
+  };
+
   const getCountryName = (code: string) => {
     switch (code) {
       case 'DE': return 'Deutschland';
@@ -161,6 +177,7 @@ export function ShopsTable({ shops, onShopsChange }: ShopsTableProps) {
                 <TableRow>
                   <TableHead>Logo</TableHead>
                   <TableHead>Firma</TableHead>
+                  <TableHead>ID</TableHead>
                   <TableHead>E-Mail</TableHead>
                   <TableHead>Telefon</TableHead>
                   <TableHead>Website</TableHead>
@@ -195,6 +212,22 @@ export function ShopsTable({ shops, onShopsChange }: ShopsTableProps) {
                       <div>
                         <div className="font-medium">{shop.company_name}</div>
                         <div className="text-sm text-gray-500">{shop.name}</div>
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex items-center gap-2">
+                        <code className="text-xs bg-gray-100 px-2 py-1 rounded font-mono">
+                          {shop.id.substring(0, 8)}...
+                        </code>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-6 w-6 p-0"
+                          onClick={() => copyToClipboard(shop.id)}
+                          title="UUID kopieren"
+                        >
+                          <Copy className="h-3 w-3" />
+                        </Button>
                       </div>
                     </TableCell>
                     <TableCell>
