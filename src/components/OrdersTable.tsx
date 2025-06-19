@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -8,10 +7,12 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Pagination, PaginationContent, PaginationItem, PaginationLink, PaginationNext, PaginationPrevious } from '@/components/ui/pagination';
-import { Search, Filter, FileText, Eye, Download, DollarSign, Check } from 'lucide-react';
+import { Search, RefreshCw, FileText, Eye, Download, DollarSign, Check } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import { OrderDetailsDialog } from './OrderDetailsDialog';
 import { BankAccountSelectionDialog } from './BankAccountSelectionDialog';
+import { Checkbox } from '@/components/ui/checkbox';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 
 interface Order {
   id: string;
@@ -76,10 +77,10 @@ export function OrdersTable() {
   const [showBankAccountDialog, setShowBankAccountDialog] = useState(false);
   const [selectedOrderForInvoice, setSelectedOrderForInvoice] = useState<Order | null>(null);
   
-  // Filter states
+  // Filter states - changed to arrays for multi-select
   const [searchTerm, setSearchTerm] = useState('');
-  const [selectedShop, setSelectedShop] = useState<string>('all');
-  const [selectedStatus, setSelectedStatus] = useState<string>('all');
+  const [selectedShops, setSelectedShops] = useState<string[]>([]);
+  const [selectedStatuses, setSelectedStatuses] = useState<string[]>([]);
   const [dateFrom, setDateFrom] = useState('');
   const [dateTo, setDateTo] = useState('');
   
@@ -91,7 +92,7 @@ export function OrdersTable() {
   useEffect(() => {
     fetchShops();
     fetchOrders();
-  }, [currentPage, searchTerm, selectedShop, selectedStatus, dateFrom, dateTo]);
+  }, [currentPage, searchTerm, selectedShops, selectedStatuses, dateFrom, dateTo]);
 
   const fetchShops = async () => {
     try {
@@ -132,12 +133,12 @@ export function OrdersTable() {
         query = query.or(`order_number.ilike.%${searchTerm}%,customer_name.ilike.%${searchTerm}%,customer_email.ilike.%${searchTerm}%`);
       }
       
-      if (selectedShop !== 'all') {
-        query = query.eq('shop_id', selectedShop);
+      if (selectedShops.length > 0) {
+        query = query.in('shop_id', selectedShops);
       }
       
-      if (selectedStatus !== 'all') {
-        query = query.eq('status', selectedStatus);
+      if (selectedStatuses.length > 0) {
+        query = query.in('status', selectedStatuses);
       }
       
       if (dateFrom) {
@@ -280,7 +281,7 @@ export function OrdersTable() {
     const date = new Date(dateString);
     const dateStr = date.toLocaleDateString('de-DE');
     const timeStr = date.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' });
-    return `${dateStr} (${timeStr})`;
+    return { dateStr, timeStr };
   };
 
   const formatAddress = (order: Order) => {
@@ -300,10 +301,32 @@ export function OrdersTable() {
 
   const totalPages = Math.ceil(totalCount / itemsPerPage);
 
+  const handleShopChange = (shopId: string, checked: boolean) => {
+    if (checked) {
+      setSelectedShops([...selectedShops, shopId]);
+    } else {
+      setSelectedShops(selectedShops.filter(id => id !== shopId));
+    }
+    setCurrentPage(1);
+  };
+
+  const handleStatusChange = (status: string, checked: boolean) => {
+    if (checked) {
+      setSelectedStatuses([...selectedStatuses, status]);
+    } else {
+      setSelectedStatuses(selectedStatuses.filter(s => s !== status));
+    }
+    setCurrentPage(1);
+  };
+
+  const refreshOrders = () => {
+    fetchOrders();
+  };
+
   const clearFilters = () => {
     setSearchTerm('');
-    setSelectedShop('all');
-    setSelectedStatus('all');
+    setSelectedShops([]);
+    setSelectedStatuses([]);
     setDateFrom('');
     setDateTo('');
     setCurrentPage(1);
@@ -336,33 +359,63 @@ export function OrdersTable() {
               </div>
             </div>
             
-            <Select value={selectedShop} onValueChange={setSelectedShop}>
-              <SelectTrigger className="w-full lg:w-48">
-                <SelectValue placeholder="Shop auswählen" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Alle Shops</SelectItem>
-                {shops.map((shop) => (
-                  <SelectItem key={shop.id} value={shop.id}>
-                    {shop.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" className="w-full lg:w-48">
+                  {selectedShops.length === 0 ? 'Alle Shops' : 
+                   selectedShops.length === 1 ? shops.find(s => s.id === selectedShops[0])?.name : 
+                   `${selectedShops.length} Shops`}
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent className="w-56 bg-white">
+                <div className="p-2 space-y-2">
+                  {shops.map((shop) => (
+                    <div key={shop.id} className="flex items-center space-x-2">
+                      <Checkbox
+                        id={`shop-${shop.id}`}
+                        checked={selectedShops.includes(shop.id)}
+                        onCheckedChange={(checked) => handleShopChange(shop.id, checked as boolean)}
+                      />
+                      <label htmlFor={`shop-${shop.id}`} className="text-sm cursor-pointer">
+                        {shop.name}
+                      </label>
+                    </div>
+                  ))}
+                </div>
+              </DropdownMenuContent>
+            </DropdownMenu>
 
-            <Select value={selectedStatus} onValueChange={setSelectedStatus}>
-              <SelectTrigger className="w-full lg:w-48">
-                <SelectValue placeholder="Status auswählen" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Alle Status</SelectItem>
-                <SelectItem value="pending">Neu</SelectItem>
-                <SelectItem value="invoice_sent">Rechnung versendet</SelectItem>
-                <SelectItem value="paid">Bezahlt</SelectItem>
-                <SelectItem value="confirmed">Exchanged</SelectItem>
-                <SelectItem value="cancelled">Down</SelectItem>
-              </SelectContent>
-            </Select>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" className="w-full lg:w-48">
+                  {selectedStatuses.length === 0 ? 'Alle Status' : 
+                   selectedStatuses.length === 1 ? getStatusLabel(selectedStatuses[0]) : 
+                   `${selectedStatuses.length} Status`}
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent className="w-56 bg-white">
+                <div className="p-2 space-y-2">
+                  {[
+                    { value: 'pending', label: 'Neu' },
+                    { value: 'invoice_sent', label: 'Rechnung versendet' },
+                    { value: 'paid', label: 'Bezahlt' },
+                    { value: 'confirmed', label: 'Exchanged' },
+                    { value: 'cancelled', label: 'Down' }
+                  ].map((status) => (
+                    <div key={status.value} className="flex items-center space-x-2">
+                      <Checkbox
+                        id={`status-${status.value}`}
+                        checked={selectedStatuses.includes(status.value)}
+                        onCheckedChange={(checked) => handleStatusChange(status.value, checked as boolean)}
+                      />
+                      <label htmlFor={`status-${status.value}`} className="text-sm cursor-pointer">
+                        {status.label}
+                      </label>
+                    </div>
+                  ))}
+                </div>
+              </DropdownMenuContent>
+            </DropdownMenu>
 
             <Input
               type="date"
@@ -380,9 +433,9 @@ export function OrdersTable() {
               placeholder="Bis Datum"
             />
 
-            <Button variant="outline" onClick={clearFilters} className="w-full lg:w-auto">
-              <Filter className="h-4 w-4 mr-2" />
-              Filter zurücksetzen
+            <Button variant="outline" onClick={refreshOrders} className="w-full lg:w-auto">
+              <RefreshCw className="h-4 w-4 mr-2" />
+              Aktualisieren
             </Button>
           </div>
 
@@ -391,7 +444,7 @@ export function OrdersTable() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Datum & Uhrzeit</TableHead>
+                  <TableHead>Datum</TableHead>
                   <TableHead>Bestellnummer</TableHead>
                   <TableHead>Kunde</TableHead>
                   <TableHead>Telefon</TableHead>
@@ -422,10 +475,14 @@ export function OrdersTable() {
                 ) : (
                   orders.map((order) => {
                     const address = formatAddress(order);
+                    const { dateStr, timeStr } = formatDateTime(order.created_at);
                     return (
                       <TableRow key={order.id}>
                         <TableCell className="font-medium">
-                          {formatDateTime(order.created_at)}
+                          <div className="text-sm">
+                            <div>{dateStr}</div>
+                            <div className="text-gray-500">{timeStr}</div>
+                          </div>
                         </TableCell>
                         <TableCell className="font-medium">
                           #{order.order_number}
