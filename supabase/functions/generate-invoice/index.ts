@@ -1,3 +1,4 @@
+
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
@@ -547,7 +548,7 @@ function calculateResponsiveLayout(order: any, t: any, language: string): any {
     TITLE_Y: layout.MARGIN + layout.HEADER.HEIGHT + 12, // Moved title down by 4mm
     ADDRESS_Y: layout.MARGIN + layout.HEADER.HEIGHT + layout.SECTIONS.TITLE_HEIGHT + 15,
     DETAILS_Y: layout.MARGIN + layout.HEADER.HEIGHT + layout.SECTIONS.TITLE_HEIGHT + 15,
-    TABLE_Y: layout.MARGIN + layout.HEADER.HEIGHT + layout.SECTIONS.TITLE_HEIGHT + layout.SECTIONS.ADDRESS_HEIGHT + 25,
+    TABLE_Y: layout.MARGIN + layout.HEADER.HEIGHT + layout.SECTIONS.TITLE_HEIGHT + layout.SECTIONS.ADDRESS_HEIGHT + 12, // Reduced from 25 to 12
     TOTALS_Y_OFFSET: 15 * scaleFactor,
     PAYMENT_Y_OFFSET: 20 * scaleFactor,
     FOOTER_Y: BASE_LAYOUT.PAGE_HEIGHT - layout.SECTIONS.FOOTER_HEIGHT - 10
