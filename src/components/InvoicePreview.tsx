@@ -55,8 +55,9 @@ export function InvoicePreview() {
   const [selectedShop, setSelectedShop] = useState<Shop | null>(null);
   const [language, setLanguage] = useState('de');
   const [isGenerating, setIsGenerating] = useState(false);
-  const [logoLoaded, setLogoLoaded] = useState(false);
-  const [logoError, setLogoError] = useState(false);
+  const [logoState, setLogoState] = useState<'loading' | 'loaded' | 'error' | 'none'>('none');
+  const [logoRetryCount, setLogoRetryCount] = useState(0);
+  const [logoUrl, setLogoUrl] = useState<string>('');
   const { toast } = useToast();
 
   useEffect(() => {
@@ -65,8 +66,18 @@ export function InvoicePreview() {
 
   // Reset logo state when shop changes
   useEffect(() => {
-    setLogoLoaded(false);
-    setLogoError(false);
+    console.log('Shop changed, resetting logo state. New shop:', selectedShop?.company_name);
+    setLogoState('none');
+    setLogoRetryCount(0);
+    setLogoUrl('');
+    
+    if (selectedShop?.logo_url) {
+      console.log('Shop has logo URL:', selectedShop.logo_url);
+      // Add cache busting parameter
+      const cacheBustedUrl = `${selectedShop.logo_url}?v=${Date.now()}`;
+      setLogoUrl(cacheBustedUrl);
+      setLogoState('loading');
+    }
   }, [selectedShop?.id]);
 
   const fetchShops = async () => {
@@ -224,13 +235,78 @@ export function InvoicePreview() {
   };
 
   const handleLogoLoad = () => {
-    setLogoLoaded(true);
-    setLogoError(false);
+    console.log('Logo loaded successfully');
+    setLogoState('loaded');
+    setLogoRetryCount(0);
   };
 
-  const handleLogoError = () => {
-    setLogoError(true);
-    setLogoLoaded(false);
+  const handleLogoError = (error: any) => {
+    console.error('Logo failed to load:', error);
+    setLogoState('error');
+    
+    // Retry logic - up to 2 retries
+    if (logoRetryCount < 2 && selectedShop?.logo_url) {
+      console.log(`Retrying logo load, attempt ${logoRetryCount + 1}`);
+      setLogoRetryCount(prev => prev + 1);
+      setTimeout(() => {
+        const retryUrl = `${selectedShop.logo_url}?v=${Date.now()}&retry=${logoRetryCount + 1}`;
+        setLogoUrl(retryUrl);
+        setLogoState('loading');
+      }, 1000 * (logoRetryCount + 1)); // Exponential backoff
+    } else {
+      console.log('Max retries reached or no logo URL available');
+      toast({
+        title: "Logo Loading Error",
+        description: "Unable to load the company logo. Using placeholder instead.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const renderLogo = () => {
+    const logoContainerClass = "w-40 h-32 flex items-center justify-center border-2 border-dashed border-gray-300";
+    
+    if (!selectedShop?.logo_url) {
+      return (
+        <div className={logoContainerClass}>
+          <span className="text-sm text-gray-500">LOGO</span>
+        </div>
+      );
+    }
+
+    switch (logoState) {
+      case 'loading':
+        return (
+          <div className={`${logoContainerClass} bg-gray-100 animate-pulse`}>
+            <span className="text-sm text-gray-500">Loading...</span>
+            <img
+              src={logoUrl}
+              alt={`${selectedShop.company_name} Logo`}
+              className="hidden"
+              onLoad={handleLogoLoad}
+              onError={handleLogoError}
+            />
+          </div>
+        );
+      
+      case 'loaded':
+        return (
+          <img
+            src={logoUrl}
+            alt={`${selectedShop.company_name} Logo`}
+            className="w-40 h-32 object-contain"
+            onError={handleLogoError}
+          />
+        );
+      
+      case 'error':
+      default:
+        return (
+          <div className={`${logoContainerClass} bg-gray-100`}>
+            <span className="text-sm text-gray-500">LOGO</span>
+          </div>
+        );
+    }
   };
 
   if (!selectedShop) {
@@ -303,6 +379,13 @@ export function InvoicePreview() {
               {isGenerating ? 'Generating...' : 'Generate PDF'}
             </Button>
           </div>
+          
+          {/* Debug info for logo state */}
+          {process.env.NODE_ENV === 'development' && (
+            <div className="mt-4 p-2 bg-gray-100 rounded text-xs">
+              <strong>Debug Info:</strong> Logo State: {logoState} | Retry Count: {logoRetryCount} | URL: {logoUrl}
+            </div>
+          )}
         </CardContent>
       </Card>
 
@@ -313,39 +396,9 @@ export function InvoicePreview() {
             
             {/* Modern Header */}
             <div className="flex items-start mb-12">
-              {/* Logo section - doubled size from w-20 h-16 to w-40 h-32 */}
+              {/* Logo section */}
               <div className="w-40 h-32 mr-6 flex items-center justify-center">
-                {selectedShop.logo_url ? (
-                  <div className="relative w-full h-full">
-                    {/* Loading placeholder shown while image loads */}
-                    {!logoLoaded && !logoError && (
-                      <div className="absolute inset-0 bg-gray-100 border-2 border-dashed border-gray-300 flex items-center justify-center animate-pulse">
-                        <span className="text-sm text-gray-500">Loading...</span>
-                      </div>
-                    )}
-                    
-                    {/* Actual logo */}
-                    <img
-                      src={selectedShop.logo_url}
-                      alt={`${selectedShop.company_name} Logo`}
-                      className={`w-full h-full object-contain ${logoLoaded ? 'block' : 'hidden'}`}
-                      onLoad={handleLogoLoad}
-                      onError={handleLogoError}
-                    />
-                    
-                    {/* Error fallback */}
-                    {logoError && (
-                      <div className="w-full h-full bg-gray-100 border-2 border-dashed border-gray-300 flex items-center justify-center">
-                        <span className="text-sm text-gray-500">LOGO</span>
-                      </div>
-                    )}
-                  </div>
-                ) : (
-                  // No logo URL - show placeholder
-                  <div className="w-full h-full bg-gray-100 border-2 border-dashed border-gray-300 flex items-center justify-center">
-                    <span className="text-sm text-gray-500">LOGO</span>
-                  </div>
-                )}
+                {renderLogo()}
               </div>
               
               {/* Company details */}
