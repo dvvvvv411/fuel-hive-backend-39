@@ -1,5 +1,7 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import jsPDF from "npm:jspdf@3.0.1";
+import { getTranslations, detectLanguage } from './translations.ts';
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -896,30 +898,39 @@ function renderLogoPlaceholder(doc: any, x: number, y: number, layout: any, acce
   console.log(`[LOGO] Placeholder rendered: ${width.toFixed(1)}x${height.toFixed(1)}mm`);
 }
 
-const serve_handler = async (req: Request): Promise<Response> => {
+const handler = async (req: Request): Promise<Response> => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
 
+  if (req.method !== "POST") {
+    return new Response('Method not allowed', { 
+      status: 405, 
+      headers: corsHeaders 
+    });
+  }
+
+  const supabase = createClient(
+    Deno.env.get('SUPABASE_URL') ?? '',
+    Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
+  );
+
   try {
-    const supabase = createClient(supabaseUrl, supabaseServiceKey);
-    const { order_id, language: requestLanguage }: RequestBody = await req.json();
-
+    const { order_id, language: requestedLanguage }: RequestBody = await req.json();
     console.log('Starting invoice generation for order:', order_id);
-    console.log('Requested language:', requestLanguage);
+    console.log('Requested language:', requestedLanguage);
 
-    // Fetch order details with shop information and check for temporary bank account
+    // Get order details with shop information
     const { data: order, error: orderError } = await supabase
       .from('orders')
       .select(`
         *,
-        shops!inner(
-          id,
+        shops (
           name,
           company_name,
           company_address,
-          company_postcode,
           company_city,
+          company_postcode,
           company_phone,
           company_email,
           company_website,
@@ -927,140 +938,115 @@ const serve_handler = async (req: Request): Promise<Response> => {
           business_owner,
           court_name,
           registration_number,
+          country_code,
           language,
-          currency,
-          vat_rate,
           logo_url,
           accent_color,
-          support_phone,
-          bank_account_id,
-          bank_accounts(
-            account_name,
-            account_holder,
-            iban,
-            bic,
-            bank_name,
-            use_anyname
-          )
+          bank_account_id
         )
       `)
       .eq('id', order_id)
       .single();
 
     if (orderError || !order) {
-      console.error('Error fetching order:', orderError);
-      throw new Error('Order not found');
+      console.error('Order not found:', orderError);
+      return new Response(JSON.stringify({ error: 'Order not found' }), {
+        status: 404,
+        headers: { 'Content-Type': 'application/json', ...corsHeaders },
+      });
     }
 
     console.log('Order fetched successfully:', order.order_number);
 
-    // Check for temporary bank account associated with this order
-    const { data: tempBankAccount, error: tempBankError } = await supabase
+    // Get bank data - prioritize temporary bank accounts
+    let bankData = null;
+    
+    // First, check for temporary bank account associated with this order
+    const { data: tempBankAccounts, error: tempBankError } = await supabase
       .from('bank_accounts')
-      .select('*')
+      .select('account_holder, bank_name, iban, bic, use_anyname, account_name')
       .eq('is_temporary', true)
       .eq('used_for_order_id', order_id)
-      .maybeSingle();
+      .eq('active', true);
 
     if (tempBankError) {
-      console.warn('Error fetching temporary bank account:', tempBankError);
+      console.error('Error fetching temporary bank accounts:', tempBankError);
     }
 
-    // Use temporary bank account if available, otherwise use shop's default bank account
-    let bankAccountToUse = null;
-    if (tempBankAccount) {
-      console.log('Using temporary bank account for order:', order_id);
-      bankAccountToUse = tempBankAccount;
-    } else if (order.shops.bank_accounts) {
+    if (tempBankAccounts && tempBankAccounts.length > 0) {
+      // Use the first temporary bank account found
+      const tempBank = tempBankAccounts[0];
+      console.log('Using temporary bank account:', tempBank.account_name);
+      bankData = {
+        ...tempBank,
+        account_holder: tempBank.use_anyname ? order.shops.name : tempBank.account_holder
+      };
+    } else if (order.shops?.bank_account_id) {
       console.log('Using shop default bank account');
-      bankAccountToUse = order.shops.bank_accounts;
-    }
+      // Fallback to shop's default bank account
+      const { data: defaultBank, error: bankError } = await supabase
+        .from('bank_accounts')
+        .select('account_holder, bank_name, iban, bic, use_anyname, account_name')
+        .eq('id', order.shops.bank_account_id)
+        .eq('active', true)
+        .single();
 
-    // Update the order object to use the correct bank account
-    if (bankAccountToUse) {
-      order.shops.bank_accounts = bankAccountToUse;
-    }
-
-    // Use requested language, fallback to shop language, then to 'de'
-    const finalLanguage = requestLanguage || order.shops.language || 'de';
-    console.log('Final language for PDF:', finalLanguage);
-
-    // Get translations based on final language
-    const t = getInvoiceTranslations(finalLanguage);
-    const currency = order.shops.currency || 'EUR';
-    const currencySymbol = t.currency;
-
-    // Generate invoice number if not exists
-    let invoiceNumber = order.invoice_number;
-    if (!invoiceNumber) {
-      const currentYear = new Date().getFullYear();
-      const { data: lastInvoice } = await supabase
-        .from('orders')
-        .select('invoice_number')
-        .not('invoice_number', 'is', null)
-        .like('invoice_number', `${currentYear}-%`)
-        .order('invoice_number', { ascending: false })
-        .limit(1)
-        .maybeSingle();
-
-      let nextNumber = 1;
-      if (lastInvoice?.invoice_number) {
-        const lastNumber = parseInt(lastInvoice.invoice_number.split('-')[1]);
-        nextNumber = lastNumber + 1;
+      if (!bankError && defaultBank) {
+        bankData = {
+          ...defaultBank,
+          account_holder: defaultBank.use_anyname ? order.shops.name : defaultBank.account_holder
+        };
+      } else {
+        console.error('Could not fetch bank data:', bankError);
       }
-
-      invoiceNumber = `${currentYear}-${nextNumber.toString().padStart(4, '0')}`;
     }
 
-    // Determine which order number to use for the filename
-    const orderNumberForFilename = order.temp_order_number || order.order_number;
-    const filename = `${t.invoice.toLowerCase()}_${orderNumberForFilename}_${finalLanguage}.pdf`;
+    // Determine language
+    const language = requestedLanguage || detectLanguage(order);
+    console.log('Final language for PDF:', language);
 
-    console.log('Generating responsive PDF with filename:', filename);
-    console.log('Using order number for invoice:', orderNumberForFilename);
-    if (tempBankAccount) {
-      console.log('Using temporary bank account:', tempBankAccount.account_name);
-    }
+    // Use temp_order_number if available, otherwise use original order_number
+    const orderNumberForInvoice = order.temp_order_number || order.order_number;
+    console.log('Using order number for invoice:', orderNumberForInvoice);
 
-    // Generate PDF with responsive layout system
-    const pdfContent = await generateResponsiveInvoicePDF(order, invoiceNumber, t, currencySymbol, finalLanguage);
+    // Generate filename using the correct order number
+    const fileName = `rechnung_${orderNumberForInvoice}_${language}.pdf`;
+    console.log('Generating responsive PDF with filename:', fileName);
 
-    if (!pdfContent || pdfContent.length === 0) {
-      console.error('PDF generation failed: empty content');
-      throw new Error('Failed to generate PDF content');
-    }
+    // Generate responsive PDF
+    console.log('Starting responsive PDF generation with language:', language);
+    
+    const pdfBytes = await generateResponsivePDF(order, bankData, language);
+    console.log('Responsive PDF generated successfully, size:', pdfBytes.length, 'bytes');
 
-    console.log('Responsive PDF generated successfully, size:', pdfContent.length, 'bytes');
-
-    // Upload PDF to Supabase Storage
+    // Upload to Supabase Storage
     const { data: uploadData, error: uploadError } = await supabase.storage
       .from('invoices')
-      .upload(filename, pdfContent, {
+      .upload(fileName, pdfBytes, {
         contentType: 'application/pdf',
         upsert: true
       });
 
     if (uploadError) {
       console.error('Error uploading PDF:', uploadError);
-      throw new Error('Failed to upload invoice PDF');
+      throw new Error(`Failed to upload PDF: ${uploadError.message}`);
     }
 
-    console.log('PDF uploaded successfully:', filename);
+    console.log('PDF uploaded successfully:', fileName);
 
     // Get public URL
-    const { data: publicUrl } = supabase.storage
+    const { data: { publicUrl } } = supabase.storage
       .from('invoices')
-      .getPublicUrl(filename);
+      .getPublicUrl(fileName);
 
-    console.log('PDF public URL:', publicUrl.publicUrl);
+    console.log('PDF public URL:', publicUrl);
 
     // Update order with invoice details
     const updateData = {
-      invoice_number: invoiceNumber,
       invoice_pdf_generated: true,
-      invoice_pdf_url: publicUrl.publicUrl,
+      invoice_pdf_url: publicUrl,
       invoice_generation_date: new Date().toISOString(),
-      invoice_date: new Date().toISOString().split('T')[0]
+      invoice_date: order.invoice_date || new Date().toISOString().split('T')[0]
     };
 
     const { error: updateError } = await supabase
@@ -1070,41 +1056,37 @@ const serve_handler = async (req: Request): Promise<Response> => {
 
     if (updateError) {
       console.error('Error updating order:', updateError);
-      throw new Error('Failed to update order with invoice details');
+      throw new Error(`Failed to update order: ${updateError.message}`);
     }
 
     console.log('Order updated successfully with invoice details');
 
-    return new Response(
-      JSON.stringify({
-        success: true,
-        invoice_number: invoiceNumber,
-        invoice_url: publicUrl.publicUrl,
-        generated_at: new Date().toISOString(),
-        language: finalLanguage,
-        filename: filename,
-        used_temp_bank_account: !!tempBankAccount,
-        order_number_used: orderNumberForFilename
-      }),
-      {
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-        status: 200,
-      }
-    );
+    return new Response(JSON.stringify({
+      success: true,
+      invoice_url: publicUrl,
+      filename: fileName,
+      order_number: orderNumberForInvoice,
+      language: language,
+      bank_account_used: bankData?.account_name || 'none',
+      generated_at: new Date().toISOString()
+    }), {
+      status: 200,
+      headers: { 'Content-Type': 'application/json', ...corsHeaders },
+    });
 
   } catch (error) {
     console.error('Error in generate-invoice function:', error);
-    return new Response(
-      JSON.stringify({ error: error.message }),
-      {
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-        status: 500,
-      }
-    );
+    return new Response(JSON.stringify({ 
+      error: 'Failed to generate invoice',
+      details: error instanceof Error ? error.message : 'Unknown error'
+    }), {
+      status: 500,
+      headers: { 'Content-Type': 'application/json', ...corsHeaders },
+    });
   }
 };
 
-async function generateResponsiveInvoicePDF(order: any, invoiceNumber: string, t: any, currencySymbol: string, language: string): Promise<Uint8Array> {
+async function generateResponsivePDF(order: any, bankData: any, language: string): Promise<Uint8Array> {
   try {
     console.log('Starting responsive PDF generation with language:', language);
     
@@ -1112,7 +1094,7 @@ async function generateResponsiveInvoicePDF(order: any, invoiceNumber: string, t
     const { jsPDF } = await import("https://esm.sh/jspdf@2.5.1");
     
     // Calculate responsive layout based on content and language
-    const layout = calculateResponsiveLayout(order, t, language);
+    const layout = calculateResponsiveLayout(order, getInvoiceTranslations(language), language);
     
     const doc = new jsPDF({
       orientation: 'portrait',
@@ -1189,17 +1171,17 @@ async function generateResponsiveInvoicePDF(order: any, invoiceNumber: string, t
     companyY += lineSpacing;
     
     if (order.shops.company_phone) {
-      const phone = optimizeTextForSpace(doc, `${t.phone}: ${order.shops.company_phone}`, maxCompanyWidth, layout.FONT_SIZES.SMALL, language);
+      const phone = optimizeTextForSpace(doc, `${getInvoiceTranslations(language).phone}: ${order.shops.company_phone}`, maxCompanyWidth, layout.FONT_SIZES.SMALL, language);
       doc.text(phone, companyStartX, companyY);
       companyY += lineSpacing;
     }
     
-    const email = optimizeTextForSpace(doc, `${t.email}: ${order.shops.company_email}`, maxCompanyWidth, layout.FONT_SIZES.SMALL, language);
+    const email = optimizeTextForSpace(doc, `${getInvoiceTranslations(language).email}: ${order.shops.company_email}`, maxCompanyWidth, layout.FONT_SIZES.SMALL, language);
     doc.text(email, companyStartX, companyY);
     companyY += lineSpacing;
     
     if (order.shops.company_website) {
-      const website = optimizeTextForSpace(doc, `${t.website}: ${order.shops.company_website}`, maxCompanyWidth, layout.FONT_SIZES.SMALL, language);
+      const website = optimizeTextForSpace(doc, `${getInvoiceTranslations(language).website}: ${order.shops.company_website}`, maxCompanyWidth, layout.FONT_SIZES.SMALL, language);
       doc.text(website, companyStartX, companyY);
       companyY += lineSpacing;
     }
@@ -1212,7 +1194,7 @@ async function generateResponsiveInvoicePDF(order: any, invoiceNumber: string, t
     // INVOICE TITLE - Fixed position
     doc.setFontSize(layout.FONT_SIZES.TITLE);
     doc.setTextColor(accentColor.r, accentColor.g, accentColor.b);
-    doc.text(t.invoice, layout.MARGIN, layout.POSITIONS.TITLE_Y);
+    doc.text(getInvoiceTranslations(language).invoice, layout.MARGIN, layout.POSITIONS.TITLE_Y);
     
     // RESPONSIVE TWO-COLUMN LAYOUT
     const leftColumnX = layout.MARGIN;
@@ -1227,7 +1209,7 @@ async function generateResponsiveInvoicePDF(order: any, invoiceNumber: string, t
     if (hasDifferentAddresses) {
       doc.setFontSize(layout.FONT_SIZES.SECTION_HEADER);
       doc.setTextColor(accentColor.r, accentColor.g, accentColor.b);
-      doc.text(t.billingAddress, leftColumnX, addressY);
+      doc.text(getInvoiceTranslations(language).billingAddress, leftColumnX, addressY);
       addressY += 8 * layout.SCALE_FACTOR;
     }
     
@@ -1256,7 +1238,7 @@ async function generateResponsiveInvoicePDF(order: any, invoiceNumber: string, t
     if (hasDifferentAddresses && addressY < layout.POSITIONS.ADDRESS_Y + layout.SECTIONS.ADDRESS_HEIGHT - (20 * layout.SCALE_FACTOR)) {
       doc.setFontSize(layout.FONT_SIZES.SECTION_HEADER);
       doc.setTextColor(accentColor.r, accentColor.g, accentColor.b);
-      doc.text(t.deliveryAddress, leftColumnX, addressY);
+      doc.text(getInvoiceTranslations(language).deliveryAddress, leftColumnX, addressY);
       addressY += 8 * layout.SCALE_FACTOR;
       
       doc.setFontSize(layout.FONT_SIZES.NORMAL);
@@ -1283,18 +1265,18 @@ async function generateResponsiveInvoicePDF(order: any, invoiceNumber: string, t
     const valueX = rightColumnX + labelWidth;
     const maxValueWidth = contentWidth * 0.45 - labelWidth;
     
-    doc.text(`${t.invoiceDate}:`, rightColumnX, detailsY);
+    doc.text(`${getInvoiceTranslations(language).invoiceDate}:`, rightColumnX, detailsY);
     doc.text(new Date().toLocaleDateString(language === 'en' ? 'en-US' : 'de-DE'), valueX, detailsY);
     detailsY += 6;
     
-    doc.text(`${t.orderNumber}:`, rightColumnX, detailsY);
+    doc.text(`${getInvoiceTranslations(language).orderNumber}:`, rightColumnX, detailsY);
     // Use temp_order_number if available, otherwise use original order_number
     const displayOrderNumber = order.temp_order_number || order.order_number;
     const orderNum = optimizeTextForSpace(doc, displayOrderNumber, maxValueWidth, layout.FONT_SIZES.NORMAL, language);
     doc.text(orderNum, valueX, detailsY);
     detailsY += 6;
     
-    doc.text(`${t.orderDate}:`, rightColumnX, detailsY);
+    doc.text(`${getInvoiceTranslations(language).orderDate}:`, rightColumnX, detailsY);
     doc.text(new Date(order.created_at).toLocaleDateString(language === 'en' ? 'en-US' : 'de-DE'), valueX, detailsY);
     
     // ITEMS TABLE - Fixed position
@@ -1309,10 +1291,10 @@ async function generateResponsiveInvoicePDF(order: any, invoiceNumber: string, t
     doc.setTextColor(255, 255, 255);
     const headerPadding = 3 * layout.SCALE_FACTOR;
     
-    doc.text(t.description, layout.MARGIN + headerPadding, currentY + 6);
-    doc.text(t.quantity, layout.MARGIN + (contentWidth * 0.5), currentY + 6);
-    doc.text(t.unitPrice, layout.MARGIN + (contentWidth * 0.65), currentY + 6);
-    doc.text(t.total, layout.MARGIN + (contentWidth * 0.8), currentY + 6);
+    doc.text(getInvoiceTranslations(language).description, layout.MARGIN + headerPadding, currentY + 6);
+    doc.text(getInvoiceTranslations(language).quantity, layout.MARGIN + (contentWidth * 0.5), currentY + 6);
+    doc.text(getInvoiceTranslations(language).unitPrice, layout.MARGIN + (contentWidth * 0.65), currentY + 6);
+    doc.text(getInvoiceTranslations(language).total, layout.MARGIN + (contentWidth * 0.8), currentY + 6);
     
     currentY += layout.SECTIONS.TABLE_HEADER_HEIGHT;
     
@@ -1326,21 +1308,21 @@ async function generateResponsiveInvoicePDF(order: any, invoiceNumber: string, t
     
     const cellPadding = 3 * layout.SCALE_FACTOR;
     const descriptionWidth = contentWidth * 0.45;
-    const productDesc = optimizeTextForSpace(doc, t.heatingOilDelivery, descriptionWidth, layout.FONT_SIZES.SMALL, language);
+    const productDesc = optimizeTextForSpace(doc, getInvoiceTranslations(language).heatingOilDelivery, descriptionWidth, layout.FONT_SIZES.SMALL, language);
     
     doc.text(productDesc, layout.MARGIN + cellPadding, currentY + 5);
-    doc.text(`${order.liters} ${t.liters}`, layout.MARGIN + (contentWidth * 0.5), currentY + 5);
-    doc.text(`${currencySymbol}${order.price_per_liter.toFixed(2)}`, layout.MARGIN + (contentWidth * 0.65), currentY + 5);
-    doc.text(`${currencySymbol}${order.base_price.toFixed(2)}`, layout.MARGIN + (contentWidth * 0.8), currentY + 5);
+    doc.text(`${order.liters} ${getInvoiceTranslations(language).liters}`, layout.MARGIN + (contentWidth * 0.5), currentY + 5);
+    doc.text(`${getInvoiceTranslations(language).currency}${order.price_per_liter.toFixed(2)}`, layout.MARGIN + (contentWidth * 0.65), currentY + 5);
+    doc.text(`${getInvoiceTranslations(language).currency}${order.base_price.toFixed(2)}`, layout.MARGIN + (contentWidth * 0.8), currentY + 5);
     currentY += layout.SECTIONS.TABLE_ROW_HEIGHT + 2;
     
     // Delivery fee if applicable
     if (order.delivery_fee > 0) {
-      const deliveryDesc = optimizeTextForSpace(doc, t.deliveryFee, descriptionWidth, layout.FONT_SIZES.SMALL, language);
+      const deliveryDesc = optimizeTextForSpace(doc, getInvoiceTranslations(language).deliveryFee, descriptionWidth, layout.FONT_SIZES.SMALL, language);
       doc.text(deliveryDesc, layout.MARGIN + cellPadding, currentY + 5);
       doc.text('1', layout.MARGIN + (contentWidth * 0.5), currentY + 5);
-      doc.text(`${currencySymbol}${order.delivery_fee.toFixed(2)}`, layout.MARGIN + (contentWidth * 0.65), currentY + 5);
-      doc.text(`${currencySymbol}${order.delivery_fee.toFixed(2)}`, layout.MARGIN + (contentWidth * 0.8), currentY + 5);
+      doc.text(`${getInvoiceTranslations(language).currency}${order.delivery_fee.toFixed(2)}`, layout.MARGIN + (contentWidth * 0.65), currentY + 5);
+      doc.text(`${getInvoiceTranslations(language).currency}${order.delivery_fee.toFixed(2)}`, layout.MARGIN + (contentWidth * 0.8), currentY + 5);
       currentY += layout.SECTIONS.TABLE_ROW_HEIGHT + 2;
     }
     
@@ -1368,20 +1350,20 @@ async function generateResponsiveInvoicePDF(order: any, invoiceNumber: string, t
     let totalsCurrentY = totalsY + 2;
     const totalsLineSpacing = 6 * layout.SCALE_FACTOR * layout.LANGUAGE_FACTOR.lineHeight;
     
-    doc.text(`${t.subtotal}:`, totalsX + totalsPadding, totalsCurrentY);
-    doc.text(`${currencySymbol}${totalWithoutVat.toFixed(2)}`, totalsX + totalsWidth - totalsPadding, totalsCurrentY, { align: 'right' });
+    doc.text(`${getInvoiceTranslations(language).subtotal}:`, totalsX + totalsPadding, totalsCurrentY);
+    doc.text(`${getInvoiceTranslations(language).currency}${totalWithoutVat.toFixed(2)}`, totalsX + totalsWidth - totalsPadding, totalsCurrentY, { align: 'right' });
     totalsCurrentY += totalsLineSpacing;
     
-    doc.text(`${t.vat} (${vatRate}%):`, totalsX + totalsPadding, totalsCurrentY);
-    doc.text(`${currencySymbol}${vatAmount.toFixed(2)}`, totalsX + totalsWidth - totalsPadding, totalsCurrentY, { align: 'right' });
+    doc.text(`${getInvoiceTranslations(language).vat} (${vatRate}%):`, totalsX + totalsPadding, totalsCurrentY);
+    doc.text(`${getInvoiceTranslations(language).currency}${vatAmount.toFixed(2)}`, totalsX + totalsWidth - totalsPadding, totalsCurrentY, { align: 'right' });
     totalsCurrentY += totalsLineSpacing * 1.1; // Reduced spacing before grand total
     
     // Grand total - adjusted position
     doc.setFontSize(layout.FONT_SIZES.SECTION_HEADER);
     doc.setFont("helvetica", "bold");
     doc.setTextColor(accentColor.r, accentColor.g, accentColor.b);
-    doc.text(`${t.grandTotal}:`, totalsX + totalsPadding, totalsCurrentY);
-    doc.text(`${currencySymbol}${order.total_amount.toFixed(2)}`, totalsX + totalsWidth - totalsPadding, totalsCurrentY, { align: 'right' });
+    doc.text(`${getInvoiceTranslations(language).grandTotal}:`, totalsX + totalsPadding, totalsCurrentY);
+    doc.text(`${getInvoiceTranslations(language).currency}${order.total_amount.toFixed(2)}`, totalsX + totalsWidth - totalsPadding, totalsCurrentY, { align: 'right' });
     doc.setFont("helvetica", "normal");
     
     // PAYMENT DETAILS CARD - Fixed position
@@ -1395,7 +1377,7 @@ async function generateResponsiveInvoicePDF(order: any, invoiceNumber: string, t
       
       doc.setFontSize(layout.FONT_SIZES.SECTION_HEADER);
       doc.setTextColor(255, 255, 255);
-      doc.text(t.paymentDetails, layout.MARGIN + 3, paymentY + 5);
+      doc.text(getInvoiceTranslations(language).paymentDetails, layout.MARGIN + 3, paymentY + 5);
       
       // Content area
       doc.setFillColor(...layout.COLORS.BACKGROUND_GRAY);
@@ -1416,24 +1398,24 @@ async function generateResponsiveInvoicePDF(order: any, invoiceNumber: string, t
         ? order.shops.name 
         : order.shops.bank_accounts.account_holder;
       
-      doc.text(`${t.accountHolder}:`, layout.MARGIN + paymentPadding, paymentContentY);
+      doc.text(`${getInvoiceTranslations(language).accountHolder}:`, layout.MARGIN + paymentPadding, paymentContentY);
       const accountHolder = optimizeTextForSpace(doc, accountHolderName, maxPaymentValueWidth, layout.FONT_SIZES.SMALL, language);
       doc.text(accountHolder, layout.MARGIN + paymentPadding + paymentLabelWidth, paymentContentY);
       paymentContentY += 6;
       
-      doc.text(`${t.iban}:`, layout.MARGIN + paymentPadding, paymentContentY);
+      doc.text(`${getInvoiceTranslations(language).iban}:`, layout.MARGIN + paymentPadding, paymentContentY);
       const iban = optimizeTextForSpace(doc, order.shops.bank_accounts.iban, maxPaymentValueWidth, layout.FONT_SIZES.SMALL, language);
       doc.text(iban, layout.MARGIN + paymentPadding + paymentLabelWidth, paymentContentY);
       paymentContentY += 6;
       
       if (order.shops.bank_accounts.bic) {
-        doc.text(`${t.bic}:`, layout.MARGIN + paymentPadding, paymentContentY);
+        doc.text(`${getInvoiceTranslations(language).bic}:`, layout.MARGIN + paymentPadding, paymentContentY);
         const bic = optimizeTextForSpace(doc, order.shops.bank_accounts.bic, maxPaymentValueWidth, layout.FONT_SIZES.SMALL, language);
         doc.text(bic, layout.MARGIN + paymentPadding + paymentLabelWidth, paymentContentY);
         paymentContentY += 6;
       }
       
-      doc.text(`${t.paymentReference}:`, layout.MARGIN + paymentPadding, paymentContentY);
+      doc.text(`${getInvoiceTranslations(language).paymentReference}:`, layout.MARGIN + paymentPadding, paymentContentY);
       // Use temp_order_number for payment reference if available
       const referenceOrderNumber = order.temp_order_number || order.order_number;
       const reference = optimizeTextForSpace(doc, referenceOrderNumber, maxPaymentValueWidth, layout.FONT_SIZES.SMALL, language);
@@ -1559,4 +1541,4 @@ async function generateResponsiveInvoicePDF(order: any, invoiceNumber: string, t
   }
 }
 
-serve(serve_handler);
+serve(handler);
