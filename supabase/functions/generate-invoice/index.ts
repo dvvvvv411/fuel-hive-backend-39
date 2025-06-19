@@ -193,7 +193,7 @@ const translations = {
     bic: 'BIC',
     paymentReference: 'Betalingskenmerk',
     thankYou: 'Dank u voor uw bestelling!',
-    heatingOilDelivery: 'Stookolielevering',
+    heatingOilDelivery: 'Levering van eldningsolja',
     liters: 'Liters',
     deliveryFee: 'Leveringskosten',
     dueDays: '14 dagen',
@@ -406,20 +406,20 @@ function getInvoiceTranslations(language: string) {
 const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
 const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
-// LAYOUT CONSTANTS - Fixed grid system for consistent layout across all languages
+// LAYOUT CONSTANTS - Updated with smaller logo dimensions
 const LAYOUT = {
   // Page dimensions (A4)
   PAGE_WIDTH: 210,
   PAGE_HEIGHT: 297,
   MARGIN: 20,
   
-  // Header section
+  // Header section with reduced logo size
   HEADER: {
-    HEIGHT: 52, // Fixed height for header section
-    LOGO_MAX_WIDTH: 40,
-    LOGO_MAX_HEIGHT: 32,
-    COMPANY_START_X_OFFSET: 46, // LOGO_MAX_WIDTH + 6mm spacing
-    TITLE_Y_OFFSET: 20 // Space after header for title
+    HEIGHT: 52,
+    LOGO_MAX_WIDTH: 30, // Reduced from 40mm to 30mm
+    LOGO_MAX_HEIGHT: 24, // Reduced from 32mm to 24mm
+    COMPANY_START_X_OFFSET: 36, // Updated: LOGO_MAX_WIDTH + 6mm spacing
+    TITLE_Y_OFFSET: 20
   },
   
   // Content sections with fixed positions
@@ -469,11 +469,13 @@ function hexToRgb(hex: string): { r: number; g: number; b: number } {
 
 // Helper function to calculate proportional dimensions
 function calculateProportionalDimensions(originalWidth: number, originalHeight: number, maxWidth: number, maxHeight: number): { width: number; height: number; x: number; y: number } {
-  console.log(`Calculating proportional dimensions: original ${originalWidth}x${originalHeight}, max ${maxWidth}x${maxHeight}`);
+  console.log(`[LOGO] Calculating proportional dimensions: original ${originalWidth}x${originalHeight}, max ${maxWidth}x${maxHeight}`);
   
   const widthRatio = maxWidth / originalWidth;
   const heightRatio = maxHeight / originalHeight;
   const scale = Math.min(widthRatio, heightRatio);
+  
+  console.log(`[LOGO] Scale factors - width: ${widthRatio.toFixed(4)}, height: ${heightRatio.toFixed(4)}, chosen: ${scale.toFixed(4)}`);
   
   const scaledWidth = originalWidth * scale;
   const scaledHeight = originalHeight * scale;
@@ -482,7 +484,7 @@ function calculateProportionalDimensions(originalWidth: number, originalHeight: 
   const offsetX = (maxWidth - scaledWidth) / 2;
   const offsetY = (maxHeight - scaledHeight) / 2;
   
-  console.log(`Calculated dimensions: ${scaledWidth}x${scaledHeight} with offsets ${offsetX}, ${offsetY}`);
+  console.log(`[LOGO] Final dimensions: ${scaledWidth.toFixed(2)}x${scaledHeight.toFixed(2)}mm with offsets (${offsetX.toFixed(2)}, ${offsetY.toFixed(2)})`);
   
   return {
     width: scaledWidth,
@@ -492,25 +494,112 @@ function calculateProportionalDimensions(originalWidth: number, originalHeight: 
   };
 }
 
-// Helper function to fetch and convert logo to base64 with dimension analysis
-async function fetchLogoAsBase64(logoUrl: string): Promise<{ base64: string; width?: number; height?: number } | null> {
+// Enhanced helper function to detect image format from content type and magic bytes
+function detectImageFormat(contentType: string, uint8Array: Uint8Array): string {
+  console.log(`[LOGO] Detecting image format from content-type: ${contentType}`);
+  
+  // Check magic bytes for more reliable format detection
+  if (uint8Array.length >= 8) {
+    // PNG magic bytes: 89 50 4E 47 0D 0A 1A 0A
+    if (uint8Array[0] === 0x89 && uint8Array[1] === 0x50 && uint8Array[2] === 0x4E && uint8Array[3] === 0x47) {
+      console.log(`[LOGO] Format detected by magic bytes: PNG`);
+      return 'PNG';
+    }
+    
+    // JPEG magic bytes: FF D8 FF
+    if (uint8Array[0] === 0xFF && uint8Array[1] === 0xD8 && uint8Array[2] === 0xFF) {
+      console.log(`[LOGO] Format detected by magic bytes: JPEG`);
+      return 'JPEG';
+    }
+    
+    // WebP magic bytes: RIFF ... WEBP
+    if (uint8Array[0] === 0x52 && uint8Array[1] === 0x49 && uint8Array[2] === 0x46 && uint8Array[3] === 0x46 &&
+        uint8Array[8] === 0x57 && uint8Array[9] === 0x45 && uint8Array[10] === 0x42 && uint8Array[11] === 0x50) {
+      console.log(`[LOGO] Format detected by magic bytes: WEBP`);
+      return 'WEBP';
+    }
+  }
+  
+  // Fallback to content type
+  if (contentType.includes('png')) return 'PNG';
+  if (contentType.includes('jpeg') || contentType.includes('jpg')) return 'JPEG';
+  if (contentType.includes('webp')) return 'WEBP';
+  
+  console.log(`[LOGO] Format detection fallback: assuming JPEG`);
+  return 'JPEG';
+}
+
+// Enhanced helper function to extract image dimensions
+function extractImageDimensions(uint8Array: Uint8Array, format: string): { width?: number; height?: number } {
+  console.log(`[LOGO] Extracting dimensions for format: ${format}`);
+  
   try {
-    console.log('Fetching logo from URL:', logoUrl);
+    if (format === 'PNG' && uint8Array.length >= 24) {
+      // PNG dimensions are at bytes 16-23 (big endian)
+      const width = (uint8Array[16] << 24) | (uint8Array[17] << 16) | (uint8Array[18] << 8) | uint8Array[19];
+      const height = (uint8Array[20] << 24) | (uint8Array[21] << 16) | (uint8Array[22] << 8) | uint8Array[23];
+      
+      if (width > 0 && height > 0 && width < 65536 && height < 65536) {
+        console.log(`[LOGO] PNG dimensions extracted: ${width}x${height}`);
+        return { width, height };
+      }
+    } else if (format === 'JPEG') {
+      // Basic JPEG dimension extraction (simplified)
+      let offset = 2; // Skip initial FF D8
+      
+      while (offset < uint8Array.length - 8) {
+        // Look for SOF (Start of Frame) markers
+        if (uint8Array[offset] === 0xFF && 
+            (uint8Array[offset + 1] === 0xC0 || uint8Array[offset + 1] === 0xC2)) {
+          
+          const height = (uint8Array[offset + 5] << 8) | uint8Array[offset + 6];
+          const width = (uint8Array[offset + 7] << 8) | uint8Array[offset + 8];
+          
+          if (width > 0 && height > 0 && width < 65536 && height < 65536) {
+            console.log(`[LOGO] JPEG dimensions extracted: ${width}x${height}`);
+            return { width, height };
+          }
+        }
+        offset += 2;
+      }
+    }
+  } catch (error) {
+    console.warn(`[LOGO] Error extracting dimensions:`, error);
+  }
+  
+  console.log(`[LOGO] Could not extract dimensions, will use default proportions`);
+  return {};
+}
+
+// Enhanced helper function to fetch and convert logo to base64 with improved analysis
+async function fetchLogoAsBase64(logoUrl: string): Promise<{ base64: string; width?: number; height?: number; format: string } | null> {
+  try {
+    console.log(`[LOGO] Fetching logo from URL: ${logoUrl}`);
     
     const response = await fetch(logoUrl);
     if (!response.ok) {
-      console.error('Failed to fetch logo:', response.status, response.statusText);
+      console.error(`[LOGO] Failed to fetch logo: ${response.status} ${response.statusText}`);
       return null;
     }
     
     const contentType = response.headers.get('content-type') || '';
+    console.log(`[LOGO] Response content-type: ${contentType}`);
+    
     if (!contentType.startsWith('image/')) {
-      console.error('URL does not point to an image:', contentType);
+      console.error(`[LOGO] URL does not point to an image: ${contentType}`);
       return null;
     }
     
     const arrayBuffer = await response.arrayBuffer();
     const uint8Array = new Uint8Array(arrayBuffer);
+    
+    console.log(`[LOGO] Image data fetched, size: ${uint8Array.byteLength} bytes`);
+    
+    // Detect format using enhanced detection
+    const format = detectImageFormat(contentType, uint8Array);
+    
+    // Extract dimensions
+    const dimensions = extractImageDimensions(uint8Array, format);
     
     // Convert to base64
     let binary = '';
@@ -519,38 +608,16 @@ async function fetchLogoAsBase64(logoUrl: string): Promise<{ base64: string; wid
     }
     const base64 = btoa(binary);
     
-    console.log('Logo converted to base64, size:', base64.length, 'characters');
-    
-    // Try to extract dimensions from image headers (basic implementation)
-    let width, height;
-    try {
-      if (contentType.includes('png')) {
-        // PNG header analysis (simplified)
-        if (uint8Array.length >= 24) {
-          width = (uint8Array[16] << 24) | (uint8Array[17] << 16) | (uint8Array[18] << 8) | uint8Array[19];
-          height = (uint8Array[20] << 24) | (uint8Array[21] << 16) | (uint8Array[22] << 8) | uint8Array[23];
-        }
-      } else if (contentType.includes('jpeg') || contentType.includes('jpg')) {
-        // JPEG header analysis would be more complex, skip for now
-        console.log('JPEG dimension extraction not implemented, using default proportions');
-      }
-      
-      if (width && height) {
-        console.log(`Extracted image dimensions: ${width}x${height}`);
-      } else {
-        console.log('Could not extract image dimensions from headers');
-      }
-    } catch (dimensionError) {
-      console.warn('Error extracting image dimensions:', dimensionError);
-    }
+    console.log(`[LOGO] Logo processed: format=${format}, base64 size=${base64.length} chars, dimensions=${dimensions.width || 'unknown'}x${dimensions.height || 'unknown'}`);
     
     return {
       base64: `data:${contentType};base64,${base64}`,
-      width,
-      height
+      width: dimensions.width,
+      height: dimensions.height,
+      format
     };
   } catch (error) {
-    console.error('Error fetching logo:', error);
+    console.error(`[LOGO] Error fetching logo:`, error);
     return null;
   }
 }
@@ -585,52 +652,126 @@ function truncateText(doc: any, text: string, maxWidth: number, fontSize: number
   return bestFit || text.substring(0, 1) + '...';
 }
 
-// Helper function to render proportionally scaled and centered logo
-function renderLogo(doc: any, logoData: { base64: string; width?: number; height?: number } | null, x: number, y: number, accentColor: { r: number; g: number; b: number }): void {
-  if (logoData?.base64) {
-    try {
-      console.log('Rendering proportionally scaled logo');
-      
-      // Use extracted dimensions if available, otherwise assume square proportions
-      const originalWidth = logoData.width || 200;
-      const originalHeight = logoData.height || 200;
-      
-      console.log(`Original logo dimensions: ${originalWidth}x${originalHeight}`);
-      
-      // Calculate proportional dimensions and centering
-      const dimensions = calculateProportionalDimensions(
-        originalWidth,
-        originalHeight,
-        LAYOUT.HEADER.LOGO_MAX_WIDTH,
-        LAYOUT.HEADER.LOGO_MAX_HEIGHT
-      );
-      
-      // Render the logo with calculated dimensions and position
-      doc.addImage(
-        logoData.base64,
-        'JPEG',
-        x + dimensions.x,
-        y + dimensions.y,
-        dimensions.width,
-        dimensions.height
-      );
-      
-      console.log(`Logo rendered at position (${x + dimensions.x}, ${y + dimensions.y}) with size ${dimensions.width}x${dimensions.height}`);
-    } catch (logoError) {
-      console.warn('Error adding logo to PDF, using placeholder:', logoError);
-      renderLogoPlaceholder(doc, x, y, accentColor);
+// Enhanced helper function to render logo with multiple fallback strategies
+function renderLogo(doc: any, logoData: { base64: string; width?: number; height?: number; format: string } | null, x: number, y: number, accentColor: { r: number; g: number; b: number }): void {
+  console.log(`[LOGO] Starting logo render at position (${x}, ${y})`);
+  
+  if (!logoData?.base64) {
+    console.log(`[LOGO] No logo data available, rendering placeholder`);
+    renderLogoPlaceholder(doc, x, y, accentColor);
+    return;
+  }
+
+  try {
+    console.log(`[LOGO] Attempting to render logo with format: ${logoData.format}`);
+    
+    // Use extracted dimensions if available, otherwise assume reasonable defaults
+    const originalWidth = logoData.width || 200;
+    const originalHeight = logoData.height || 150;
+    
+    console.log(`[LOGO] Using dimensions: ${originalWidth}x${originalHeight} (${logoData.width ? 'extracted' : 'default'})`);
+    
+    // Calculate proportional dimensions and centering with reduced max size
+    const dimensions = calculateProportionalDimensions(
+      originalWidth,
+      originalHeight,
+      LAYOUT.HEADER.LOGO_MAX_WIDTH,
+      LAYOUT.HEADER.LOGO_MAX_HEIGHT
+    );
+    
+    // Final position calculation
+    const finalX = x + dimensions.x;
+    const finalY = y + dimensions.y;
+    
+    console.log(`[LOGO] Final render parameters: position=(${finalX.toFixed(2)}, ${finalY.toFixed(2)}), size=(${dimensions.width.toFixed(2)}, ${dimensions.height.toFixed(2)}), format=${logoData.format}`);
+    
+    // Attempt to add the image with correct format
+    doc.addImage(
+      logoData.base64,
+      logoData.format,
+      finalX,
+      finalY,
+      dimensions.width,
+      dimensions.height
+    );
+    
+    console.log(`[LOGO] Logo rendered successfully`);
+    
+  } catch (logoError) {
+    console.error(`[LOGO] Primary render failed:`, logoError);
+    
+    // First fallback: try with JPEG format
+    if (logoData.format !== 'JPEG') {
+      try {
+        console.log(`[LOGO] Fallback 1: Trying JPEG format`);
+        
+        const originalWidth = logoData.width || 200;
+        const originalHeight = logoData.height || 150;
+        const dimensions = calculateProportionalDimensions(
+          originalWidth,
+          originalHeight,
+          LAYOUT.HEADER.LOGO_MAX_WIDTH,
+          LAYOUT.HEADER.LOGO_MAX_HEIGHT
+        );
+        
+        doc.addImage(
+          logoData.base64,
+          'JPEG',
+          x + dimensions.x,
+          y + dimensions.y,
+          dimensions.width,
+          dimensions.height
+        );
+        
+        console.log(`[LOGO] Logo rendered successfully with JPEG fallback`);
+        return;
+        
+      } catch (fallbackError) {
+        console.warn(`[LOGO] JPEG fallback failed:`, fallbackError);
+      }
     }
-  } else {
-    console.log('No logo data available, using placeholder');
+    
+    // Second fallback: try with PNG format
+    if (logoData.format !== 'PNG') {
+      try {
+        console.log(`[LOGO] Fallback 2: Trying PNG format`);
+        
+        const originalWidth = logoData.width || 200;
+        const originalHeight = logoData.height || 150;
+        const dimensions = calculateProportionalDimensions(
+          originalWidth,
+          originalHeight,
+          LAYOUT.HEADER.LOGO_MAX_WIDTH,
+          LAYOUT.HEADER.LOGO_MAX_HEIGHT
+        );
+        
+        doc.addImage(
+          logoData.base64,
+          'PNG',
+          x + dimensions.x,
+          y + dimensions.y,
+          dimensions.width,
+          dimensions.height
+        );
+        
+        console.log(`[LOGO] Logo rendered successfully with PNG fallback`);
+        return;
+        
+      } catch (fallbackError) {
+        console.warn(`[LOGO] PNG fallback failed:`, fallbackError);
+      }
+    }
+    
+    // Final fallback: render placeholder
+    console.log(`[LOGO] All rendering attempts failed, using placeholder`);
     renderLogoPlaceholder(doc, x, y, accentColor);
   }
 }
 
-// Helper function to render improved logo placeholder
+// Enhanced helper function to render improved logo placeholder
 function renderLogoPlaceholder(doc: any, x: number, y: number, accentColor: { r: number; g: number; b: number }): void {
-  console.log('Rendering improved logo placeholder with proportional space');
+  console.log(`[LOGO] Rendering placeholder at (${x}, ${y}) with size ${LAYOUT.HEADER.LOGO_MAX_WIDTH}x${LAYOUT.HEADER.LOGO_MAX_HEIGHT}`);
   
-  // Use the full allocated space for placeholder
   const width = LAYOUT.HEADER.LOGO_MAX_WIDTH;
   const height = LAYOUT.HEADER.LOGO_MAX_HEIGHT;
   
@@ -648,7 +789,7 @@ function renderLogoPlaceholder(doc: any, x: number, y: number, accentColor: { r:
   doc.setTextColor(accentColor.r, accentColor.g, accentColor.b);
   doc.text('LOGO', x + width/2, y + height/2, { align: 'center' });
   
-  console.log(`Placeholder rendered at (${x}, ${y}) with size ${width}x${height}`);
+  console.log(`[LOGO] Placeholder rendered successfully`);
 }
 
 const serve_handler = async (req: Request): Promise<Response> => {
@@ -860,20 +1001,22 @@ async function generateStandardizedInvoicePDF(order: any, invoiceNumber: string,
     // Set font encoding to support special characters
     doc.setFont("helvetica", "normal");
     
-    // HEADER SECTION - Fixed layout with improved logo handling
+    // HEADER SECTION - Enhanced logo handling with improved debugging
     let logoData = null;
     
     // Fetch logo with enhanced analysis
     if (order.shops.logo_url) {
-      console.log('Attempting to fetch logo from:', order.shops.logo_url);
+      console.log(`[LOGO] Processing shop logo: ${order.shops.logo_url}`);
       const cacheBustedUrl = `${order.shops.logo_url}?v=${Date.now()}`;
       logoData = await fetchLogoAsBase64(cacheBustedUrl);
+    } else {
+      console.log(`[LOGO] No logo URL provided in shop settings`);
     }
     
-    // Render proportionally scaled and centered logo
+    // Render logo with enhanced fallback handling
     renderLogo(doc, logoData, LAYOUT.MARGIN, LAYOUT.MARGIN, rgb);
     
-    // Company details - fixed position and responsive text
+    // Company details - updated position for smaller logo
     const companyStartX = LAYOUT.MARGIN + LAYOUT.HEADER.COMPANY_START_X_OFFSET;
     const maxCompanyWidth = contentWidth - LAYOUT.HEADER.COMPANY_START_X_OFFSET;
     
@@ -1221,7 +1364,7 @@ async function generateStandardizedInvoicePDF(order: any, invoiceNumber: string,
       doc.text(footerVat, col4X, footerY + 8);
     }
     
-    console.log('Standardized PDF content created with consistent layout and proportional logo, converting to bytes...');
+    console.log('Standardized PDF content created with enhanced logo handling and debugging, converting to bytes...');
     
     // Get PDF as array buffer
     const pdfArrayBuffer = doc.output('arraybuffer');
