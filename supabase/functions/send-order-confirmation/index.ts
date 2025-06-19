@@ -222,7 +222,6 @@ const generateInvoiceEmailTemplate = (order: any, bankData: any, language: strin
   console.log('- language:', language);
   console.log('- temp_order_number:', order.temp_order_number);
   console.log('- original order_number:', order.order_number);
-  console.log('- bank_account_used:', bankData?.account_name);
   
   const subject = interpolateString(t.invoiceSubject, {
     shopName: shopName
@@ -479,24 +478,23 @@ const handler = async (req: Request): Promise<Response> => {
       console.log('Looking for bank account data for invoice email...');
       
       // First, check for temporary bank account associated with this order
-      const { data: tempBankAccounts, error: tempBankError } = await supabase
+      const { data: tempBankAccount, error: tempBankError } = await supabase
         .from('bank_accounts')
         .select('account_holder, bank_name, iban, bic, use_anyname, account_name')
         .eq('is_temporary', true)
         .eq('used_for_order_id', order_id)
-        .eq('active', true);
+        .eq('active', true)
+        .maybeSingle();
 
       if (tempBankError) {
-        console.warn('Error fetching temporary bank accounts:', tempBankError);
+        console.warn('Error fetching temporary bank account:', tempBankError);
       }
 
-      if (tempBankAccounts && tempBankAccounts.length > 0) {
-        // Use the first temporary bank account found
-        const tempBank = tempBankAccounts[0];
-        console.log('Using temporary bank account for email:', tempBank.account_name);
+      if (tempBankAccount) {
+        console.log('Using temporary bank account for email:', tempBankAccount.account_name);
         bankData = {
-          ...tempBank,
-          account_holder: tempBank.use_anyname ? order.shops.company_name : tempBank.account_holder
+          ...tempBankAccount,
+          account_holder: tempBankAccount.use_anyname ? order.shops.company_name : tempBankAccount.account_holder
         };
       } else if (order.shops?.bank_account_id) {
         console.log('No temporary bank account found, using shop default bank account');
