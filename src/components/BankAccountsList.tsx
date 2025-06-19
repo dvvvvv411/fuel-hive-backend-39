@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -6,9 +5,10 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Progress } from '@/components/ui/progress';
-import { CreditCard, Plus, Building, Edit, Trash2, Store, Euro, TrendingUp } from 'lucide-react';
+import { CreditCard, Plus, Building, Edit, Trash2, Store, Euro, TrendingUp, Eye } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import { BankAccountDialog } from './BankAccountDialog';
+import { BankAccountDetailsDialog } from './BankAccountDetailsDialog';
 import { formatCurrency, calculateDailyUsage, getDailyUsagePercentage } from '@/utils/bankingUtils';
 
 interface BankAccount {
@@ -42,7 +42,9 @@ export function BankAccountsList() {
   const [shops, setShops] = useState<Shop[]>([]);
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [detailsDialogOpen, setDetailsDialogOpen] = useState(false);
   const [selectedAccount, setSelectedAccount] = useState<BankAccount | undefined>();
+  const [selectedAccountForDetails, setSelectedAccountForDetails] = useState<BankAccount | null>(null);
 
   useEffect(() => {
     fetchData();
@@ -172,6 +174,11 @@ export function BankAccountsList() {
   const handleAdd = () => {
     setSelectedAccount(undefined);
     setDialogOpen(true);
+  };
+
+  const handleViewDetails = (account: BankAccount) => {
+    setSelectedAccountForDetails(account);
+    setDetailsDialogOpen(true);
   };
 
   if (loading) {
@@ -318,6 +325,13 @@ export function BankAccountsList() {
                           <Button
                             variant="outline"
                             size="sm"
+                            onClick={() => handleViewDetails(account)}
+                          >
+                            <Eye className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
                             onClick={() => handleEdit(account)}
                           >
                             <Edit className="h-4 w-4" />
@@ -346,6 +360,12 @@ export function BankAccountsList() {
         onOpenChange={setDialogOpen}
         bankAccount={selectedAccount}
         onSave={fetchData}
+      />
+
+      <BankAccountDetailsDialog
+        open={detailsDialogOpen}
+        onOpenChange={setDetailsDialogOpen}
+        bankAccount={selectedAccountForDetails}
       />
     </div>
   );
