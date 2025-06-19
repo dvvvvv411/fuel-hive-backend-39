@@ -544,7 +544,7 @@ function calculateResponsiveLayout(order: any, t: any, language: string): any {
   // Calculate dynamic positions
   layout.POSITIONS = {
     HEADER_Y: layout.MARGIN,
-    TITLE_Y: layout.MARGIN + layout.HEADER.HEIGHT + 8,
+    TITLE_Y: layout.MARGIN + layout.HEADER.HEIGHT + 12, // Moved title down by 4mm
     ADDRESS_Y: layout.MARGIN + layout.HEADER.HEIGHT + layout.SECTIONS.TITLE_HEIGHT + 15,
     DETAILS_Y: layout.MARGIN + layout.HEADER.HEIGHT + layout.SECTIONS.TITLE_HEIGHT + 15,
     TABLE_Y: layout.MARGIN + layout.HEADER.HEIGHT + layout.SECTIONS.TITLE_HEIGHT + layout.SECTIONS.ADDRESS_HEIGHT + 25,
@@ -1294,7 +1294,7 @@ async function generateResponsiveInvoicePDF(order: any, invoiceNumber: string, t
     
     doc.text(productDesc, layout.MARGIN + cellPadding, currentY + 5);
     doc.text(`${order.liters} ${t.liters}`, layout.MARGIN + (contentWidth * 0.5), currentY + 5);
-    doc.text(`${currencySymbol}${order.price_per_liter.toFixed(3)}`, layout.MARGIN + (contentWidth * 0.65), currentY + 5);
+    doc.text(`${currencySymbol}${order.price_per_liter.toFixed(2)}`, layout.MARGIN + (contentWidth * 0.65), currentY + 5);
     doc.text(`${currencySymbol}${order.base_price.toFixed(2)}`, layout.MARGIN + (contentWidth * 0.8), currentY + 5);
     currentY += layout.SECTIONS.TABLE_ROW_HEIGHT + 2;
     
@@ -1338,9 +1338,9 @@ async function generateResponsiveInvoicePDF(order: any, invoiceNumber: string, t
     
     doc.text(`${t.vat} (${vatRate}%):`, totalsX + totalsPadding, totalsCurrentY);
     doc.text(`${currencySymbol}${vatAmount.toFixed(2)}`, totalsX + totalsWidth - totalsPadding, totalsCurrentY, { align: 'right' });
-    totalsCurrentY += totalsLineSpacing * 1.3;
+    totalsCurrentY += totalsLineSpacing * 1.1; // Reduced spacing before grand total
     
-    // Grand total
+    // Grand total - adjusted position
     doc.setFontSize(layout.FONT_SIZES.SECTION_HEADER);
     doc.setFont("helvetica", "bold");
     doc.setTextColor(accentColor.r, accentColor.g, accentColor.b);
