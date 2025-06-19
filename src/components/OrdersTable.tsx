@@ -456,7 +456,7 @@ export function OrdersTable() {
     
     // If processing_mode is 'manual' and no invoice has been generated yet
     if (order.processing_mode === 'manual' && !order.invoice_number) {
-      return 'Noch nicht zugewiesen';
+      return '';
     }
     
     // For all other cases (manual with invoice, instant mode, or fallback)
@@ -465,7 +465,7 @@ export function OrdersTable() {
       return bankAccount.account_name;
     }
     
-    return 'Kein Bankkonto';
+    return '';
   };
 
   const getDisplayOrderNumber = (order: Order) => {
