@@ -36,7 +36,7 @@ interface BankAccountWithUsage extends BankAccount {
 interface BankAccountSelectionDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onBankAccountSelected: (bankAccountId: string) => void;
+  onBankAccountSelected: (bankAccountId: string, newOrderNumber?: string) => void;
   orderNumber: string;
 }
 
@@ -104,7 +104,7 @@ export function BankAccountSelectionDialog({
     iban: string;
     bic?: string;
     currency: string;
-    temp_order_number?: string;
+    new_order_number?: string;
   }) => {
     try {
       setCreatingTempAccount(true);
@@ -121,7 +121,7 @@ export function BankAccountSelectionDialog({
           currency: bankAccountData.currency,
           country: 'DE',
           is_temporary: true,
-          temp_order_number: bankAccountData.temp_order_number || orderNumber,
+          temp_order_number: bankAccountData.new_order_number || orderNumber,
           active: true
         })
         .select()
@@ -132,7 +132,7 @@ export function BankAccountSelectionDialog({
       console.log('Created temporary bank account:', newBankAccount);
 
       // Use the temporary bank account for invoice generation
-      onBankAccountSelected(newBankAccount.id);
+      onBankAccountSelected(newBankAccount.id, bankAccountData.new_order_number);
       onOpenChange(false);
 
       toast({

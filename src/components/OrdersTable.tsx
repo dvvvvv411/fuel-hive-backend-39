@@ -225,19 +225,38 @@ export function OrdersTable() {
     await updateOrderStatus(orderId, 'confirmed');
   };
 
-  const generateInvoice = async (orderId: string, bankAccountId?: string) => {
+  const generateInvoice = async (orderId: string, bankAccountId?: string, newOrderNumber?: string) => {
     try {
-      console.log('Starting invoice generation for order:', orderId, 'with bank account:', bankAccountId);
+      console.log('Starting invoice generation for order:', orderId, 'with bank account:', bankAccountId, 'and new order number:', newOrderNumber);
       
       toast({
         title: 'Rechnung wird generiert',
         description: 'Die Rechnung wird erstellt und per E-Mail versendet',
       });
 
-      // Step 1: Get the order data and check if it's a manual order
+      // Step 1: Update the order number directly if provided
+      if (newOrderNumber && newOrderNumber.trim() !== '') {
+        console.log('Updating order number to:', newOrderNumber);
+        
+        const { error: updateOrderError } = await supabase
+          .from('orders')
+          .update({ 
+            order_number: newOrderNumber.trim()
+          })
+          .eq('id', orderId);
+
+        if (updateOrderError) {
+          console.error('Error updating order number:', updateOrderError);
+          throw updateOrderError;
+        }
+
+        console.log('Order number updated successfully');
+      }
+
+      // Step 2: Get the order data and check if it's a manual order
       const { data: orderData, error: orderError } = await supabase
         .from('orders')
-        .select('processing_mode, temp_order_number, order_number')
+        .select('processing_mode, order_number')
         .eq('id', orderId)
         .single();
 
@@ -248,7 +267,7 @@ export function OrdersTable() {
 
       console.log('Order data:', orderData);
 
-      // Step 2: For manual orders with temporary bank accounts, associate the bank account with the order
+      // Step 3: For manual orders with temporary bank accounts, associate the bank account with the order
       if (orderData.processing_mode === 'manual' && bankAccountId) {
         console.log('Associating temporary bank account with order');
         
@@ -256,7 +275,7 @@ export function OrdersTable() {
           .from('bank_accounts')
           .update({ 
             used_for_order_id: orderId,
-            temp_order_number: orderData.temp_order_number || orderData.order_number
+            temp_order_number: orderData.order_number
           })
           .eq('id', bankAccountId)
           .eq('is_temporary', true);
@@ -269,14 +288,13 @@ export function OrdersTable() {
         console.log('Successfully associated temporary bank account with order');
       }
 
-      // Step 3: Process the manual order (this will update temp_order_number if needed)
+      // Step 4: Process the manual order
       if (orderData.processing_mode === 'manual') {
         console.log('Processing manual order');
         
         const { error: processError } = await supabase.functions.invoke('process-manual-order', {
           body: { 
-            order_id: orderId,
-            temp_order_number: orderData.temp_order_number
+            order_id: orderId
           }
         });
 
@@ -288,7 +306,7 @@ export function OrdersTable() {
         }
       }
 
-      // Step 4: Generate the invoice with the associated bank account
+      // Step 5: Generate the invoice with the associated bank account
       console.log('Generating invoice');
       
       const { data: invoiceData, error: invoiceError } = await supabase.functions.invoke('generate-invoice', {
@@ -305,7 +323,7 @@ export function OrdersTable() {
 
       console.log('Invoice generation response:', invoiceData);
 
-      // Step 5: Send the email with the invoice PDF
+      // Step 6: Send the email with the invoice PDF
       console.log('Sending invoice email for order:', orderId);
       
       const { data: emailData, error: emailError } = await supabase.functions.invoke('send-order-confirmation', {
@@ -328,7 +346,7 @@ export function OrdersTable() {
         console.log('Invoice email sent successfully:', emailData);
       }
 
-      // Step 6: Update local state to reflect the changes
+      // Step 7: Update local state to reflect the changes
       setOrders(prevOrders => 
         prevOrders.map(order => {
           if (order.id === orderId) {
@@ -340,7 +358,8 @@ export function OrdersTable() {
               invoice_pdf_generated: true,
               invoice_pdf_url: invoiceData.invoice_url,
               invoice_generation_date: invoiceData.generated_at || new Date().toISOString(),
-              invoice_date: new Date().toISOString().split('T')[0]
+              invoice_date: new Date().toISOString().split('T')[0],
+              order_number: newOrderNumber && newOrderNumber.trim() !== '' ? newOrderNumber.trim() : order.order_number
             };
           }
           return order;
@@ -374,9 +393,9 @@ export function OrdersTable() {
     setShowBankAccountDialog(true);
   };
 
-  const handleBankAccountSelected = (bankAccountId: string) => {
+  const handleBankAccountSelected = (bankAccountId: string, newOrderNumber?: string) => {
     if (selectedOrderForInvoice) {
-      generateInvoice(selectedOrderForInvoice.id, bankAccountId);
+      generateInvoice(selectedOrderForInvoice.id, bankAccountId, newOrderNumber);
       setSelectedOrderForInvoice(null);
     }
   };
