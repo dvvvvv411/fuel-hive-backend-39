@@ -1,11 +1,11 @@
-
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
 import { toast } from '@/hooks/use-toast';
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar, Cell } from 'recharts';
-import { TrendingUp, BarChart3, ArrowUp, ArrowDown } from 'lucide-react';
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar, PieChart, Pie, Cell } from 'recharts';
+import { TrendingUp, TrendingDown, Calendar, BarChart3, PieChart as PieChartIcon, ArrowUp, ArrowDown } from 'lucide-react';
 
 interface DailyRevenueData {
   date: string;
@@ -18,6 +18,13 @@ interface ShopPerformanceData {
   shopName: string;
   revenue: number;
   orders: number;
+  color: string;
+}
+
+interface StatusDistributionData {
+  status: string;
+  count: number;
+  percentage: number;
   color: string;
 }
 
@@ -37,6 +44,7 @@ type TimeFrame = 'today' | 'week' | 'month' | 'total';
 export function RevenueCharts() {
   const [dailyData, setDailyData] = useState<DailyRevenueData[]>([]);
   const [shopData, setShopData] = useState<ShopPerformanceData[]>([]);
+  const [statusData, setStatusData] = useState<StatusDistributionData[]>([]);
   const [trendData, setTrendData] = useState<TrendData | null>(null);
   const [loading, setLoading] = useState(true);
   const [timeFrame, setTimeFrame] = useState<TimeFrame>('week');
@@ -131,6 +139,32 @@ export function RevenueCharts() {
         };
       }).sort((a, b) => b.revenue - a.revenue) || [];
 
+      // Status distribution data
+      const statusMap = new Map<string, number>();
+      orders?.forEach(order => {
+        const status = order.status || 'unknown';
+        statusMap.set(status, (statusMap.get(status) || 0) + 1);
+      });
+
+      const totalOrders = orders?.length || 0;
+      const statusColors = {
+        pending: '#F59E0B',
+        confirmed: '#10B981',
+        invoice_sent: '#3B82F6',
+        paid: '#8B5CF6',
+        unknown: '#6B7280'
+      };
+
+      const statusDistributionData: StatusDistributionData[] = Array.from(statusMap.entries()).map(([status, count]) => ({
+        status: status === 'pending' ? 'Ausstehend' :
+                status === 'confirmed' ? 'Bestätigt' :
+                status === 'invoice_sent' ? 'Rechnung versendet' :
+                status === 'paid' ? 'Bezahlt' : 'Unbekannt',
+        count,
+        percentage: totalOrders > 0 ? (count / totalOrders) * 100 : 0,
+        color: statusColors[status as keyof typeof statusColors] || statusColors.unknown
+      }));
+
       // Trend data calculation
       const todayStr = today.toISOString().split('T')[0];
       const yesterdayStr = yesterday.toISOString().split('T')[0];
@@ -166,6 +200,7 @@ export function RevenueCharts() {
 
       setDailyData(dailyRevenueData);
       setShopData(shopPerformanceData);
+      setStatusData(statusDistributionData);
       setTrendData(trendInfo);
     } catch (error) {
       console.error('Error fetching charts data:', error);
@@ -201,7 +236,7 @@ export function RevenueCharts() {
   if (loading) {
     return (
       <div className="space-y-6">
-        {[...Array(3)].map((_, i) => (
+        {[...Array(4)].map((_, i) => (
           <Card key={i} className="bg-white shadow-sm border border-gray-200">
             <CardHeader>
               <div className="animate-pulse">
@@ -425,6 +460,75 @@ export function RevenueCharts() {
                 </Bar>
               </BarChart>
             </ResponsiveContainer>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Status Distribution Donut Chart */}
+      <Card className="bg-white shadow-sm border border-gray-200">
+        <CardHeader>
+          <CardTitle className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+            <PieChartIcon className="h-5 w-5 text-purple-600" />
+            Status-Verteilung (Alle Bestellungen)
+          </CardTitle>
+          <CardDescription>
+            Aktuelle Verteilung aller Bestellungsstatus mit klickbaren Details
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="flex flex-col lg:flex-row items-center gap-8">
+            <div className="h-80 w-80">
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart>
+                  <Pie
+                    data={statusData}
+                    cx="50%"
+                    cy="50%"
+                    innerRadius={60}
+                    outerRadius={120}
+                    paddingAngle={2}
+                    dataKey="count"
+                  >
+                    {statusData.map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={entry.color} />
+                    ))}
+                  </Pie>
+                  <Tooltip 
+                    content={({ active, payload }) => {
+                      if (active && payload && payload.length) {
+                        const data = payload[0].payload;
+                        return (
+                          <div className="bg-white p-3 border border-gray-200 rounded-lg shadow-md">
+                            <p className="font-medium">{data.status}</p>
+                            <p className="text-blue-600">Anzahl: {data.count}</p>
+                            <p className="text-green-600">Anteil: {data.percentage.toFixed(1)}%</p>
+                          </div>
+                        );
+                      }
+                      return null;
+                    }}
+                  />
+                </PieChart>
+              </ResponsiveContainer>
+            </div>
+            
+            <div className="space-y-3 flex-1">
+              {statusData.map((entry) => (
+                <div key={entry.status} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                  <div className="flex items-center gap-3">
+                    <div 
+                      className="w-4 h-4 rounded-full" 
+                      style={{ backgroundColor: entry.color }}
+                    ></div>
+                    <span className="font-medium">{entry.status}</span>
+                  </div>
+                  <div className="text-right">
+                    <div className="font-bold">{entry.count}</div>
+                    <div className="text-sm text-gray-600">{entry.percentage.toFixed(1)}%</div>
+                  </div>
+                </div>
+              ))}
+            </div>
           </div>
         </CardContent>
       </Card>
