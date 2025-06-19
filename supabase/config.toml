@@ -3,3 +3,6 @@ project_id = "luhhnsvwtnmxztcmdxyq"
 
 [functions.create-order-token]
 verify_jwt = false
+
+[functions.get-order-token]
+verify_jwt = false
