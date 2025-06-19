@@ -246,10 +246,8 @@ export function OrdersTable() {
         throw orderError;
       }
 
-      // STEP 1: Update the bank account association for temporary accounts if this is a manual order
+      // Update the bank account association for temporary accounts if this is a manual order
       if (orderData.processing_mode === 'manual' && bankAccountId) {
-        console.log('Updating temporary bank account association for manual order...');
-        
         const { error: updateError } = await supabase
           .from('bank_accounts')
           .update({ 
@@ -261,13 +259,13 @@ export function OrdersTable() {
 
         if (updateError) {
           console.error('Error updating temporary bank account:', updateError);
-          throw new Error('Failed to associate bank account with order');
+          // Don't fail the invoice generation, just log the error
         } else {
-          console.log('Successfully updated temporary bank account association for order:', orderId);
+          console.log('Updated temporary bank account association for order:', orderId);
         }
       }
 
-      // STEP 2: Call the edge function to generate the invoice (now with correct bank account association)
+      // Call the edge function to generate the invoice
       const { data: invoiceData, error: invoiceError } = await supabase.functions.invoke('generate-invoice', {
         body: { 
           order_id: orderId,
@@ -282,7 +280,7 @@ export function OrdersTable() {
 
       console.log('Invoice generation response:', invoiceData);
 
-      // STEP 3: Automatically send the email with the invoice PDF
+      // Now automatically send the email with the invoice PDF
       console.log('Sending invoice email for order:', orderId);
       
       const { data: emailData, error: emailError } = await supabase.functions.invoke('send-order-confirmation', {
@@ -305,11 +303,11 @@ export function OrdersTable() {
         console.log('Invoice email sent successfully:', emailData);
       }
 
-      // STEP 4: Update local state to reflect the changes
+      // Update local state to reflect the changes, including temporary bank account info
       setOrders(prevOrders => 
         prevOrders.map(order => {
           if (order.id === orderId) {
-            return {
+            const updatedOrder = {
               ...order,
               status: 'invoice_sent',
               invoice_sent: true,
@@ -319,13 +317,19 @@ export function OrdersTable() {
               invoice_generation_date: invoiceData.generated_at || new Date().toISOString(),
               invoice_date: new Date().toISOString().split('T')[0]
             };
+
+            // If a temporary bank account was used, update the display
+            if (bankAccountId && orderData.processing_mode === 'manual') {
+              // The temporary bank account will now be loaded in the next refresh via the query
+              // For now, we'll refresh the data to get the updated bank account info
+              setTimeout(() => fetchOrders(), 1000);
+            }
+
+            return updatedOrder;
           }
           return order;
         })
       );
-
-      // Refresh the orders data to get updated bank account info
-      setTimeout(() => fetchOrders(), 1000);
 
       const successMessage = emailError 
         ? 'Rechnung wurde erfolgreich generiert (E-Mail-Versand fehlgeschlagen)'
