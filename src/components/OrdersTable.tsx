@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Pagination, PaginationContent, PaginationItem, PaginationLink, PaginationNext, PaginationPrevious } from '@/components/ui/pagination';
-import { Search, RefreshCw, FileText, Eye, Download, DollarSign, Check, EyeOff } from 'lucide-react';
+import { Search, RefreshCw, FileText, Eye, Download, DollarSign, Check, EyeOff, Copy } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import { OrderDetailsDialog } from './OrderDetailsDialog';
 import { BankAccountSelectionDialog } from './BankAccountSelectionDialog';
@@ -584,6 +584,22 @@ export function OrdersTable() {
     setCurrentPage(1);
   };
 
+  const copyPhoneToClipboard = async (phone: string) => {
+    try {
+      await navigator.clipboard.writeText(phone);
+      toast({
+        title: 'Kopiert',
+        description: 'Telefonnummer wurde in die Zwischenablage kopiert',
+      });
+    } catch (error) {
+      toast({
+        title: 'Fehler',
+        description: 'Fehler beim Kopieren in die Zwischenablage',
+        variant: 'destructive',
+      });
+    }
+  };
+
   return (
     <div className="space-y-6">
       <Card>
@@ -739,6 +755,8 @@ export function OrdersTable() {
                     const address = formatAddress(order);
                     const { dateStr, timeStr } = formatDateTime(order.created_at);
                     const hasAddressDifference = checkAddressDifference(order);
+                    const phoneNumber = order.customer_phone || order.delivery_phone;
+                    
                     return (
                       <TableRow key={order.id}>
                         <TableCell className="font-medium">
@@ -764,7 +782,18 @@ export function OrdersTable() {
                           </div>
                         </TableCell>
                         <TableCell>
-                          {order.customer_phone || order.delivery_phone || '-'}
+                          {phoneNumber ? (
+                            <div 
+                              className="flex items-center gap-1 cursor-pointer hover:bg-gray-100 p-1 rounded"
+                              onClick={() => copyPhoneToClipboard(phoneNumber)}
+                              title="Klicken zum Kopieren"
+                            >
+                              <span>{phoneNumber}</span>
+                              <Copy className="h-3 w-3 text-gray-400" />
+                            </div>
+                          ) : (
+                            '-'
+                          )}
                         </TableCell>
                         <TableCell>
                           <div className="text-sm">
