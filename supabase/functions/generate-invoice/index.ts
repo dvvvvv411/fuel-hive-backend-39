@@ -79,10 +79,30 @@ const handler = async (req: Request): Promise<Response> => {
     // Check if invoice already exists
     if (order.invoice_pdf_generated && order.invoice_pdf_url) {
       console.log('Invoice already exists for order:', order_id);
+      
+      // Update the order status to invoice_sent even if PDF already exists
+      console.log('Updating order status to invoice_sent for existing invoice');
+      const { error: updateError } = await supabase
+        .from('orders')
+        .update({
+          status: 'invoice_sent',
+          invoice_sent: true
+        })
+        .eq('id', order_id);
+
+      if (updateError) {
+        console.error('Error updating order status:', updateError);
+        return new Response(JSON.stringify({ error: 'Failed to update order status' }), {
+          status: 500,
+          headers: { 'Content-Type': 'application/json', ...corsHeaders },
+        });
+      }
+
       return new Response(JSON.stringify({
         invoice_number: order.invoice_number,
         invoice_url: order.invoice_pdf_url,
         already_generated: true,
+        status_updated: true,
       }), {
         status: 200,
         headers: { 'Content-Type': 'application/json', ...corsHeaders },
