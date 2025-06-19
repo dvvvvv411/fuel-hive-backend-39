@@ -202,7 +202,9 @@ const generateInvoiceEmailTemplate = (order: any, bankData: any) => {
   // Use shop name as recipient when use_anyname is true, otherwise use account holder
   const recipientName = bankData?.use_anyname ? shopName : (bankData?.account_holder || shopName);
   
-  const subject = `Rechnung ${invoiceNumber} - Ihre ${translateProduct(order.product)}-Bestellung bei ${shopName}`;
+  // Fix subject line by ensuring proper trimming of shop name
+  const cleanShopName = shopName.trim();
+  const subject = `Rechnung ${invoiceNumber} - Ihre ${translateProduct(order.product)}-Bestellung bei ${cleanShopName}`;
 
   const htmlContent = `
     <!DOCTYPE html>
@@ -231,7 +233,7 @@ const generateInvoiceEmailTemplate = (order: any, bankData: any) => {
               <tr>
                 <td style="padding: 50px 40px 30px 40px; text-align: center; background: ${accentColor}; border-radius: 12px 12px 0 0;">
                   <h1 style="margin: 0; color: #ffffff; font-size: 32px; font-weight: 700; line-height: 1.2; text-shadow: 0 2px 4px rgba(0,0,0,0.1);">
-                    ${shopName}
+                    ${cleanShopName}
                   </h1>
                   <div style="margin: 20px 0 0 0; padding: 12px 24px; background-color: rgba(255,255,255,0.2); border-radius: 50px; display: inline-block;">
                     <span style="color: #ffffff; font-size: 18px; font-weight: 600;">
@@ -252,7 +254,7 @@ const generateInvoiceEmailTemplate = (order: any, bankData: any) => {
                     anbei erhalten Sie die Rechnung für Ihre ${translateProduct(order.product)}-Bestellung. Die Rechnung finden Sie als PDF-Anhang in dieser E-Mail.
                   </p>
 
-                  <!-- Payment Information Box (moved above invoice details) -->
+                  <!-- Payment Information Box -->
                   ${bankData ? `
                   <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%); border-radius: 12px; border: 2px solid #3b82f6; margin-bottom: 32px;">
                     <tr>
@@ -275,22 +277,22 @@ const generateInvoiceEmailTemplate = (order: any, bankData: any) => {
                           </tr>
                           <tr>
                             <td style="padding: 8px 0; color: #1e40af; font-size: 15px; font-weight: 600;">IBAN:</td>
-                            <td style="padding: 8px 0; color: #1e3a8a; font-size: 15px; font-weight: 700; font-family: 'Courier New', monospace;"><strong>${formatIBAN(bankData.iban)}</strong></td>
+                            <td style="padding: 8px 0; color: #1e3a8a; font-size: 15px; font-weight: 700;"><strong>${formatIBAN(bankData.iban)}</strong></td>
                           </tr>
                           ${bankData.bic ? `
                           <tr>
                             <td style="padding: 8px 0; color: #1e40af; font-size: 15px; font-weight: 600;">BIC:</td>
-                            <td style="padding: 8px 0; color: #1e3a8a; font-size: 15px; font-weight: 700; font-family: 'Courier New', monospace;">${bankData.bic}</td>
+                            <td style="padding: 8px 0; color: #1e3a8a; font-size: 15px; font-weight: 700;"><strong>${bankData.bic}</strong></td>
                           </tr>
                           ` : ''}
                           <tr>
                             <td style="padding: 8px 0; color: #1e40af; font-size: 15px; font-weight: 600;">Verwendungszweck:</td>
-                            <td style="padding: 8px 0; color: #1e3a8a; font-size: 15px; font-weight: 700;">Rechnung ${invoiceNumber} - ${shopName}</td>
+                            <td style="padding: 8px 0; color: #1e3a8a; font-size: 15px; font-weight: 700;">${invoiceNumber}</td>
                           </tr>
                         </table>
                         <div style="margin-top: 16px; padding: 16px; background-color: rgba(59, 130, 246, 0.1); border-radius: 8px; border-left: 4px solid #3b82f6;">
                           <p style="margin: 0; color: #1e40af; font-size: 14px; font-weight: 600;">
-                            💡 Bitte verwenden Sie unbedingt <strong>Rechnung ${invoiceNumber} - ${shopName}</strong> als Verwendungszweck.
+                            💡 Bitte verwenden Sie unbedingt die Rechnungsnummer <strong>"${invoiceNumber}"</strong> als Verwendungszweck und den Empfängernamen (in diesem Fall) <strong>"${recipientName}"</strong> bei der Überweisung.
                           </p>
                         </div>
                       </td>
@@ -348,7 +350,7 @@ const generateInvoiceEmailTemplate = (order: any, bankData: any) => {
 
                   <p style="margin: 32px 0 0 0; color: #374151; font-size: 16px; line-height: 1.6; text-align: center;">
                     Vielen Dank für Ihr Vertrauen!<br>
-                    <strong style="color: ${accentColor};">${shopName}</strong>
+                    <strong style="color: ${accentColor};">${cleanShopName}</strong>
                   </p>
                 </td>
               </tr>
@@ -358,7 +360,7 @@ const generateInvoiceEmailTemplate = (order: any, bankData: any) => {
                 <td style="padding: 24px 40px; background-color: #f9fafb; border-radius: 0 0 12px 12px; border-top: 1px solid #e5e7eb;">
                   <div style="text-align: center; color: #6b7280; font-size: 13px; line-height: 1.5;">
                     <div style="margin-bottom: 8px;">
-                      <strong>${shopName}</strong>
+                      <strong>${cleanShopName}</strong>
                     </div>
                     <div>
                       ${order.shops?.company_address || ''} • ${order.shops?.company_postcode || ''} ${order.shops?.company_city || ''}
