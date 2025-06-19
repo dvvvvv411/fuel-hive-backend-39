@@ -6,6 +6,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { supabase } from '@/integrations/supabase/client';
 import { FileText, Download } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { getInvoiceTranslations } from '@/utils/invoiceTranslations';
 
 interface Shop {
   id: string;
@@ -28,6 +29,21 @@ interface Shop {
     bank_name?: string;
   };
 }
+
+const SUPPORTED_LANGUAGES = [
+  { code: 'de', name: 'Deutsch' },
+  { code: 'en', name: 'English' },
+  { code: 'fr', name: 'Français' },
+  { code: 'es', name: 'Español' },
+  { code: 'it', name: 'Italiano' },
+  { code: 'nl', name: 'Nederlands' },
+  { code: 'pt', name: 'Português' },
+  { code: 'pl', name: 'Polski' },
+  { code: 'sv', name: 'Svenska' },
+  { code: 'da', name: 'Dansk' },
+  { code: 'no', name: 'Norsk' },
+  { code: 'fi', name: 'Suomi' }
+];
 
 export function InvoicePreview() {
   const [shops, setShops] = useState<Shop[]>([]);
@@ -82,91 +98,7 @@ export function InvoicePreview() {
     }
   };
 
-  const getTranslations = (lang: string) => {
-    const translations = {
-      de: {
-        invoice: 'Rechnung',
-        invoiceNumber: 'Rechnungsnummer',
-        invoiceDate: 'Rechnungsdatum',
-        dueDate: 'Fälligkeitsdatum',
-        orderNumber: 'Bestellnummer',
-        orderDate: 'Bestelldatum',
-        description: 'Beschreibung',
-        quantity: 'Menge',
-        unitPrice: 'Einzelpreis',
-        total: 'Gesamt',
-        heatingOilDelivery: 'Heizöllieferung',
-        liters: 'Liter',
-        deliveryFee: 'Liefergebühr',
-        subtotal: 'Zwischensumme',
-        vat: 'MwSt.',
-        grandTotal: 'Gesamtsumme',
-        paymentDetails: 'Zahlungsdetails',
-        accountHolder: 'Kontoinhaber',
-        iban: 'IBAN',
-        bic: 'BIC',
-        paymentReference: 'Verwendungszweck',
-        dueDays: '14 Tage netto',
-        thankYou: 'Vielen Dank für Ihr Vertrauen!',
-        currency: '€'
-      },
-      en: {
-        invoice: 'Invoice',
-        invoiceNumber: 'Invoice Number',
-        invoiceDate: 'Invoice Date',
-        dueDate: 'Due Date',
-        orderNumber: 'Order Number',
-        orderDate: 'Order Date',
-        description: 'Description',
-        quantity: 'Quantity',
-        unitPrice: 'Unit Price',
-        total: 'Total',
-        heatingOilDelivery: 'Heating Oil Delivery',
-        liters: 'Liters',
-        deliveryFee: 'Delivery Fee',
-        subtotal: 'Subtotal',
-        vat: 'VAT',
-        grandTotal: 'Grand Total',
-        paymentDetails: 'Payment Details',
-        accountHolder: 'Account Holder',
-        iban: 'IBAN',
-        bic: 'BIC',
-        paymentReference: 'Payment Reference',
-        dueDays: '14 days net',
-        thankYou: 'Thank you for your trust!',
-        currency: '£'
-      },
-      fr: {
-        invoice: 'Facture',
-        invoiceNumber: 'Numéro de facture',
-        invoiceDate: 'Date de facturation',
-        dueDate: 'Date d\'échéance',
-        orderNumber: 'Numéro de commande',
-        orderDate: 'Date de commande',
-        description: 'Description',
-        quantity: 'Quantité',
-        unitPrice: 'Prix unitaire',
-        total: 'Total',
-        heatingOilDelivery: 'Livraison de mazout',
-        liters: 'Litres',
-        deliveryFee: 'Frais de livraison',
-        subtotal: 'Sous-total',
-        vat: 'TVA',
-        grandTotal: 'Total général',
-        paymentDetails: 'Détails de paiement',
-        accountHolder: 'Titulaire du compte',
-        iban: 'IBAN',
-        bic: 'BIC',
-        paymentReference: 'Référence de paiement',
-        dueDays: '14 jours net',
-        thankYou: 'Merci pour votre confiance!',
-        currency: '€'
-      }
-    };
-    return translations[lang as keyof typeof translations] || translations.de;
-  };
-
-  const t = getTranslations(language);
+  const t = getInvoiceTranslations(language);
 
   // Sample data for preview
   const sampleData = {
@@ -233,9 +165,12 @@ export function InvoicePreview() {
 
       if (error) throw error;
 
-      // Generate PDF
+      // Generate PDF with the selected language
       const { data, error: invoiceError } = await supabase.functions.invoke('generate-invoice', {
-        body: { order_id: order.id }
+        body: { 
+          order_id: order.id,
+          language: language // Pass the selected language
+        }
       });
 
       if (invoiceError) throw invoiceError;
@@ -250,7 +185,7 @@ export function InvoicePreview() {
 
       toast({
         title: "Success",
-        description: "Sample PDF generated successfully",
+        description: `Sample PDF generated successfully in ${SUPPORTED_LANGUAGES.find(l => l.code === language)?.name}`,
       });
     } catch (error) {
       console.error('Error generating PDF:', error);
@@ -309,16 +244,18 @@ export function InvoicePreview() {
               </Select>
             </div>
             
-            <div className="min-w-32">
-              <label className="block text-sm font-medium mb-2">Language</label>
+            <div className="min-w-48">
+              <label className="block text-sm font-medium mb-2">Preview Language</label>
               <Select value={language} onValueChange={setLanguage}>
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="de">Deutsch</SelectItem>
-                  <SelectItem value="en">English</SelectItem>
-                  <SelectItem value="fr">Français</SelectItem>
+                  {SUPPORTED_LANGUAGES.map((lang) => (
+                    <SelectItem key={lang.code} value={lang.code}>
+                      {lang.name}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
@@ -386,11 +323,11 @@ export function InvoicePreview() {
               </div>
               <div className="space-y-2">
                 <div className="flex">
-                  <span className="w-32 font-medium">{t.orderNumber}:</span>
+                  <span className="w-32 font-medium">{t.orderNumber || 'Order Number'}:</span>
                   <span>{sampleData.orderNumber}</span>
                 </div>
                 <div className="flex">
-                  <span className="w-32 font-medium">{t.orderDate}:</span>
+                  <span className="w-32 font-medium">{t.orderDate || 'Order Date'}:</span>
                   <span>{currentDate.toLocaleDateString(language === 'en' ? 'en-US' : 'de-DE')}</span>
                 </div>
               </div>

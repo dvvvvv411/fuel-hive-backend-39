@@ -1,7 +1,6 @@
 
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-import { getInvoiceTranslations } from "./translations.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -10,6 +9,327 @@ const corsHeaders = {
 
 interface RequestBody {
   order_id: string;
+  language?: string;
+}
+
+// Import translations directly in the edge function
+const translations = {
+  de: {
+    invoice: 'Rechnung',
+    invoiceNumber: 'Rechnungsnummer',
+    invoiceDate: 'Rechnungsdatum',
+    dueDate: 'Fälligkeitsdatum',
+    orderNumber: 'Bestellnummer',
+    orderDate: 'Bestelldatum',
+    description: 'Beschreibung',
+    quantity: 'Menge',
+    unitPrice: 'Einzelpreis',
+    total: 'Gesamt',
+    subtotal: 'Zwischensumme',
+    vat: 'MwSt',
+    grandTotal: 'Gesamtbetrag',
+    paymentDetails: 'Zahlungsdetails',
+    accountHolder: 'Kontoinhaber',
+    iban: 'IBAN',
+    bic: 'BIC',
+    paymentReference: 'Verwendungszweck',
+    thankYou: 'Vielen Dank für Ihren Auftrag!',
+    heatingOilDelivery: 'Heizöllieferung',
+    liters: 'Liter',
+    deliveryFee: 'Liefergebühr',
+    dueDays: '14 Tage',
+    currency: '€'
+  },
+  en: {
+    invoice: 'Invoice',
+    invoiceNumber: 'Invoice Number',
+    invoiceDate: 'Invoice Date',
+    dueDate: 'Due Date',
+    orderNumber: 'Order Number',
+    orderDate: 'Order Date',
+    description: 'Description',
+    quantity: 'Quantity',
+    unitPrice: 'Unit Price',
+    total: 'Total',
+    subtotal: 'Subtotal',
+    vat: 'VAT',
+    grandTotal: 'Grand Total',
+    paymentDetails: 'Payment Details',
+    accountHolder: 'Account Holder',
+    iban: 'IBAN',
+    bic: 'BIC',
+    paymentReference: 'Payment Reference',
+    thankYou: 'Thank you for your order!',
+    heatingOilDelivery: 'Heating Oil Delivery',
+    liters: 'Liters',
+    deliveryFee: 'Delivery Fee',
+    dueDays: '14 days',
+    currency: '€'
+  },
+  fr: {
+    invoice: 'Facture',
+    invoiceNumber: 'Numéro de facture',
+    invoiceDate: 'Date de facture',
+    dueDate: 'Date d\'échéance',
+    orderNumber: 'Numéro de commande',
+    orderDate: 'Date de commande',
+    description: 'Description',
+    quantity: 'Quantité',
+    unitPrice: 'Prix unitaire',
+    total: 'Total',
+    subtotal: 'Sous-total',
+    vat: 'TVA',
+    grandTotal: 'Total général',
+    paymentDetails: 'Détails de paiement',
+    accountHolder: 'Titulaire du compte',
+    iban: 'IBAN',
+    bic: 'BIC',
+    paymentReference: 'Référence de paiement',
+    thankYou: 'Merci pour votre commande!',
+    heatingOilDelivery: 'Livraison de fioul',
+    liters: 'Litres',
+    deliveryFee: 'Frais de livraison',
+    dueDays: '14 jours',
+    currency: '€'
+  },
+  es: {
+    invoice: 'Factura',
+    invoiceNumber: 'Número de factura',
+    invoiceDate: 'Fecha de factura',
+    dueDate: 'Fecha de vencimiento',
+    orderNumber: 'Número de pedido',
+    orderDate: 'Fecha de pedido',
+    description: 'Descripción',
+    quantity: 'Cantidad',
+    unitPrice: 'Precio unitario',
+    total: 'Total',
+    subtotal: 'Subtotal',
+    vat: 'IVA',
+    grandTotal: 'Total general',
+    paymentDetails: 'Detalles de pago',
+    accountHolder: 'Titular de la cuenta',
+    iban: 'IBAN',
+    bic: 'BIC',
+    paymentReference: 'Referencia de pago',
+    thankYou: '¡Gracias por su pedido!',
+    heatingOilDelivery: 'Entrega de combustible',
+    liters: 'Litros',
+    deliveryFee: 'Tarifa de entrega',
+    dueDays: '14 días',
+    currency: '€'
+  },
+  it: {
+    invoice: 'Fattura',
+    invoiceNumber: 'Numero fattura',
+    invoiceDate: 'Data fattura',
+    dueDate: 'Data di scadenza',
+    orderNumber: 'Numero ordine',
+    orderDate: 'Data ordine',
+    description: 'Descrizione',
+    quantity: 'Quantità',
+    unitPrice: 'Prezzo unitario',
+    total: 'Totale',
+    subtotal: 'Subtotale',
+    vat: 'IVA',
+    grandTotal: 'Totale generale',
+    paymentDetails: 'Dettagli pagamento',
+    accountHolder: 'Intestatario conto',
+    iban: 'IBAN',
+    bic: 'BIC',
+    paymentReference: 'Riferimento pagamento',
+    thankYou: 'Grazie per il tuo ordine!',
+    heatingOilDelivery: 'Consegna gasolio',
+    liters: 'Litri',
+    deliveryFee: 'Tassa di consegna',
+    dueDays: '14 giorni',
+    currency: '€'
+  },
+  nl: {
+    invoice: 'Factuur',
+    invoiceNumber: 'Factuurnummer',
+    invoiceDate: 'Factuurdatum',
+    dueDate: 'Vervaldatum',
+    orderNumber: 'Bestelnummer',
+    orderDate: 'Besteldatum',
+    description: 'Beschrijving',
+    quantity: 'Hoeveelheid',
+    unitPrice: 'Eenheidsprijs',
+    total: 'Totaal',
+    subtotal: 'Subtotaal',
+    vat: 'BTW',
+    grandTotal: 'Eindtotaal',
+    paymentDetails: 'Betalingsgegevens',
+    accountHolder: 'Rekeninghouder',
+    iban: 'IBAN',
+    bic: 'BIC',
+    paymentReference: 'Betalingskenmerk',
+    thankYou: 'Dank u voor uw bestelling!',
+    heatingOilDelivery: 'Stookolielevering',
+    liters: 'Liters',
+    deliveryFee: 'Leveringskosten',
+    dueDays: '14 dagen',
+    currency: '€'
+  },
+  pt: {
+    invoice: 'Fatura',
+    invoiceNumber: 'Número da fatura',
+    invoiceDate: 'Data da fatura',
+    dueDate: 'Data de vencimento',
+    orderNumber: 'Número do pedido',
+    orderDate: 'Data do pedido',
+    description: 'Descrição',
+    quantity: 'Quantidade',
+    unitPrice: 'Preço unitário',
+    total: 'Total',
+    subtotal: 'Subtotal',
+    vat: 'IVA',
+    grandTotal: 'Total geral',
+    paymentDetails: 'Detalhes de pagamento',
+    accountHolder: 'Titular da conta',
+    iban: 'IBAN',
+    bic: 'BIC',
+    paymentReference: 'Referência de pagamento',
+    thankYou: 'Obrigado pelo seu pedido!',
+    heatingOilDelivery: 'Entrega de óleo de aquecimento',
+    liters: 'Litros',
+    deliveryFee: 'Taxa de entrega',
+    dueDays: '14 dias',
+    currency: '€'
+  },
+  pl: {
+    invoice: 'Faktura',
+    invoiceNumber: 'Numer faktury',
+    invoiceDate: 'Data faktury',
+    dueDate: 'Termin płatności',
+    orderNumber: 'Numer zamówienia',
+    orderDate: 'Data zamówienia',
+    description: 'Opis',
+    quantity: 'Ilość',
+    unitPrice: 'Cena jednostkowa',
+    total: 'Razem',
+    subtotal: 'Suma częściowa',
+    vat: 'VAT',
+    grandTotal: 'Suma całkowita',
+    paymentDetails: 'Szczegóły płatności',
+    accountHolder: 'Właściciel konta',
+    iban: 'IBAN',
+    bic: 'BIC',
+    paymentReference: 'Tytuł płatności',
+    thankYou: 'Dziękujemy za zamówienie!',
+    heatingOilDelivery: 'Dostawa oleju opałowego',
+    liters: 'Litry',
+    deliveryFee: 'Opłata za dostawę',
+    dueDays: '14 dni',
+    currency: '€'
+  },
+  sv: {
+    invoice: 'Faktura',
+    invoiceNumber: 'Fakturanummer',
+    invoiceDate: 'Fakturadatum',
+    dueDate: 'Förfallodatum',
+    orderNumber: 'Ordernummer',
+    orderDate: 'Orderdatum',
+    description: 'Beskrivning',
+    quantity: 'Kvantitet',
+    unitPrice: 'Enhetspris',
+    total: 'Total',
+    subtotal: 'Delsumma',
+    vat: 'Moms',
+    grandTotal: 'Totalsumma',
+    paymentDetails: 'Betalningsuppgifter',
+    accountHolder: 'Kontoinnehavare',
+    iban: 'IBAN',
+    bic: 'BIC',
+    paymentReference: 'Betalningsreferens',
+    thankYou: 'Tack för din beställning!',
+    heatingOilDelivery: 'Leverans av eldningsolja',
+    liters: 'Liter',
+    deliveryFee: 'Leveransavgift',
+    dueDays: '14 dagar',
+    currency: '€'
+  },
+  da: {
+    invoice: 'Faktura',
+    invoiceNumber: 'Fakturanummer',
+    invoiceDate: 'Fakturadato',
+    dueDate: 'Forfaldsdato',
+    orderNumber: 'Ordrenummer',
+    orderDate: 'Ordredato',
+    description: 'Beskrivelse',
+    quantity: 'Mængde',
+    unitPrice: 'Enhedspris',
+    total: 'Total',
+    subtotal: 'Subtotal',
+    vat: 'Moms',
+    grandTotal: 'Samlet total',
+    paymentDetails: 'Betalingsoplysninger',
+    accountHolder: 'Kontoindehaver',
+    iban: 'IBAN',
+    bic: 'BIC',
+    paymentReference: 'Betalingsreference',
+    thankYou: 'Tak for din ordre!',
+    heatingOilDelivery: 'Levering af fyringsolie',
+    liters: 'Liter',
+    deliveryFee: 'Leveringsgebyr',
+    dueDays: '14 dage',
+    currency: '€'
+  },
+  no: {
+    invoice: 'Faktura',
+    invoiceNumber: 'Fakturanummer',
+    invoiceDate: 'Fakturadato',
+    dueDate: 'Forfallsdato',
+    orderNumber: 'Ordrenummer',
+    orderDate: 'Ordredato',
+    description: 'Beskrivelse',
+    quantity: 'Mengde',
+    unitPrice: 'Enhetspris',
+    total: 'Total',
+    subtotal: 'Delsum',
+    vat: 'MVA',
+    grandTotal: 'Totalsum',
+    paymentDetails: 'Betalingsdetaljer',
+    accountHolder: 'Kontoinnehaver',
+    iban: 'IBAN',
+    bic: 'BIC',
+    paymentReference: 'Betalingsreferanse',
+    thankYou: 'Takk for din ordre!',
+    heatingOilDelivery: 'Levering av fyringsolje',
+    liters: 'Liter',
+    deliveryFee: 'Leveringsgebyr',
+    dueDays: '14 dager',
+    currency: '€'
+  },
+  fi: {
+    invoice: 'Lasku',
+    invoiceNumber: 'Laskunumero',
+    invoiceDate: 'Laskupäivä',
+    dueDate: 'Eräpäivä',
+    orderNumber: 'Tilausnumero',
+    orderDate: 'Tilauspäivä',
+    description: 'Kuvaus',
+    quantity: 'Määrä',
+    unitPrice: 'Yksikköhinta',
+    total: 'Yhteensä',
+    subtotal: 'Välisumma',
+    vat: 'ALV',
+    grandTotal: 'Loppusumma',
+    paymentDetails: 'Maksutiedot',
+    accountHolder: 'Tilinomistaja',
+    iban: 'IBAN',
+    bic: 'BIC',
+    paymentReference: 'Maksuviite',
+    thankYou: 'Kiitos tilauksestasi!',
+    heatingOilDelivery: 'Lämmitysöljyn toimitus',
+    liters: 'Litraa',
+    deliveryFee: 'Toimitusmaksu',
+    dueDays: '14 päivää',
+    currency: '€'
+  }
+};
+
+function getInvoiceTranslations(language: string) {
+  return translations[language as keyof typeof translations] || translations.de;
 }
 
 const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
@@ -22,9 +342,10 @@ const serve_handler = async (req: Request): Promise<Response> => {
 
   try {
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
-    const { order_id }: RequestBody = await req.json();
+    const { order_id, language: requestLanguage }: RequestBody = await req.json();
 
     console.log('Starting invoice generation for order:', order_id);
+    console.log('Requested language:', requestLanguage);
 
     // Fetch order details with shop information to get language
     const { data: order, error: orderError } = await supabase
@@ -68,10 +389,13 @@ const serve_handler = async (req: Request): Promise<Response> => {
     }
 
     console.log('Order fetched successfully:', order.order_number);
-    console.log('Shop language:', order.shops.language);
 
-    // Get translations based on shop language
-    const t = getInvoiceTranslations(order.shops.language || 'de');
+    // Use requested language, fallback to shop language, then to 'de'
+    const finalLanguage = requestLanguage || order.shops.language || 'de';
+    console.log('Final language for PDF:', finalLanguage);
+
+    // Get translations based on final language
+    const t = getInvoiceTranslations(finalLanguage);
     const currency = order.shops.currency || 'EUR';
     const currencySymbol = t.currency;
 
@@ -98,13 +422,12 @@ const serve_handler = async (req: Request): Promise<Response> => {
     }
 
     // Create localized filename
-    const languageCode = order.shops.language || 'de';
-    const filename = `${t.invoice.toLowerCase()}_${invoiceNumber.replace('/', '_')}_${languageCode}.pdf`;
+    const filename = `${t.invoice.toLowerCase()}_${invoiceNumber.replace('/', '_')}_${finalLanguage}.pdf`;
 
     console.log('Generating PDF with filename:', filename);
 
     // Generate PDF content with translations
-    const pdfContent = await generateInvoicePDF(order, invoiceNumber, t, currencySymbol);
+    const pdfContent = await generateInvoicePDF(order, invoiceNumber, t, currencySymbol, finalLanguage);
 
     if (!pdfContent || pdfContent.length === 0) {
       console.error('PDF generation failed: empty content');
@@ -162,7 +485,7 @@ const serve_handler = async (req: Request): Promise<Response> => {
         invoice_number: invoiceNumber,
         invoice_url: publicUrl.publicUrl,
         generated_at: new Date().toISOString(),
-        language: languageCode,
+        language: finalLanguage,
         filename: filename
       }),
       {
@@ -183,9 +506,9 @@ const serve_handler = async (req: Request): Promise<Response> => {
   }
 };
 
-async function generateInvoicePDF(order: any, invoiceNumber: string, t: any, currencySymbol: string): Promise<Uint8Array> {
+async function generateInvoicePDF(order: any, invoiceNumber: string, t: any, currencySymbol: string, language: string): Promise<Uint8Array> {
   try {
-    console.log('Starting PDF generation...');
+    console.log('Starting PDF generation with language:', language);
     
     // Import jsPDF dynamically
     const { jsPDF } = await import("https://esm.sh/jspdf@2.5.1");
@@ -274,19 +597,19 @@ async function generateInvoicePDF(order: any, invoiceNumber: string, t: any, cur
     yPos += 6;
     
     doc.text(`${t.invoiceDate}:`, margin, yPos);
-    doc.text(new Date().toLocaleDateString(order.shops.language === 'en' ? 'en-US' : 'de-DE'), margin + labelWidth, yPos);
+    doc.text(new Date().toLocaleDateString(language === 'en' ? 'en-US' : 'de-DE'), margin + labelWidth, yPos);
     yPos += 6;
     
     doc.text(`${t.dueDate}:`, margin, yPos);
-    doc.text(dueDate.toLocaleDateString(order.shops.language === 'en' ? 'en-US' : 'de-DE'), margin + labelWidth, yPos);
+    doc.text(dueDate.toLocaleDateString(language === 'en' ? 'en-US' : 'de-DE'), margin + labelWidth, yPos);
     yPos += 6;
     
-    doc.text(`Bestellnummer:`, margin, yPos);
+    doc.text(`${t.orderNumber}:`, margin, yPos);
     doc.text(order.order_number, margin + labelWidth, yPos);
     yPos += 6;
     
-    doc.text(`Bestelldatum:`, margin, yPos);
-    doc.text(new Date(order.created_at).toLocaleDateString(order.shops.language === 'en' ? 'en-US' : 'de-DE'), margin + labelWidth, yPos);
+    doc.text(`${t.orderDate}:`, margin, yPos);
+    doc.text(new Date(order.created_at).toLocaleDateString(language === 'en' ? 'en-US' : 'de-DE'), margin + labelWidth, yPos);
     
     // Items table with proper A4 layout
     yPos += 25;
@@ -386,7 +709,7 @@ async function generateInvoicePDF(order: any, invoiceNumber: string, t: any, cur
     doc.setTextColor(102, 102, 102);
     doc.text(t.thankYou, margin, yPos);
     
-    console.log('PDF content created with A4 format, converting to bytes...');
+    console.log('PDF content created with A4 format and language', language, ', converting to bytes...');
     
     // Get PDF as array buffer
     const pdfArrayBuffer = doc.output('arraybuffer');
