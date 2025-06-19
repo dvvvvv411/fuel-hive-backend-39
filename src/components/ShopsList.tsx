@@ -30,6 +30,7 @@ interface Shop {
   business_owner: string | null;
   registration_number: string | null;
   vat_rate: number | null;
+  logo_url: string | null;
 }
 
 export function ShopsList() {
