@@ -67,7 +67,7 @@ interface Order {
     account_name: string;
     account_holder: string;
     iban: string;
-  };
+  }[];
 }
 
 interface Shop {
