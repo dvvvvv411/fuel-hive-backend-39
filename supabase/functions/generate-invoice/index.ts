@@ -406,56 +406,189 @@ function getInvoiceTranslations(language: string) {
 const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
 const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
-// LAYOUT CONSTANTS - Updated with smaller logo dimensions
-const LAYOUT = {
+// RESPONSIVE LAYOUT SYSTEM - Dynamic scaling based on content measurement
+const BASE_LAYOUT = {
   // Page dimensions (A4)
   PAGE_WIDTH: 210,
   PAGE_HEIGHT: 297,
   MARGIN: 20,
+  CONTENT_HEIGHT: 257, // PAGE_HEIGHT - (2 * MARGIN)
   
-  // Header section with reduced logo size
-  HEADER: {
-    HEIGHT: 52,
-    LOGO_MAX_WIDTH: 30, // Reduced from 40mm to 30mm
-    LOGO_MAX_HEIGHT: 24, // Reduced from 32mm to 24mm
-    COMPANY_START_X_OFFSET: 36, // Updated: LOGO_MAX_WIDTH + 6mm spacing
-    TITLE_Y_OFFSET: 20
-  },
-  
-  // Content sections with fixed positions
-  SECTIONS: {
-    TITLE_Y: 84, // MARGIN + HEADER.HEIGHT + TITLE_Y_OFFSET
-    ADDRESS_Y: 110,
-    ADDRESS_HEIGHT: 60, // Fixed height for address section
-    INVOICE_DETAILS_Y: 110,
-    INVOICE_DETAILS_HEIGHT: 40,
-    TABLE_Y: 180, // Fixed position for table start
-    TABLE_HEADER_HEIGHT: 10,
-    TABLE_ROW_HEIGHT: 8,
-    TOTALS_Y_OFFSET: 20, // Space after table
-    PAYMENT_Y_OFFSET: 25, // Space after totals
-    FOOTER_Y: 262 // Fixed footer position
-  },
-  
-  // Typography - responsive sizing
-  FONT_SIZES: {
-    TITLE: 28,
-    SECTION_HEADER: 12,
-    NORMAL: 10,
-    SMALL: 9,
-    FOOTER: 8
-  },
-  
-  // Colors
-  COLORS: {
-    PRIMARY_TEXT: [0, 0, 0],
-    SECONDARY_TEXT: [80, 80, 80],
-    LIGHT_TEXT: [120, 120, 120],
-    BACKGROUND_LIGHT: [250, 250, 250],
-    BACKGROUND_GRAY: [248, 249, 250],
-    BORDER_LIGHT: [220, 220, 220]
+  // Minimum required sections with base heights
+  MIN_SECTIONS: {
+    HEADER: 30,
+    TITLE: 12,
+    ADDRESSES: 35,
+    TABLE_HEADER: 8,
+    TABLE_MIN_ROWS: 16, // Minimum space for product rows
+    TOTALS: 20,
+    PAYMENT: 35,
+    FOOTER: 25
   }
 };
+
+// Language-specific optimization factors
+const LANGUAGE_FACTORS = {
+  'de': { textDensity: 1.0, lineHeight: 1.0 },
+  'en': { textDensity: 0.95, lineHeight: 1.0 },
+  'fr': { textDensity: 1.05, lineHeight: 1.0 },
+  'es': { textDensity: 1.1, lineHeight: 1.0 },
+  'it': { textDensity: 1.05, lineHeight: 1.0 },
+  'nl': { textDensity: 1.15, lineHeight: 1.0 },
+  'pt': { textDensity: 1.1, lineHeight: 1.0 },
+  'pl': { textDensity: 1.1, lineHeight: 1.1 },
+  'sv': { textDensity: 1.0, lineHeight: 1.0 },
+  'da': { textDensity: 1.0, lineHeight: 1.0 },
+  'no': { textDensity: 1.0, lineHeight: 1.0 },
+  'fi': { textDensity: 1.05, lineHeight: 1.0 }
+};
+
+// Calculate dynamic layout based on content and language
+function calculateResponsiveLayout(order: any, t: any, language: string): any {
+  console.log(`[LAYOUT] Calculating responsive layout for language: ${language}`);
+  
+  const langFactor = LANGUAGE_FACTORS[language as keyof typeof LANGUAGE_FACTORS] || LANGUAGE_FACTORS.de;
+  const contentWidth = BASE_LAYOUT.PAGE_WIDTH - (2 * BASE_LAYOUT.MARGIN);
+  
+  // Calculate required content height
+  let requiredHeight = 0;
+  
+  // Header section
+  requiredHeight += BASE_LAYOUT.MIN_SECTIONS.HEADER;
+  
+  // Title section
+  requiredHeight += BASE_LAYOUT.MIN_SECTIONS.TITLE;
+  
+  // Address section (varies by whether addresses are different)
+  const hasDifferentAddresses = order.billing_street && 
+    (order.billing_street !== order.delivery_street ||
+     order.billing_postcode !== order.delivery_postcode ||
+     order.billing_city !== order.delivery_city);
+  
+  const addressHeight = hasDifferentAddresses ? 
+    BASE_LAYOUT.MIN_SECTIONS.ADDRESSES * 1.6 : 
+    BASE_LAYOUT.MIN_SECTIONS.ADDRESSES;
+  requiredHeight += addressHeight;
+  
+  // Table section
+  requiredHeight += BASE_LAYOUT.MIN_SECTIONS.TABLE_HEADER;
+  let tableRows = 1; // Main product
+  if (order.delivery_fee > 0) tableRows++;
+  requiredHeight += tableRows * 6 * langFactor.lineHeight;
+  
+  // Totals section
+  requiredHeight += BASE_LAYOUT.MIN_SECTIONS.TOTALS;
+  
+  // Payment section (if bank account exists)
+  if (order.shops.bank_accounts) {
+    requiredHeight += BASE_LAYOUT.MIN_SECTIONS.PAYMENT * langFactor.textDensity;
+  }
+  
+  // Footer section
+  requiredHeight += BASE_LAYOUT.MIN_SECTIONS.FOOTER;
+  
+  console.log(`[LAYOUT] Required content height: ${requiredHeight}mm, Available: ${BASE_LAYOUT.CONTENT_HEIGHT}mm`);
+  
+  // Calculate scaling factor if content exceeds available space
+  const scaleFactor = Math.min(1.0, BASE_LAYOUT.CONTENT_HEIGHT / requiredHeight);
+  console.log(`[LAYOUT] Scaling factor: ${scaleFactor.toFixed(3)}`);
+  
+  // Apply scaling to create dynamic layout
+  const layout = {
+    PAGE_WIDTH: BASE_LAYOUT.PAGE_WIDTH,
+    PAGE_HEIGHT: BASE_LAYOUT.PAGE_HEIGHT,
+    MARGIN: BASE_LAYOUT.MARGIN,
+    SCALE_FACTOR: scaleFactor,
+    
+    // Scaled dimensions
+    HEADER: {
+      HEIGHT: BASE_LAYOUT.MIN_SECTIONS.HEADER * scaleFactor,
+      LOGO_MAX_WIDTH: 25 * scaleFactor, // Reduced base size
+      LOGO_MAX_HEIGHT: 18 * scaleFactor,
+      COMPANY_START_X_OFFSET: (25 * scaleFactor) + 6
+    },
+    
+    SECTIONS: {
+      TITLE_HEIGHT: BASE_LAYOUT.MIN_SECTIONS.TITLE * scaleFactor,
+      ADDRESS_HEIGHT: addressHeight * scaleFactor,
+      TABLE_ROW_HEIGHT: 6 * scaleFactor * langFactor.lineHeight,
+      TABLE_HEADER_HEIGHT: 8 * scaleFactor,
+      TOTALS_HEIGHT: BASE_LAYOUT.MIN_SECTIONS.TOTALS * scaleFactor,
+      PAYMENT_HEIGHT: BASE_LAYOUT.MIN_SECTIONS.PAYMENT * scaleFactor * langFactor.textDensity,
+      FOOTER_HEIGHT: BASE_LAYOUT.MIN_SECTIONS.FOOTER * scaleFactor
+    },
+    
+    // Dynamic font sizes based on scaling
+    FONT_SIZES: {
+      TITLE: Math.max(16, 24 * scaleFactor),
+      SECTION_HEADER: Math.max(8, 11 * scaleFactor),
+      NORMAL: Math.max(7, 9 * scaleFactor),
+      SMALL: Math.max(6, 8 * scaleFactor),
+      FOOTER: Math.max(5, 7 * scaleFactor)
+    },
+    
+    // Colors remain constant
+    COLORS: {
+      PRIMARY_TEXT: [0, 0, 0],
+      SECONDARY_TEXT: [80, 80, 80],
+      LIGHT_TEXT: [120, 120, 120],
+      BACKGROUND_LIGHT: [250, 250, 250],
+      BACKGROUND_GRAY: [248, 249, 250],
+      BORDER_LIGHT: [220, 220, 220]
+    },
+    
+    // Language-specific adjustments
+    LANGUAGE_FACTOR: langFactor
+  };
+  
+  // Calculate dynamic positions
+  layout.POSITIONS = {
+    HEADER_Y: layout.MARGIN,
+    TITLE_Y: layout.MARGIN + layout.HEADER.HEIGHT + 8,
+    ADDRESS_Y: layout.MARGIN + layout.HEADER.HEIGHT + layout.SECTIONS.TITLE_HEIGHT + 15,
+    DETAILS_Y: layout.MARGIN + layout.HEADER.HEIGHT + layout.SECTIONS.TITLE_HEIGHT + 15,
+    TABLE_Y: layout.MARGIN + layout.HEADER.HEIGHT + layout.SECTIONS.TITLE_HEIGHT + layout.SECTIONS.ADDRESS_HEIGHT + 25,
+    TOTALS_Y_OFFSET: 15 * scaleFactor,
+    PAYMENT_Y_OFFSET: 20 * scaleFactor,
+    FOOTER_Y: BASE_LAYOUT.PAGE_HEIGHT - layout.SECTIONS.FOOTER_HEIGHT - 10
+  };
+  
+  console.log(`[LAYOUT] Dynamic layout calculated with ${Object.keys(layout.POSITIONS).length} positions`);
+  return layout;
+}
+
+// Enhanced content measurement and optimization
+function optimizeTextForSpace(doc: any, text: string, maxWidth: number, fontSize: number, language: string): string {
+  const langFactor = LANGUAGE_FACTORS[language as keyof typeof LANGUAGE_FACTORS] || LANGUAGE_FACTORS.de;
+  const adjustedMaxWidth = maxWidth * langFactor.textDensity;
+  
+  doc.setFontSize(fontSize);
+  const textWidth = doc.getTextWidth(text);
+  
+  if (textWidth <= adjustedMaxWidth) {
+    return text;
+  }
+  
+  // Smart truncation with language-specific considerations
+  const words = text.split(' ');
+  if (words.length === 1) {
+    // Single word - truncate with ellipsis
+    let truncated = text;
+    while (doc.getTextWidth(truncated + '...') > adjustedMaxWidth && truncated.length > 1) {
+      truncated = truncated.slice(0, -1);
+    }
+    return truncated + '...';
+  }
+  
+  // Multiple words - remove words from the end
+  let result = text;
+  while (doc.getTextWidth(result + '...') > adjustedMaxWidth && result.includes(' ')) {
+    const lastSpace = result.lastIndexOf(' ');
+    result = result.substring(0, lastSpace);
+  }
+  
+  return result + (result !== text ? '...' : '');
+}
 
 // Helper function to convert hex color to RGB
 function hexToRgb(hex: string): { r: number; g: number; b: number } {
@@ -464,18 +597,16 @@ function hexToRgb(hex: string): { r: number; g: number; b: number } {
     r: parseInt(result[1], 16),
     g: parseInt(result[2], 16),
     b: parseInt(result[3], 16)
-  } : { r: 37, g: 99, b: 235 }; // Default blue
+  } : { r: 37, g: 99, b: 235 };
 }
 
-// Helper function to calculate proportional dimensions
-function calculateProportionalDimensions(originalWidth: number, originalHeight: number, maxWidth: number, maxHeight: number): { width: number; height: number; x: number; y: number } {
-  console.log(`[LOGO] Calculating proportional dimensions: original ${originalWidth}x${originalHeight}, max ${maxWidth}x${maxHeight}`);
+// Enhanced logo handling with dynamic sizing
+function calculateLogoProportions(originalWidth: number, originalHeight: number, maxWidth: number, maxHeight: number): { width: number; height: number; x: number; y: number } {
+  console.log(`[LOGO] Calculating proportions: original ${originalWidth}x${originalHeight}, max ${maxWidth.toFixed(1)}x${maxHeight.toFixed(1)}`);
   
   const widthRatio = maxWidth / originalWidth;
   const heightRatio = maxHeight / originalHeight;
   const scale = Math.min(widthRatio, heightRatio);
-  
-  console.log(`[LOGO] Scale factors - width: ${widthRatio.toFixed(4)}, height: ${heightRatio.toFixed(4)}, chosen: ${scale.toFixed(4)}`);
   
   const scaledWidth = originalWidth * scale;
   const scaledHeight = originalHeight * scale;
@@ -484,7 +615,7 @@ function calculateProportionalDimensions(originalWidth: number, originalHeight: 
   const offsetX = (maxWidth - scaledWidth) / 2;
   const offsetY = (maxHeight - scaledHeight) / 2;
   
-  console.log(`[LOGO] Final dimensions: ${scaledWidth.toFixed(2)}x${scaledHeight.toFixed(2)}mm with offsets (${offsetX.toFixed(2)}, ${offsetY.toFixed(2)})`);
+  console.log(`[LOGO] Final proportions: ${scaledWidth.toFixed(1)}x${scaledHeight.toFixed(1)}mm with offsets (${offsetX.toFixed(1)}, ${offsetY.toFixed(1)})`);
   
   return {
     width: scaledWidth,
@@ -494,28 +625,27 @@ function calculateProportionalDimensions(originalWidth: number, originalHeight: 
   };
 }
 
-// Enhanced helper function to detect image format from content type and magic bytes
+// Enhanced image format detection
 function detectImageFormat(contentType: string, uint8Array: Uint8Array): string {
-  console.log(`[LOGO] Detecting image format from content-type: ${contentType}`);
+  console.log(`[LOGO] Detecting format from content-type: ${contentType}`);
   
-  // Check magic bytes for more reliable format detection
   if (uint8Array.length >= 8) {
-    // PNG magic bytes: 89 50 4E 47 0D 0A 1A 0A
+    // PNG magic bytes
     if (uint8Array[0] === 0x89 && uint8Array[1] === 0x50 && uint8Array[2] === 0x4E && uint8Array[3] === 0x47) {
-      console.log(`[LOGO] Format detected by magic bytes: PNG`);
+      console.log(`[LOGO] Format detected: PNG`);
       return 'PNG';
     }
     
-    // JPEG magic bytes: FF D8 FF
+    // JPEG magic bytes
     if (uint8Array[0] === 0xFF && uint8Array[1] === 0xD8 && uint8Array[2] === 0xFF) {
-      console.log(`[LOGO] Format detected by magic bytes: JPEG`);
+      console.log(`[LOGO] Format detected: JPEG`);
       return 'JPEG';
     }
     
-    // WebP magic bytes: RIFF ... WEBP
+    // WebP magic bytes
     if (uint8Array[0] === 0x52 && uint8Array[1] === 0x49 && uint8Array[2] === 0x46 && uint8Array[3] === 0x46 &&
         uint8Array[8] === 0x57 && uint8Array[9] === 0x45 && uint8Array[10] === 0x42 && uint8Array[11] === 0x50) {
-      console.log(`[LOGO] Format detected by magic bytes: WEBP`);
+      console.log(`[LOGO] Format detected: WEBP`);
       return 'WEBP';
     }
   }
@@ -525,30 +655,27 @@ function detectImageFormat(contentType: string, uint8Array: Uint8Array): string 
   if (contentType.includes('jpeg') || contentType.includes('jpg')) return 'JPEG';
   if (contentType.includes('webp')) return 'WEBP';
   
-  console.log(`[LOGO] Format detection fallback: assuming JPEG`);
+  console.log(`[LOGO] Format fallback: JPEG`);
   return 'JPEG';
 }
 
-// Enhanced helper function to extract image dimensions
+// Enhanced dimension extraction
 function extractImageDimensions(uint8Array: Uint8Array, format: string): { width?: number; height?: number } {
-  console.log(`[LOGO] Extracting dimensions for format: ${format}`);
+  console.log(`[LOGO] Extracting dimensions for: ${format}`);
   
   try {
     if (format === 'PNG' && uint8Array.length >= 24) {
-      // PNG dimensions are at bytes 16-23 (big endian)
       const width = (uint8Array[16] << 24) | (uint8Array[17] << 16) | (uint8Array[18] << 8) | uint8Array[19];
       const height = (uint8Array[20] << 24) | (uint8Array[21] << 16) | (uint8Array[22] << 8) | uint8Array[23];
       
       if (width > 0 && height > 0 && width < 65536 && height < 65536) {
-        console.log(`[LOGO] PNG dimensions extracted: ${width}x${height}`);
+        console.log(`[LOGO] PNG dimensions: ${width}x${height}`);
         return { width, height };
       }
     } else if (format === 'JPEG') {
-      // Basic JPEG dimension extraction (simplified)
-      let offset = 2; // Skip initial FF D8
+      let offset = 2;
       
       while (offset < uint8Array.length - 8) {
-        // Look for SOF (Start of Frame) markers
         if (uint8Array[offset] === 0xFF && 
             (uint8Array[offset + 1] === 0xC0 || uint8Array[offset + 1] === 0xC2)) {
           
@@ -556,7 +683,7 @@ function extractImageDimensions(uint8Array: Uint8Array, format: string): { width
           const width = (uint8Array[offset + 7] << 8) | uint8Array[offset + 8];
           
           if (width > 0 && height > 0 && width < 65536 && height < 65536) {
-            console.log(`[LOGO] JPEG dimensions extracted: ${width}x${height}`);
+            console.log(`[LOGO] JPEG dimensions: ${width}x${height}`);
             return { width, height };
           }
         }
@@ -567,38 +694,33 @@ function extractImageDimensions(uint8Array: Uint8Array, format: string): { width
     console.warn(`[LOGO] Error extracting dimensions:`, error);
   }
   
-  console.log(`[LOGO] Could not extract dimensions, will use default proportions`);
+  console.log(`[LOGO] Could not extract dimensions`);
   return {};
 }
 
-// Enhanced helper function to fetch and convert logo to base64 with improved analysis
-async function fetchLogoAsBase64(logoUrl: string): Promise<{ base64: string; width?: number; height?: number; format: string } | null> {
+// Enhanced logo fetching and processing
+async function fetchAndProcessLogo(logoUrl: string): Promise<{ base64: string; width?: number; height?: number; format: string } | null> {
   try {
-    console.log(`[LOGO] Fetching logo from URL: ${logoUrl}`);
+    console.log(`[LOGO] Fetching logo: ${logoUrl}`);
     
     const response = await fetch(logoUrl);
     if (!response.ok) {
-      console.error(`[LOGO] Failed to fetch logo: ${response.status} ${response.statusText}`);
+      console.error(`[LOGO] Fetch failed: ${response.status}`);
       return null;
     }
     
     const contentType = response.headers.get('content-type') || '';
-    console.log(`[LOGO] Response content-type: ${contentType}`);
-    
     if (!contentType.startsWith('image/')) {
-      console.error(`[LOGO] URL does not point to an image: ${contentType}`);
+      console.error(`[LOGO] Invalid content type: ${contentType}`);
       return null;
     }
     
     const arrayBuffer = await response.arrayBuffer();
     const uint8Array = new Uint8Array(arrayBuffer);
     
-    console.log(`[LOGO] Image data fetched, size: ${uint8Array.byteLength} bytes`);
+    console.log(`[LOGO] Image data fetched: ${uint8Array.byteLength} bytes`);
     
-    // Detect format using enhanced detection
     const format = detectImageFormat(contentType, uint8Array);
-    
-    // Extract dimensions
     const dimensions = extractImageDimensions(uint8Array, format);
     
     // Convert to base64
@@ -608,7 +730,7 @@ async function fetchLogoAsBase64(logoUrl: string): Promise<{ base64: string; wid
     }
     const base64 = btoa(binary);
     
-    console.log(`[LOGO] Logo processed: format=${format}, base64 size=${base64.length} chars, dimensions=${dimensions.width || 'unknown'}x${dimensions.height || 'unknown'}`);
+    console.log(`[LOGO] Logo processed: format=${format}, base64=${base64.length} chars`);
     
     return {
       base64: `data:${contentType};base64,${base64}`,
@@ -617,179 +739,100 @@ async function fetchLogoAsBase64(logoUrl: string): Promise<{ base64: string; wid
       format
     };
   } catch (error) {
-    console.error(`[LOGO] Error fetching logo:`, error);
+    console.error(`[LOGO] Processing error:`, error);
     return null;
   }
 }
 
-// Helper function to truncate text to fit within specified width
-function truncateText(doc: any, text: string, maxWidth: number, fontSize: number): string {
-  doc.setFontSize(fontSize);
-  const textWidth = doc.getTextWidth(text);
-  
-  if (textWidth <= maxWidth) {
-    return text;
-  }
-  
-  // Binary search for the best fit
-  let left = 0;
-  let right = text.length;
-  let bestFit = '';
-  
-  while (left <= right) {
-    const mid = Math.floor((left + right) / 2);
-    const truncated = text.substring(0, mid) + (mid < text.length ? '...' : '');
-    const truncatedWidth = doc.getTextWidth(truncated);
-    
-    if (truncatedWidth <= maxWidth) {
-      bestFit = truncated;
-      left = mid + 1;
-    } else {
-      right = mid - 1;
-    }
-  }
-  
-  return bestFit || text.substring(0, 1) + '...';
-}
-
-// Enhanced helper function to render logo with multiple fallback strategies
-function renderLogo(doc: any, logoData: { base64: string; width?: number; height?: number; format: string } | null, x: number, y: number, accentColor: { r: number; g: number; b: number }): void {
-  console.log(`[LOGO] Starting logo render at position (${x}, ${y})`);
+// Enhanced logo rendering with responsive sizing
+function renderResponsiveLogo(doc: any, logoData: { base64: string; width?: number; height?: number; format: string } | null, layout: any, x: number, y: number, accentColor: { r: number; g: number; b: number }): void {
+  console.log(`[LOGO] Rendering responsive logo at (${x}, ${y})`);
   
   if (!logoData?.base64) {
-    console.log(`[LOGO] No logo data available, rendering placeholder`);
-    renderLogoPlaceholder(doc, x, y, accentColor);
+    console.log(`[LOGO] No logo data, rendering placeholder`);
+    renderLogoPlaceholder(doc, x, y, layout, accentColor);
     return;
   }
 
   try {
-    console.log(`[LOGO] Attempting to render logo with format: ${logoData.format}`);
-    
-    // Use extracted dimensions if available, otherwise assume reasonable defaults
     const originalWidth = logoData.width || 200;
     const originalHeight = logoData.height || 150;
     
-    console.log(`[LOGO] Using dimensions: ${originalWidth}x${originalHeight} (${logoData.width ? 'extracted' : 'default'})`);
+    console.log(`[LOGO] Original dimensions: ${originalWidth}x${originalHeight}`);
     
-    // Calculate proportional dimensions and centering with reduced max size
-    const dimensions = calculateProportionalDimensions(
+    const proportions = calculateLogoProportions(
       originalWidth,
       originalHeight,
-      LAYOUT.HEADER.LOGO_MAX_WIDTH,
-      LAYOUT.HEADER.LOGO_MAX_HEIGHT
+      layout.HEADER.LOGO_MAX_WIDTH,
+      layout.HEADER.LOGO_MAX_HEIGHT
     );
     
-    // Final position calculation
-    const finalX = x + dimensions.x;
-    const finalY = y + dimensions.y;
+    const finalX = x + proportions.x;
+    const finalY = y + proportions.y;
     
-    console.log(`[LOGO] Final render parameters: position=(${finalX.toFixed(2)}, ${finalY.toFixed(2)}), size=(${dimensions.width.toFixed(2)}, ${dimensions.height.toFixed(2)}), format=${logoData.format}`);
+    console.log(`[LOGO] Rendering at (${finalX.toFixed(2)}, ${finalY.toFixed(2)}) size ${proportions.width.toFixed(2)}x${proportions.height.toFixed(2)}`);
     
-    // Attempt to add the image with correct format
     doc.addImage(
       logoData.base64,
       logoData.format,
       finalX,
       finalY,
-      dimensions.width,
-      dimensions.height
+      proportions.width,
+      proportions.height
     );
     
     console.log(`[LOGO] Logo rendered successfully`);
     
-  } catch (logoError) {
-    console.error(`[LOGO] Primary render failed:`, logoError);
+  } catch (error) {
+    console.error(`[LOGO] Render error:`, error);
     
-    // First fallback: try with JPEG format
+    // Try format fallbacks
     if (logoData.format !== 'JPEG') {
       try {
-        console.log(`[LOGO] Fallback 1: Trying JPEG format`);
-        
+        console.log(`[LOGO] Trying JPEG fallback`);
         const originalWidth = logoData.width || 200;
         const originalHeight = logoData.height || 150;
-        const dimensions = calculateProportionalDimensions(
-          originalWidth,
-          originalHeight,
-          LAYOUT.HEADER.LOGO_MAX_WIDTH,
-          LAYOUT.HEADER.LOGO_MAX_HEIGHT
+        const proportions = calculateLogoProportions(
+          originalWidth, originalHeight,
+          layout.HEADER.LOGO_MAX_WIDTH, layout.HEADER.LOGO_MAX_HEIGHT
         );
         
-        doc.addImage(
-          logoData.base64,
-          'JPEG',
-          x + dimensions.x,
-          y + dimensions.y,
-          dimensions.width,
-          dimensions.height
-        );
-        
-        console.log(`[LOGO] Logo rendered successfully with JPEG fallback`);
+        doc.addImage(logoData.base64, 'JPEG', x + proportions.x, y + proportions.y, proportions.width, proportions.height);
+        console.log(`[LOGO] JPEG fallback successful`);
         return;
-        
       } catch (fallbackError) {
         console.warn(`[LOGO] JPEG fallback failed:`, fallbackError);
       }
     }
     
-    // Second fallback: try with PNG format
-    if (logoData.format !== 'PNG') {
-      try {
-        console.log(`[LOGO] Fallback 2: Trying PNG format`);
-        
-        const originalWidth = logoData.width || 200;
-        const originalHeight = logoData.height || 150;
-        const dimensions = calculateProportionalDimensions(
-          originalWidth,
-          originalHeight,
-          LAYOUT.HEADER.LOGO_MAX_WIDTH,
-          LAYOUT.HEADER.LOGO_MAX_HEIGHT
-        );
-        
-        doc.addImage(
-          logoData.base64,
-          'PNG',
-          x + dimensions.x,
-          y + dimensions.y,
-          dimensions.width,
-          dimensions.height
-        );
-        
-        console.log(`[LOGO] Logo rendered successfully with PNG fallback`);
-        return;
-        
-      } catch (fallbackError) {
-        console.warn(`[LOGO] PNG fallback failed:`, fallbackError);
-      }
-    }
-    
-    // Final fallback: render placeholder
-    console.log(`[LOGO] All rendering attempts failed, using placeholder`);
-    renderLogoPlaceholder(doc, x, y, accentColor);
+    // Final fallback
+    console.log(`[LOGO] Using placeholder fallback`);
+    renderLogoPlaceholder(doc, x, y, layout, accentColor);
   }
 }
 
-// Enhanced helper function to render improved logo placeholder
-function renderLogoPlaceholder(doc: any, x: number, y: number, accentColor: { r: number; g: number; b: number }): void {
-  console.log(`[LOGO] Rendering placeholder at (${x}, ${y}) with size ${LAYOUT.HEADER.LOGO_MAX_WIDTH}x${LAYOUT.HEADER.LOGO_MAX_HEIGHT}`);
+// Enhanced logo placeholder with responsive sizing
+function renderLogoPlaceholder(doc: any, x: number, y: number, layout: any, accentColor: { r: number; g: number; b: number }): void {
+  console.log(`[LOGO] Rendering responsive placeholder`);
   
-  const width = LAYOUT.HEADER.LOGO_MAX_WIDTH;
-  const height = LAYOUT.HEADER.LOGO_MAX_HEIGHT;
+  const width = layout.HEADER.LOGO_MAX_WIDTH;
+  const height = layout.HEADER.LOGO_MAX_HEIGHT;
   
   // Background
-  doc.setFillColor(...LAYOUT.COLORS.BACKGROUND_LIGHT);
+  doc.setFillColor(...layout.COLORS.BACKGROUND_LIGHT);
   doc.rect(x, y, width, height, 'F');
   
-  // Border with accent color
+  // Border
   doc.setDrawColor(accentColor.r, accentColor.g, accentColor.b);
-  doc.setLineWidth(1);
+  doc.setLineWidth(0.5 * layout.SCALE_FACTOR);
   doc.rect(x, y, width, height);
   
-  // Text centered in the space
-  doc.setFontSize(LAYOUT.FONT_SIZES.SMALL);
+  // Text
+  doc.setFontSize(layout.FONT_SIZES.SMALL);
   doc.setTextColor(accentColor.r, accentColor.g, accentColor.b);
   doc.text('LOGO', x + width/2, y + height/2, { align: 'center' });
   
-  console.log(`[LOGO] Placeholder rendered successfully`);
+  console.log(`[LOGO] Placeholder rendered: ${width.toFixed(1)}x${height.toFixed(1)}mm`);
 }
 
 const serve_handler = async (req: Request): Promise<Response> => {
@@ -884,17 +927,17 @@ const serve_handler = async (req: Request): Promise<Response> => {
     // Create localized filename
     const filename = `${t.invoice.toLowerCase()}_${invoiceNumber.replace('/', '_')}_${finalLanguage}.pdf`;
 
-    console.log('Generating PDF with filename:', filename);
+    console.log('Generating responsive PDF with filename:', filename);
 
-    // Generate PDF content with standardized layout
-    const pdfContent = await generateStandardizedInvoicePDF(order, invoiceNumber, t, currencySymbol, finalLanguage);
+    // Generate PDF with responsive layout system
+    const pdfContent = await generateResponsiveInvoicePDF(order, invoiceNumber, t, currencySymbol, finalLanguage);
 
     if (!pdfContent || pdfContent.length === 0) {
       console.error('PDF generation failed: empty content');
       throw new Error('Failed to generate PDF content');
     }
 
-    console.log('PDF generated successfully, size:', pdfContent.length, 'bytes');
+    console.log('Responsive PDF generated successfully, size:', pdfContent.length, 'bytes');
 
     // Upload PDF to Supabase Storage
     const { data: uploadData, error: uploadError } = await supabase.storage
@@ -966,25 +1009,26 @@ const serve_handler = async (req: Request): Promise<Response> => {
   }
 };
 
-async function generateStandardizedInvoicePDF(order: any, invoiceNumber: string, t: any, currencySymbol: string, language: string): Promise<Uint8Array> {
+async function generateResponsiveInvoicePDF(order: any, invoiceNumber: string, t: any, currencySymbol: string, language: string): Promise<Uint8Array> {
   try {
-    console.log('Starting standardized PDF generation with language:', language);
+    console.log('Starting responsive PDF generation with language:', language);
     
     // Import jsPDF dynamically
     const { jsPDF } = await import("https://esm.sh/jspdf@2.5.1");
     
-    // Create new PDF document with fixed layout constants
+    // Calculate responsive layout based on content and language
+    const layout = calculateResponsiveLayout(order, t, language);
+    
     const doc = new jsPDF({
       orientation: 'portrait',
       unit: 'mm',
       format: 'a4'
     });
     
-    const contentWidth = LAYOUT.PAGE_WIDTH - (2 * LAYOUT.MARGIN);
+    const contentWidth = layout.PAGE_WIDTH - (2 * layout.MARGIN);
     
     // Get accent color from shop settings
-    const accentColor = order.shops.accent_color || '#2563eb';
-    const rgb = hexToRgb(accentColor);
+    const accentColor = hexToRgb(order.shops.accent_color || '#2563eb');
     
     // Calculate VAT details
     const vatRate = order.shops.vat_rate || 19;
@@ -1008,123 +1052,129 @@ async function generateStandardizedInvoicePDF(order: any, invoiceNumber: string,
     if (order.shops.logo_url) {
       console.log(`[LOGO] Processing shop logo: ${order.shops.logo_url}`);
       const cacheBustedUrl = `${order.shops.logo_url}?v=${Date.now()}`;
-      logoData = await fetchLogoAsBase64(cacheBustedUrl);
+      logoData = await fetchAndProcessLogo(cacheBustedUrl);
     } else {
       console.log(`[LOGO] No logo URL provided in shop settings`);
     }
     
-    // Render logo with enhanced fallback handling
-    renderLogo(doc, logoData, LAYOUT.MARGIN, LAYOUT.MARGIN, rgb);
+    // Render responsive logo
+    renderResponsiveLogo(doc, logoData, layout, layout.MARGIN, layout.POSITIONS.HEADER_Y, accentColor);
     
     // Company details - updated position for smaller logo
-    const companyStartX = LAYOUT.MARGIN + LAYOUT.HEADER.COMPANY_START_X_OFFSET;
-    const maxCompanyWidth = contentWidth - LAYOUT.HEADER.COMPANY_START_X_OFFSET;
+    const companyStartX = layout.MARGIN + layout.HEADER.COMPANY_START_X_OFFSET;
+    const maxCompanyWidth = contentWidth - layout.HEADER.COMPANY_START_X_OFFSET;
     
-    doc.setFontSize(20);
-    doc.setTextColor(rgb.r, rgb.g, rgb.b);
-    const companyName = truncateText(doc, order.shops.company_name, maxCompanyWidth, 20);
-    doc.text(companyName, companyStartX, LAYOUT.MARGIN + 10);
+    doc.setFontSize(layout.FONT_SIZES.TITLE);
+    doc.setTextColor(accentColor.r, accentColor.g, accentColor.b);
+    const companyName = optimizeTextForSpace(doc, order.shops.company_name, maxCompanyWidth, layout.FONT_SIZES.TITLE, language);
+    doc.text(companyName, companyStartX, layout.POSITIONS.HEADER_Y + (10 * layout.SCALE_FACTOR));
     
-    let companyY = LAYOUT.MARGIN + 15;
-    doc.setFontSize(LAYOUT.FONT_SIZES.SMALL);
-    doc.setTextColor(...LAYOUT.COLORS.SECONDARY_TEXT);
+    let companyY = layout.POSITIONS.HEADER_Y + (15 * layout.SCALE_FACTOR);
+    doc.setFontSize(layout.FONT_SIZES.SMALL);
+    doc.setTextColor(...layout.COLORS.SECONDARY_TEXT);
     
-    const companyAddress = truncateText(doc, order.shops.company_address, maxCompanyWidth, LAYOUT.FONT_SIZES.SMALL);
+    const lineSpacing = 4 * layout.SCALE_FACTOR * layout.LANGUAGE_FACTOR.lineHeight;
+    
+    const companyAddress = optimizeTextForSpace(doc, order.shops.company_address, maxCompanyWidth, layout.FONT_SIZES.SMALL, language);
     doc.text(companyAddress, companyStartX, companyY);
-    companyY += 4;
+    companyY += lineSpacing;
     
-    const cityPostcode = truncateText(doc, `${order.shops.company_postcode} ${order.shops.company_city}`, maxCompanyWidth, LAYOUT.FONT_SIZES.SMALL);
+    const cityPostcode = optimizeTextForSpace(doc, `${order.shops.company_postcode} ${order.shops.company_city}`, maxCompanyWidth, layout.FONT_SIZES.SMALL, language);
     doc.text(cityPostcode, companyStartX, companyY);
-    companyY += 4;
+    companyY += lineSpacing;
     
     if (order.shops.company_phone) {
-      const phone = truncateText(doc, `${t.phone}: ${order.shops.company_phone}`, maxCompanyWidth, LAYOUT.FONT_SIZES.SMALL);
+      const phone = optimizeTextForSpace(doc, `${t.phone}: ${order.shops.company_phone}`, maxCompanyWidth, layout.FONT_SIZES.SMALL, language);
       doc.text(phone, companyStartX, companyY);
-      companyY += 4;
+      companyY += lineSpacing;
     }
     
-    const email = truncateText(doc, `${t.email}: ${order.shops.company_email}`, maxCompanyWidth, LAYOUT.FONT_SIZES.SMALL);
+    const email = optimizeTextForSpace(doc, `${t.email}: ${order.shops.company_email}`, maxCompanyWidth, layout.FONT_SIZES.SMALL, language);
     doc.text(email, companyStartX, companyY);
-    companyY += 4;
+    companyY += lineSpacing;
     
     if (order.shops.company_website) {
-      const website = truncateText(doc, `${t.website}: ${order.shops.company_website}`, maxCompanyWidth, LAYOUT.FONT_SIZES.SMALL);
+      const website = optimizeTextForSpace(doc, `${t.website}: ${order.shops.company_website}`, maxCompanyWidth, layout.FONT_SIZES.SMALL, language);
       doc.text(website, companyStartX, companyY);
-      companyY += 4;
+      companyY += lineSpacing;
     }
     
     if (order.shops.vat_number) {
-      const vat = truncateText(doc, `USt-IdNr: ${order.shops.vat_number}`, maxCompanyWidth, LAYOUT.FONT_SIZES.SMALL);
+      const vat = optimizeTextForSpace(doc, `USt-IdNr: ${order.shops.vat_number}`, maxCompanyWidth, layout.FONT_SIZES.SMALL, language);
       doc.text(vat, companyStartX, companyY);
     }
     
     // INVOICE TITLE - Fixed position
-    doc.setFontSize(LAYOUT.FONT_SIZES.TITLE);
-    doc.setTextColor(rgb.r, rgb.g, rgb.b);
-    doc.text(t.invoice, LAYOUT.MARGIN, LAYOUT.SECTIONS.TITLE_Y);
+    doc.setFontSize(layout.FONT_SIZES.TITLE);
+    doc.setTextColor(accentColor.r, accentColor.g, accentColor.b);
+    doc.text(t.invoice, layout.MARGIN, layout.POSITIONS.TITLE_Y);
     
-    // TWO-COLUMN LAYOUT - Fixed positions
-    const leftColumnX = LAYOUT.MARGIN;
-    const rightColumnX = LAYOUT.MARGIN + (contentWidth * 0.55);
+    // RESPONSIVE TWO-COLUMN LAYOUT
+    const leftColumnX = layout.MARGIN;
+    const rightColumnX = layout.MARGIN + (contentWidth * 0.55);
+    const leftColumnWidth = contentWidth * 0.45;
+    const rightColumnWidth = contentWidth * 0.4;
     
     // LEFT COLUMN - Address(es) - Fixed height allocation
-    let addressY = LAYOUT.SECTIONS.ADDRESS_Y;
+    let addressY = layout.POSITIONS.ADDRESS_Y;
     
     // Billing Address (or single address if same)
     if (hasDifferentAddresses) {
-      doc.setFontSize(LAYOUT.FONT_SIZES.SECTION_HEADER);
-      doc.setTextColor(rgb.r, rgb.g, rgb.b);
+      doc.setFontSize(layout.FONT_SIZES.SECTION_HEADER);
+      doc.setTextColor(accentColor.r, accentColor.g, accentColor.b);
       doc.text(t.billingAddress, leftColumnX, addressY);
-      addressY += 8;
+      addressY += 8 * layout.SCALE_FACTOR;
     }
     
-    doc.setFontSize(LAYOUT.FONT_SIZES.NORMAL);
-    doc.setTextColor(...LAYOUT.COLORS.PRIMARY_TEXT);
+    doc.setFontSize(layout.FONT_SIZES.NORMAL);
+    doc.setTextColor(...layout.COLORS.PRIMARY_TEXT);
     
-    const customerName = truncateText(doc, order.customer_name, contentWidth * 0.45, LAYOUT.FONT_SIZES.NORMAL);
+    const addressLineSpacing = 5 * layout.SCALE_FACTOR * layout.LANGUAGE_FACTOR.lineHeight;
+    
+    const customerName = optimizeTextForSpace(doc, order.customer_name, leftColumnWidth, layout.FONT_SIZES.NORMAL, language);
     doc.text(customerName, leftColumnX, addressY);
-    addressY += 5;
+    addressY += addressLineSpacing;
     
     const billingStreet = order.billing_street || order.delivery_street;
     const billingPostcode = order.billing_postcode || order.delivery_postcode;
     const billingCity = order.billing_city || order.delivery_city;
     
-    const street = truncateText(doc, billingStreet, contentWidth * 0.45, LAYOUT.FONT_SIZES.NORMAL);
+    const street = optimizeTextForSpace(doc, billingStreet, leftColumnWidth, layout.FONT_SIZES.NORMAL, language);
     doc.text(street, leftColumnX, addressY);
-    addressY += 5;
+    addressY += addressLineSpacing;
     
-    const cityLine = truncateText(doc, `${billingPostcode} ${billingCity}`, contentWidth * 0.45, LAYOUT.FONT_SIZES.NORMAL);
+    const cityLine = optimizeTextForSpace(doc, `${billingPostcode} ${billingCity}`, leftColumnWidth, layout.FONT_SIZES.NORMAL, language);
     doc.text(cityLine, leftColumnX, addressY);
-    addressY += 10;
+    addressY += addressLineSpacing * 2;
     
     // Delivery Address (if different) - within fixed height
-    if (hasDifferentAddresses && addressY < LAYOUT.SECTIONS.ADDRESS_Y + LAYOUT.SECTIONS.ADDRESS_HEIGHT - 20) {
-      doc.setFontSize(LAYOUT.FONT_SIZES.SECTION_HEADER);
-      doc.setTextColor(rgb.r, rgb.g, rgb.b);
+    if (hasDifferentAddresses && addressY < layout.POSITIONS.ADDRESS_Y + layout.SECTIONS.ADDRESS_HEIGHT - (20 * layout.SCALE_FACTOR)) {
+      doc.setFontSize(layout.FONT_SIZES.SECTION_HEADER);
+      doc.setTextColor(accentColor.r, accentColor.g, accentColor.b);
       doc.text(t.deliveryAddress, leftColumnX, addressY);
-      addressY += 8;
+      addressY += 8 * layout.SCALE_FACTOR;
       
-      doc.setFontSize(LAYOUT.FONT_SIZES.NORMAL);
-      doc.setTextColor(...LAYOUT.COLORS.PRIMARY_TEXT);
+      doc.setFontSize(layout.FONT_SIZES.NORMAL);
+      doc.setTextColor(...layout.COLORS.PRIMARY_TEXT);
       
-      const deliveryName = truncateText(doc, `${order.delivery_first_name} ${order.delivery_last_name}`, contentWidth * 0.45, LAYOUT.FONT_SIZES.NORMAL);
+      const deliveryName = optimizeTextForSpace(doc, `${order.delivery_first_name} ${order.delivery_last_name}`, leftColumnWidth, layout.FONT_SIZES.NORMAL, language);
       doc.text(deliveryName, leftColumnX, addressY);
-      addressY += 5;
+      addressY += addressLineSpacing;
       
-      const deliveryStreet = truncateText(doc, order.delivery_street, contentWidth * 0.45, LAYOUT.FONT_SIZES.NORMAL);
+      const deliveryStreet = optimizeTextForSpace(doc, order.delivery_street, leftColumnWidth, layout.FONT_SIZES.NORMAL, language);
       doc.text(deliveryStreet, leftColumnX, addressY);
-      addressY += 5;
+      addressY += addressLineSpacing;
       
-      const deliveryCity = truncateText(doc, `${order.delivery_postcode} ${order.delivery_city}`, contentWidth * 0.45, LAYOUT.FONT_SIZES.NORMAL);
+      const deliveryCity = optimizeTextForSpace(doc, `${order.delivery_postcode} ${order.delivery_city}`, leftColumnWidth, layout.FONT_SIZES.NORMAL, language);
       doc.text(deliveryCity, leftColumnX, addressY);
     }
     
     // RIGHT COLUMN - Invoice Details - Fixed position and height
-    let detailsY = LAYOUT.SECTIONS.INVOICE_DETAILS_Y;
-    doc.setFontSize(LAYOUT.FONT_SIZES.NORMAL);
-    doc.setTextColor(...LAYOUT.COLORS.PRIMARY_TEXT);
+    let detailsY = layout.POSITIONS.DETAILS_Y;
+    doc.setFontSize(layout.FONT_SIZES.NORMAL);
+    doc.setTextColor(...layout.COLORS.PRIMARY_TEXT);
     
-    const labelWidth = 35;
+    const labelWidth = 35 * layout.SCALE_FACTOR;
     const valueX = rightColumnX + labelWidth;
     const maxValueWidth = contentWidth * 0.45 - labelWidth;
     
@@ -1133,7 +1183,7 @@ async function generateStandardizedInvoicePDF(order: any, invoiceNumber: string,
     detailsY += 6;
     
     doc.text(`${t.orderNumber}:`, rightColumnX, detailsY);
-    const orderNum = truncateText(doc, order.order_number, maxValueWidth, LAYOUT.FONT_SIZES.NORMAL);
+    const orderNum = optimizeTextForSpace(doc, order.order_number, maxValueWidth, layout.FONT_SIZES.NORMAL, language);
     doc.text(orderNum, valueX, detailsY);
     detailsY += 6;
     
@@ -1141,116 +1191,117 @@ async function generateStandardizedInvoicePDF(order: any, invoiceNumber: string,
     doc.text(new Date(order.created_at).toLocaleDateString(language === 'en' ? 'en-US' : 'de-DE'), valueX, detailsY);
     
     // ITEMS TABLE - Fixed position
-    const tableStartY = LAYOUT.SECTIONS.TABLE_Y;
+    const tableStartY = layout.POSITIONS.TABLE_Y;
     let currentY = tableStartY;
     
     // Table header with accent color
-    doc.setFillColor(rgb.r, rgb.g, rgb.b);
-    doc.rect(LAYOUT.MARGIN, currentY, contentWidth, LAYOUT.SECTIONS.TABLE_HEADER_HEIGHT, 'F');
+    doc.setFillColor(accentColor.r, accentColor.g, accentColor.b);
+    doc.rect(layout.MARGIN, currentY, contentWidth, layout.SECTIONS.TABLE_HEADER_HEIGHT, 'F');
     
-    doc.setFontSize(LAYOUT.FONT_SIZES.SMALL);
+    doc.setFontSize(layout.FONT_SIZES.SMALL);
     doc.setTextColor(255, 255, 255);
-    const headerPadding = 3;
+    const headerPadding = 3 * layout.SCALE_FACTOR;
     
-    doc.text(t.description, LAYOUT.MARGIN + headerPadding, currentY + 6);
-    doc.text(t.quantity, LAYOUT.MARGIN + (contentWidth * 0.5), currentY + 6);
-    doc.text(t.unitPrice, LAYOUT.MARGIN + (contentWidth * 0.65), currentY + 6);
-    doc.text(t.total, LAYOUT.MARGIN + (contentWidth * 0.8), currentY + 6);
+    doc.text(t.description, layout.MARGIN + headerPadding, currentY + 6);
+    doc.text(t.quantity, layout.MARGIN + (contentWidth * 0.5), currentY + 6);
+    doc.text(t.unitPrice, layout.MARGIN + (contentWidth * 0.65), currentY + 6);
+    doc.text(t.total, layout.MARGIN + (contentWidth * 0.8), currentY + 6);
     
-    currentY += LAYOUT.SECTIONS.TABLE_HEADER_HEIGHT;
+    currentY += layout.SECTIONS.TABLE_HEADER_HEIGHT;
     
     // Table content
-    doc.setTextColor(...LAYOUT.COLORS.PRIMARY_TEXT);
-    doc.setFontSize(LAYOUT.FONT_SIZES.SMALL);
+    doc.setTextColor(...layout.COLORS.PRIMARY_TEXT);
+    doc.setFontSize(layout.FONT_SIZES.SMALL);
     
     // Main product line
-    doc.setFillColor(...LAYOUT.COLORS.BACKGROUND_LIGHT);
-    doc.rect(LAYOUT.MARGIN, currentY, contentWidth, LAYOUT.SECTIONS.TABLE_ROW_HEIGHT, 'F');
+    doc.setFillColor(...layout.COLORS.BACKGROUND_LIGHT);
+    doc.rect(layout.MARGIN, currentY, contentWidth, layout.SECTIONS.TABLE_ROW_HEIGHT, 'F');
     
-    const cellPadding = 3;
+    const cellPadding = 3 * layout.SCALE_FACTOR;
     const descriptionWidth = contentWidth * 0.45;
-    const productDesc = truncateText(doc, t.heatingOilDelivery, descriptionWidth, LAYOUT.FONT_SIZES.SMALL);
+    const productDesc = optimizeTextForSpace(doc, t.heatingOilDelivery, descriptionWidth, layout.FONT_SIZES.SMALL, language);
     
-    doc.text(productDesc, LAYOUT.MARGIN + cellPadding, currentY + 5);
-    doc.text(`${order.liters} ${t.liters}`, LAYOUT.MARGIN + (contentWidth * 0.5), currentY + 5);
-    doc.text(`${currencySymbol}${order.price_per_liter.toFixed(3)}`, LAYOUT.MARGIN + (contentWidth * 0.65), currentY + 5);
-    doc.text(`${currencySymbol}${order.base_price.toFixed(2)}`, LAYOUT.MARGIN + (contentWidth * 0.8), currentY + 5);
-    currentY += LAYOUT.SECTIONS.TABLE_ROW_HEIGHT + 2;
+    doc.text(productDesc, layout.MARGIN + cellPadding, currentY + 5);
+    doc.text(`${order.liters} ${t.liters}`, layout.MARGIN + (contentWidth * 0.5), currentY + 5);
+    doc.text(`${currencySymbol}${order.price_per_liter.toFixed(3)}`, layout.MARGIN + (contentWidth * 0.65), currentY + 5);
+    doc.text(`${currencySymbol}${order.base_price.toFixed(2)}`, layout.MARGIN + (contentWidth * 0.8), currentY + 5);
+    currentY += layout.SECTIONS.TABLE_ROW_HEIGHT + 2;
     
     // Delivery fee if applicable
     if (order.delivery_fee > 0) {
-      const deliveryDesc = truncateText(doc, t.deliveryFee, descriptionWidth, LAYOUT.FONT_SIZES.SMALL);
-      doc.text(deliveryDesc, LAYOUT.MARGIN + cellPadding, currentY + 5);
-      doc.text('1', LAYOUT.MARGIN + (contentWidth * 0.5), currentY + 5);
-      doc.text(`${currencySymbol}${order.delivery_fee.toFixed(2)}`, LAYOUT.MARGIN + (contentWidth * 0.65), currentY + 5);
-      doc.text(`${currencySymbol}${order.delivery_fee.toFixed(2)}`, LAYOUT.MARGIN + (contentWidth * 0.8), currentY + 5);
-      currentY += LAYOUT.SECTIONS.TABLE_ROW_HEIGHT + 2;
+      const deliveryDesc = optimizeTextForSpace(doc, t.deliveryFee, descriptionWidth, layout.FONT_SIZES.SMALL, language);
+      doc.text(deliveryDesc, layout.MARGIN + cellPadding, currentY + 5);
+      doc.text('1', layout.MARGIN + (contentWidth * 0.5), currentY + 5);
+      doc.text(`${currencySymbol}${order.delivery_fee.toFixed(2)}`, layout.MARGIN + (contentWidth * 0.65), currentY + 5);
+      doc.text(`${currencySymbol}${order.delivery_fee.toFixed(2)}`, layout.MARGIN + (contentWidth * 0.8), currentY + 5);
+      currentY += layout.SECTIONS.TABLE_ROW_HEIGHT + 2;
     }
     
     // Table border
-    doc.setDrawColor(...LAYOUT.COLORS.BORDER_LIGHT);
-    doc.setLineWidth(0.5);
-    doc.rect(LAYOUT.MARGIN, tableStartY, contentWidth, currentY - tableStartY);
+    doc.setDrawColor(...layout.COLORS.BORDER_LIGHT);
+    doc.setLineWidth(0.5 * layout.SCALE_FACTOR);
+    doc.rect(layout.MARGIN, tableStartY, contentWidth, currentY - tableStartY);
     
     // TOTALS SECTION - Fixed position relative to table
-    const totalsY = currentY + LAYOUT.SECTIONS.TOTALS_Y_OFFSET;
-    const totalsWidth = 64;
-    const totalsX = LAYOUT.MARGIN + contentWidth - totalsWidth;
+    const totalsY = currentY + layout.POSITIONS.TOTALS_Y_OFFSET;
+    const totalsWidth = 64 * layout.SCALE_FACTOR;
+    const totalsX = layout.MARGIN + contentWidth - totalsWidth;
     
     // Totals background
-    doc.setFillColor(...LAYOUT.COLORS.BACKGROUND_GRAY);
-    const totalsHeight = 25;
+    doc.setFillColor(...layout.COLORS.BACKGROUND_GRAY);
+    const totalsHeight = layout.SECTIONS.TOTALS_HEIGHT;
     doc.rect(totalsX, totalsY - 5, totalsWidth, totalsHeight, 'F');
-    doc.setDrawColor(...LAYOUT.COLORS.BORDER_LIGHT);
+    doc.setDrawColor(...layout.COLORS.BORDER_LIGHT);
     doc.rect(totalsX, totalsY - 5, totalsWidth, totalsHeight);
     
-    doc.setFontSize(LAYOUT.FONT_SIZES.NORMAL);
-    doc.setTextColor(...LAYOUT.COLORS.PRIMARY_TEXT);
+    doc.setFontSize(layout.FONT_SIZES.NORMAL);
+    doc.setTextColor(...layout.COLORS.PRIMARY_TEXT);
     
-    const totalsPadding = 3;
+    const totalsPadding = 3 * layout.SCALE_FACTOR;
     let totalsCurrentY = totalsY + 2;
+    const totalsLineSpacing = 6 * layout.SCALE_FACTOR * layout.LANGUAGE_FACTOR.lineHeight;
     
     doc.text(`${t.subtotal}:`, totalsX + totalsPadding, totalsCurrentY);
     doc.text(`${currencySymbol}${totalWithoutVat.toFixed(2)}`, totalsX + totalsWidth - totalsPadding, totalsCurrentY, { align: 'right' });
-    totalsCurrentY += 6;
+    totalsCurrentY += totalsLineSpacing;
     
     doc.text(`${t.vat} (${vatRate}%):`, totalsX + totalsPadding, totalsCurrentY);
     doc.text(`${currencySymbol}${vatAmount.toFixed(2)}`, totalsX + totalsWidth - totalsPadding, totalsCurrentY, { align: 'right' });
-    totalsCurrentY += 8;
+    totalsCurrentY += totalsLineSpacing * 1.3;
     
     // Grand total
-    doc.setFontSize(LAYOUT.FONT_SIZES.SECTION_HEADER);
+    doc.setFontSize(layout.FONT_SIZES.SECTION_HEADER);
     doc.setFont("helvetica", "bold");
-    doc.setTextColor(rgb.r, rgb.g, rgb.b);
+    doc.setTextColor(accentColor.r, accentColor.g, accentColor.b);
     doc.text(`${t.grandTotal}:`, totalsX + totalsPadding, totalsCurrentY);
     doc.text(`${currencySymbol}${order.total_amount.toFixed(2)}`, totalsX + totalsWidth - totalsPadding, totalsCurrentY, { align: 'right' });
     doc.setFont("helvetica", "normal");
     
     // PAYMENT DETAILS CARD - Fixed position
     if (order.shops.bank_accounts) {
-      const paymentY = totalsY + totalsHeight + LAYOUT.SECTIONS.PAYMENT_Y_OFFSET;
+      const paymentY = totalsY + totalsHeight + layout.POSITIONS.PAYMENT_Y_OFFSET;
       
-      const cardHeight = 35;
+      const cardHeight = layout.SECTIONS.PAYMENT_HEIGHT;
       // Header
-      doc.setFillColor(rgb.r, rgb.g, rgb.b);
-      doc.rect(LAYOUT.MARGIN, paymentY, contentWidth, 8, 'F');
+      doc.setFillColor(accentColor.r, accentColor.g, accentColor.b);
+      doc.rect(layout.MARGIN, paymentY, contentWidth, 8, 'F');
       
-      doc.setFontSize(LAYOUT.FONT_SIZES.SECTION_HEADER);
+      doc.setFontSize(layout.FONT_SIZES.SECTION_HEADER);
       doc.setTextColor(255, 255, 255);
-      doc.text(t.paymentDetails, LAYOUT.MARGIN + 3, paymentY + 5);
+      doc.text(t.paymentDetails, layout.MARGIN + 3, paymentY + 5);
       
       // Content area
-      doc.setFillColor(...LAYOUT.COLORS.BACKGROUND_GRAY);
-      doc.rect(LAYOUT.MARGIN, paymentY + 8, contentWidth, cardHeight - 8, 'F');
-      doc.setDrawColor(rgb.r, rgb.g, rgb.b);
-      doc.rect(LAYOUT.MARGIN, paymentY, contentWidth, cardHeight);
+      doc.setFillColor(...layout.COLORS.BACKGROUND_GRAY);
+      doc.rect(layout.MARGIN, paymentY + 8, contentWidth, cardHeight - 8, 'F');
+      doc.setDrawColor(accentColor.r, accentColor.g, accentColor.b);
+      doc.rect(layout.MARGIN, paymentY, contentWidth, cardHeight);
       
       let paymentContentY = paymentY + 13;
-      doc.setFontSize(LAYOUT.FONT_SIZES.SMALL);
-      doc.setTextColor(...LAYOUT.COLORS.PRIMARY_TEXT);
+      doc.setFontSize(layout.FONT_SIZES.SMALL);
+      doc.setTextColor(...layout.COLORS.PRIMARY_TEXT);
       
-      const paymentLabelWidth = 30;
-      const paymentPadding = 3;
+      const paymentLabelWidth = 30 * layout.SCALE_FACTOR;
+      const paymentPadding = 3 * layout.SCALE_FACTOR;
       const maxPaymentValueWidth = contentWidth - paymentLabelWidth - (paymentPadding * 2);
       
       // Account holder
@@ -1258,55 +1309,55 @@ async function generateStandardizedInvoicePDF(order: any, invoiceNumber: string,
         ? order.shops.name 
         : order.shops.bank_accounts.account_holder;
       
-      doc.text(`${t.accountHolder}:`, LAYOUT.MARGIN + paymentPadding, paymentContentY);
-      const accountHolder = truncateText(doc, accountHolderName, maxPaymentValueWidth, LAYOUT.FONT_SIZES.SMALL);
-      doc.text(accountHolder, LAYOUT.MARGIN + paymentPadding + paymentLabelWidth, paymentContentY);
+      doc.text(`${t.accountHolder}:`, layout.MARGIN + paymentPadding, paymentContentY);
+      const accountHolder = optimizeTextForSpace(doc, accountHolderName, maxPaymentValueWidth, layout.FONT_SIZES.SMALL, language);
+      doc.text(accountHolder, layout.MARGIN + paymentPadding + paymentLabelWidth, paymentContentY);
       paymentContentY += 6;
       
-      doc.text(`${t.iban}:`, LAYOUT.MARGIN + paymentPadding, paymentContentY);
-      const iban = truncateText(doc, order.shops.bank_accounts.iban, maxPaymentValueWidth, LAYOUT.FONT_SIZES.SMALL);
-      doc.text(iban, LAYOUT.MARGIN + paymentPadding + paymentLabelWidth, paymentContentY);
+      doc.text(`${t.iban}:`, layout.MARGIN + paymentPadding, paymentContentY);
+      const iban = optimizeTextForSpace(doc, order.shops.bank_accounts.iban, maxPaymentValueWidth, layout.FONT_SIZES.SMALL, language);
+      doc.text(iban, layout.MARGIN + paymentPadding + paymentLabelWidth, paymentContentY);
       paymentContentY += 6;
       
       if (order.shops.bank_accounts.bic) {
-        doc.text(`${t.bic}:`, LAYOUT.MARGIN + paymentPadding, paymentContentY);
-        const bic = truncateText(doc, order.shops.bank_accounts.bic, maxPaymentValueWidth, LAYOUT.FONT_SIZES.SMALL);
-        doc.text(bic, LAYOUT.MARGIN + paymentPadding + paymentLabelWidth, paymentContentY);
+        doc.text(`${t.bic}:`, layout.MARGIN + paymentPadding, paymentContentY);
+        const bic = optimizeTextForSpace(doc, order.shops.bank_accounts.bic, maxPaymentValueWidth, layout.FONT_SIZES.SMALL, language);
+        doc.text(bic, layout.MARGIN + paymentPadding + paymentLabelWidth, paymentContentY);
         paymentContentY += 6;
       }
       
-      doc.text(`${t.paymentReference}:`, LAYOUT.MARGIN + paymentPadding, paymentContentY);
-      const reference = truncateText(doc, order.order_number, maxPaymentValueWidth, LAYOUT.FONT_SIZES.SMALL);
-      doc.text(reference, LAYOUT.MARGIN + paymentPadding + paymentLabelWidth, paymentContentY);
+      doc.text(`${t.paymentReference}:`, layout.MARGIN + paymentPadding, paymentContentY);
+      const reference = optimizeTextForSpace(doc, order.order_number, maxPaymentValueWidth, layout.FONT_SIZES.SMALL, language);
+      doc.text(reference, layout.MARGIN + paymentPadding + paymentLabelWidth, paymentContentY);
     }
     
     // FOOTER - Fixed position
-    const footerY = LAYOUT.SECTIONS.FOOTER_Y;
+    const footerY = layout.POSITIONS.FOOTER_Y;
     
     // Footer background
-    doc.setFillColor(...LAYOUT.COLORS.BACKGROUND_LIGHT);
-    doc.rect(0, footerY - 5, LAYOUT.PAGE_WIDTH, 30, 'F');
+    doc.setFillColor(...layout.COLORS.BACKGROUND_LIGHT);
+    doc.rect(0, footerY - 5, layout.PAGE_WIDTH, 30, 'F');
     
     // 4-column layout
-    const col1X = LAYOUT.MARGIN;
-    const col2X = LAYOUT.MARGIN + (contentWidth * 0.25);
-    const col3X = LAYOUT.MARGIN + (contentWidth * 0.5);
-    const col4X = LAYOUT.MARGIN + (contentWidth * 0.75);
+    const col1X = layout.MARGIN;
+    const col2X = layout.MARGIN + (contentWidth * 0.25);
+    const col3X = layout.MARGIN + (contentWidth * 0.5);
+    const col4X = layout.MARGIN + (contentWidth * 0.75);
     const colWidth = contentWidth * 0.22; // Slightly less than 25% for padding
     
-    doc.setFontSize(LAYOUT.FONT_SIZES.FOOTER);
-    doc.setTextColor(...LAYOUT.COLORS.SECONDARY_TEXT);
+    doc.setFontSize(layout.FONT_SIZES.FOOTER);
+    doc.setTextColor(...layout.COLORS.SECONDARY_TEXT);
     
     // Column 1: Company name and address
     doc.setFont("helvetica", "bold");
-    const footerCompanyName = truncateText(doc, order.shops.company_name, colWidth, LAYOUT.FONT_SIZES.FOOTER);
+    const footerCompanyName = optimizeTextForSpace(doc, order.shops.company_name, colWidth, layout.FONT_SIZES.FOOTER, language);
     doc.text(footerCompanyName, col1X, footerY);
     doc.setFont("helvetica", "normal");
     
-    const footerAddress = truncateText(doc, order.shops.company_address, colWidth, LAYOUT.FONT_SIZES.FOOTER);
+    const footerAddress = optimizeTextForSpace(doc, order.shops.company_address, colWidth, layout.FONT_SIZES.FOOTER, language);
     doc.text(footerAddress, col1X, footerY + 4);
     
-    const footerCity = truncateText(doc, `${order.shops.company_postcode} ${order.shops.company_city}`, colWidth, LAYOUT.FONT_SIZES.FOOTER);
+    const footerCity = optimizeTextForSpace(doc, `${order.shops.company_postcode} ${order.shops.company_city}`, colWidth, layout.FONT_SIZES.FOOTER, language);
     doc.text(footerCity, col1X, footerY + 8);
     
     // Column 2: Contact information
@@ -1315,15 +1366,15 @@ async function generateStandardizedInvoicePDF(order: any, invoiceNumber: string,
     doc.setFont("helvetica", "normal");
     
     if (order.shops.company_phone) {
-      const footerPhone = truncateText(doc, order.shops.company_phone, colWidth, LAYOUT.FONT_SIZES.FOOTER);
+      const footerPhone = optimizeTextForSpace(doc, order.shops.company_phone, colWidth, layout.FONT_SIZES.FOOTER, language);
       doc.text(footerPhone, col2X, footerY + 4);
     }
     
-    const footerEmail = truncateText(doc, order.shops.company_email, colWidth, LAYOUT.FONT_SIZES.FOOTER);
+    const footerEmail = optimizeTextForSpace(doc, order.shops.company_email, colWidth, layout.FONT_SIZES.FOOTER, language);
     doc.text(footerEmail, col2X, footerY + 8);
     
     if (order.shops.company_website) {
-      const footerWebsite = truncateText(doc, order.shops.company_website, colWidth, LAYOUT.FONT_SIZES.FOOTER);
+      const footerWebsite = optimizeTextForSpace(doc, order.shops.company_website, colWidth, layout.FONT_SIZES.FOOTER, language);
       doc.text(footerWebsite, col2X, footerY + 12);
     }
     
@@ -1337,14 +1388,14 @@ async function generateStandardizedInvoicePDF(order: any, invoiceNumber: string,
         ? order.shops.name 
         : order.shops.bank_accounts.account_holder;
       
-      const footerAccountHolder = truncateText(doc, accountHolderName, colWidth, LAYOUT.FONT_SIZES.FOOTER);
+      const footerAccountHolder = optimizeTextForSpace(doc, accountHolderName, colWidth, layout.FONT_SIZES.FOOTER, language);
       doc.text(footerAccountHolder, col3X, footerY + 4);
       
-      const footerIban = truncateText(doc, order.shops.bank_accounts.iban, colWidth, LAYOUT.FONT_SIZES.FOOTER);
+      const footerIban = optimizeTextForSpace(doc, order.shops.bank_accounts.iban, colWidth, layout.FONT_SIZES.FOOTER, language);
       doc.text(footerIban, col3X, footerY + 8);
       
       if (order.shops.bank_accounts.bic) {
-        const footerBic = truncateText(doc, order.shops.bank_accounts.bic, colWidth, LAYOUT.FONT_SIZES.FOOTER);
+        const footerBic = optimizeTextForSpace(doc, order.shops.bank_accounts.bic, colWidth, layout.FONT_SIZES.FOOTER, language);
         doc.text(footerBic, col3X, footerY + 12);
       }
     }
@@ -1355,16 +1406,16 @@ async function generateStandardizedInvoicePDF(order: any, invoiceNumber: string,
     doc.setFont("helvetica", "normal");
     
     if (order.shops.business_owner) {
-      const footerOwner = truncateText(doc, order.shops.business_owner, colWidth, LAYOUT.FONT_SIZES.FOOTER);
+      const footerOwner = optimizeTextForSpace(doc, order.shops.business_owner, colWidth, layout.FONT_SIZES.FOOTER, language);
       doc.text(footerOwner, col4X, footerY + 4);
     }
     
     if (order.shops.vat_number) {
-      const footerVat = truncateText(doc, order.shops.vat_number, colWidth, LAYOUT.FONT_SIZES.FOOTER);
+      const footerVat = optimizeTextForSpace(doc, order.shops.vat_number, colWidth, layout.FONT_SIZES.FOOTER, language);
       doc.text(footerVat, col4X, footerY + 8);
     }
     
-    console.log('Standardized PDF content created with enhanced logo handling and debugging, converting to bytes...');
+    console.log('Responsive PDF content created with enhanced logo handling and debugging, converting to bytes...');
     
     // Get PDF as array buffer
     const pdfArrayBuffer = doc.output('arraybuffer');
@@ -1375,8 +1426,8 @@ async function generateStandardizedInvoicePDF(order: any, invoiceNumber: string,
     return pdfBytes;
     
   } catch (error) {
-    console.error('Error generating standardized PDF:', error);
-    throw new Error(`PDF generation failed: ${error.message}`);
+    console.error('Error generating responsive PDF:', error);
+    throw new Error(`Responsive PDF generation failed: ${error.message}`);
   }
 }
 
