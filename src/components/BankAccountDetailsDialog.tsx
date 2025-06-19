@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -110,11 +109,6 @@ export function BankAccountDetailsDialog({ open, onOpenChange, bankAccount }: Ba
     }
   };
 
-  const maskIban = (iban: string) => {
-    if (iban.length <= 8) return iban;
-    return iban.substring(0, 4) + '*'.repeat(iban.length - 8) + iban.substring(iban.length - 4);
-  };
-
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'pending':
@@ -205,7 +199,7 @@ export function BankAccountDetailsDialog({ open, onOpenChange, bankAccount }: Ba
                   <div>
                     <label className="text-sm font-medium text-gray-500">IBAN</label>
                     <code className="text-sm bg-gray-100 px-2 py-1 rounded block">
-                      {maskIban(bankAccount.iban)}
+                      {bankAccount.iban}
                     </code>
                   </div>
                   <div>
@@ -235,6 +229,7 @@ export function BankAccountDetailsDialog({ open, onOpenChange, bankAccount }: Ba
               </CardContent>
             </Card>
 
+            {/* Usage Statistics Card */}
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2 text-lg">
