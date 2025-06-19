@@ -1,4 +1,3 @@
-
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
@@ -417,9 +416,9 @@ const LAYOUT = {
   // Header section
   HEADER: {
     HEIGHT: 52, // Fixed height for header section
-    LOGO_WIDTH: 40,
-    LOGO_HEIGHT: 32,
-    COMPANY_START_X_OFFSET: 46, // LOGO_WIDTH + 6mm spacing
+    LOGO_MAX_WIDTH: 40,
+    LOGO_MAX_HEIGHT: 32,
+    COMPANY_START_X_OFFSET: 46, // LOGO_MAX_WIDTH + 6mm spacing
     TITLE_Y_OFFSET: 20 // Space after header for title
   },
   
@@ -468,8 +467,33 @@ function hexToRgb(hex: string): { r: number; g: number; b: number } {
   } : { r: 37, g: 99, b: 235 }; // Default blue
 }
 
-// Helper function to fetch and convert logo to base64 with standardized dimensions
-async function fetchLogoAsBase64(logoUrl: string): Promise<string | null> {
+// Helper function to calculate proportional dimensions
+function calculateProportionalDimensions(originalWidth: number, originalHeight: number, maxWidth: number, maxHeight: number): { width: number; height: number; x: number; y: number } {
+  console.log(`Calculating proportional dimensions: original ${originalWidth}x${originalHeight}, max ${maxWidth}x${maxHeight}`);
+  
+  const widthRatio = maxWidth / originalWidth;
+  const heightRatio = maxHeight / originalHeight;
+  const scale = Math.min(widthRatio, heightRatio);
+  
+  const scaledWidth = originalWidth * scale;
+  const scaledHeight = originalHeight * scale;
+  
+  // Center the logo within the available space
+  const offsetX = (maxWidth - scaledWidth) / 2;
+  const offsetY = (maxHeight - scaledHeight) / 2;
+  
+  console.log(`Calculated dimensions: ${scaledWidth}x${scaledHeight} with offsets ${offsetX}, ${offsetY}`);
+  
+  return {
+    width: scaledWidth,
+    height: scaledHeight,
+    x: offsetX,
+    y: offsetY
+  };
+}
+
+// Helper function to fetch and convert logo to base64 with dimension analysis
+async function fetchLogoAsBase64(logoUrl: string): Promise<{ base64: string; width?: number; height?: number } | null> {
   try {
     console.log('Fetching logo from URL:', logoUrl);
     
@@ -496,7 +520,35 @@ async function fetchLogoAsBase64(logoUrl: string): Promise<string | null> {
     const base64 = btoa(binary);
     
     console.log('Logo converted to base64, size:', base64.length, 'characters');
-    return `data:${contentType};base64,${base64}`;
+    
+    // Try to extract dimensions from image headers (basic implementation)
+    let width, height;
+    try {
+      if (contentType.includes('png')) {
+        // PNG header analysis (simplified)
+        if (uint8Array.length >= 24) {
+          width = (uint8Array[16] << 24) | (uint8Array[17] << 16) | (uint8Array[18] << 8) | uint8Array[19];
+          height = (uint8Array[20] << 24) | (uint8Array[21] << 16) | (uint8Array[22] << 8) | uint8Array[23];
+        }
+      } else if (contentType.includes('jpeg') || contentType.includes('jpg')) {
+        // JPEG header analysis would be more complex, skip for now
+        console.log('JPEG dimension extraction not implemented, using default proportions');
+      }
+      
+      if (width && height) {
+        console.log(`Extracted image dimensions: ${width}x${height}`);
+      } else {
+        console.log('Could not extract image dimensions from headers');
+      }
+    } catch (dimensionError) {
+      console.warn('Error extracting image dimensions:', dimensionError);
+    }
+    
+    return {
+      base64: `data:${contentType};base64,${base64}`,
+      width,
+      height
+    };
   } catch (error) {
     console.error('Error fetching logo:', error);
     return null;
@@ -533,39 +585,70 @@ function truncateText(doc: any, text: string, maxWidth: number, fontSize: number
   return bestFit || text.substring(0, 1) + '...';
 }
 
-// Helper function to render standardized logo
-function renderLogo(doc: any, logoBase64: string | null, x: number, y: number, accentColor: { r: number; g: number; b: number }): void {
-  if (logoBase64) {
+// Helper function to render proportionally scaled and centered logo
+function renderLogo(doc: any, logoData: { base64: string; width?: number; height?: number } | null, x: number, y: number, accentColor: { r: number; g: number; b: number }): void {
+  if (logoData?.base64) {
     try {
-      console.log('Adding standardized logo to PDF');
-      // Always use exact dimensions regardless of original image proportions
-      doc.addImage(logoBase64, 'JPEG', x, y, LAYOUT.HEADER.LOGO_WIDTH, LAYOUT.HEADER.LOGO_HEIGHT);
+      console.log('Rendering proportionally scaled logo');
+      
+      // Use extracted dimensions if available, otherwise assume square proportions
+      const originalWidth = logoData.width || 200;
+      const originalHeight = logoData.height || 200;
+      
+      console.log(`Original logo dimensions: ${originalWidth}x${originalHeight}`);
+      
+      // Calculate proportional dimensions and centering
+      const dimensions = calculateProportionalDimensions(
+        originalWidth,
+        originalHeight,
+        LAYOUT.HEADER.LOGO_MAX_WIDTH,
+        LAYOUT.HEADER.LOGO_MAX_HEIGHT
+      );
+      
+      // Render the logo with calculated dimensions and position
+      doc.addImage(
+        logoData.base64,
+        'JPEG',
+        x + dimensions.x,
+        y + dimensions.y,
+        dimensions.width,
+        dimensions.height
+      );
+      
+      console.log(`Logo rendered at position (${x + dimensions.x}, ${y + dimensions.y}) with size ${dimensions.width}x${dimensions.height}`);
     } catch (logoError) {
       console.warn('Error adding logo to PDF, using placeholder:', logoError);
       renderLogoPlaceholder(doc, x, y, accentColor);
     }
   } else {
+    console.log('No logo data available, using placeholder');
     renderLogoPlaceholder(doc, x, y, accentColor);
   }
 }
 
-// Helper function to render standardized logo placeholder
+// Helper function to render improved logo placeholder
 function renderLogoPlaceholder(doc: any, x: number, y: number, accentColor: { r: number; g: number; b: number }): void {
-  console.log('Using standardized logo placeholder');
+  console.log('Rendering improved logo placeholder with proportional space');
+  
+  // Use the full allocated space for placeholder
+  const width = LAYOUT.HEADER.LOGO_MAX_WIDTH;
+  const height = LAYOUT.HEADER.LOGO_MAX_HEIGHT;
   
   // Background
   doc.setFillColor(...LAYOUT.COLORS.BACKGROUND_LIGHT);
-  doc.rect(x, y, LAYOUT.HEADER.LOGO_WIDTH, LAYOUT.HEADER.LOGO_HEIGHT, 'F');
+  doc.rect(x, y, width, height, 'F');
   
-  // Border
-  doc.setDrawColor(...LAYOUT.COLORS.BORDER_LIGHT);
-  doc.setLineWidth(0.5);
-  doc.rect(x, y, LAYOUT.HEADER.LOGO_WIDTH, LAYOUT.HEADER.LOGO_HEIGHT);
+  // Border with accent color
+  doc.setDrawColor(accentColor.r, accentColor.g, accentColor.b);
+  doc.setLineWidth(1);
+  doc.rect(x, y, width, height);
   
-  // Text
+  // Text centered in the space
   doc.setFontSize(LAYOUT.FONT_SIZES.SMALL);
-  doc.setTextColor(...LAYOUT.COLORS.LIGHT_TEXT);
-  doc.text('LOGO', x + LAYOUT.HEADER.LOGO_WIDTH/2, y + LAYOUT.HEADER.LOGO_HEIGHT/2, { align: 'center' });
+  doc.setTextColor(accentColor.r, accentColor.g, accentColor.b);
+  doc.text('LOGO', x + width/2, y + height/2, { align: 'center' });
+  
+  console.log(`Placeholder rendered at (${x}, ${y}) with size ${width}x${height}`);
 }
 
 const serve_handler = async (req: Request): Promise<Response> => {
@@ -777,18 +860,18 @@ async function generateStandardizedInvoicePDF(order: any, invoiceNumber: string,
     // Set font encoding to support special characters
     doc.setFont("helvetica", "normal");
     
-    // HEADER SECTION - Fixed layout regardless of content length
-    let logoBase64 = null;
+    // HEADER SECTION - Fixed layout with improved logo handling
+    let logoData = null;
     
-    // Fetch logo with cache busting
+    // Fetch logo with enhanced analysis
     if (order.shops.logo_url) {
       console.log('Attempting to fetch logo from:', order.shops.logo_url);
       const cacheBustedUrl = `${order.shops.logo_url}?v=${Date.now()}`;
-      logoBase64 = await fetchLogoAsBase64(cacheBustedUrl);
+      logoData = await fetchLogoAsBase64(cacheBustedUrl);
     }
     
-    // Render standardized logo
-    renderLogo(doc, logoBase64, LAYOUT.MARGIN, LAYOUT.MARGIN, rgb);
+    // Render proportionally scaled and centered logo
+    renderLogo(doc, logoData, LAYOUT.MARGIN, LAYOUT.MARGIN, rgb);
     
     // Company details - fixed position and responsive text
     const companyStartX = LAYOUT.MARGIN + LAYOUT.HEADER.COMPANY_START_X_OFFSET;
@@ -1138,7 +1221,7 @@ async function generateStandardizedInvoicePDF(order: any, invoiceNumber: string,
       doc.text(footerVat, col4X, footerY + 8);
     }
     
-    console.log('Standardized PDF content created with consistent layout, converting to bytes...');
+    console.log('Standardized PDF content created with consistent layout and proportional logo, converting to bytes...');
     
     // Get PDF as array buffer
     const pdfArrayBuffer = doc.output('arraybuffer');
