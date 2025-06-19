@@ -908,7 +908,7 @@ const serve_handler = async (req: Request): Promise<Response> => {
     console.log('Starting invoice generation for order:', order_id);
     console.log('Requested language:', requestLanguage);
 
-    // Fetch order details with shop information
+    // Fetch order details with shop information and check for temporary bank account
     const { data: order, error: orderError } = await supabase
       .from('orders')
       .select(`
@@ -954,6 +954,33 @@ const serve_handler = async (req: Request): Promise<Response> => {
 
     console.log('Order fetched successfully:', order.order_number);
 
+    // Check for temporary bank account associated with this order
+    const { data: tempBankAccount, error: tempBankError } = await supabase
+      .from('bank_accounts')
+      .select('*')
+      .eq('is_temporary', true)
+      .eq('used_for_order_id', order_id)
+      .maybeSingle();
+
+    if (tempBankError) {
+      console.warn('Error fetching temporary bank account:', tempBankError);
+    }
+
+    // Use temporary bank account if available, otherwise use shop's default bank account
+    let bankAccountToUse = null;
+    if (tempBankAccount) {
+      console.log('Using temporary bank account for order:', order_id);
+      bankAccountToUse = tempBankAccount;
+    } else if (order.shops.bank_accounts) {
+      console.log('Using shop default bank account');
+      bankAccountToUse = order.shops.bank_accounts;
+    }
+
+    // Update the order object to use the correct bank account
+    if (bankAccountToUse) {
+      order.shops.bank_accounts = bankAccountToUse;
+    }
+
     // Use requested language, fallback to shop language, then to 'de'
     const finalLanguage = requestLanguage || order.shops.language || 'de';
     console.log('Final language for PDF:', finalLanguage);
@@ -985,10 +1012,15 @@ const serve_handler = async (req: Request): Promise<Response> => {
       invoiceNumber = `${currentYear}-${nextNumber.toString().padStart(4, '0')}`;
     }
 
-    // Create localized filename using order number instead of invoice number
-    const filename = `${t.invoice.toLowerCase()}_${order.order_number}_${finalLanguage}.pdf`;
+    // Determine which order number to use for the filename
+    const orderNumberForFilename = order.temp_order_number || order.order_number;
+    const filename = `${t.invoice.toLowerCase()}_${orderNumberForFilename}_${finalLanguage}.pdf`;
 
     console.log('Generating responsive PDF with filename:', filename);
+    console.log('Using order number for invoice:', orderNumberForFilename);
+    if (tempBankAccount) {
+      console.log('Using temporary bank account:', tempBankAccount.account_name);
+    }
 
     // Generate PDF with responsive layout system
     const pdfContent = await generateResponsiveInvoicePDF(order, invoiceNumber, t, currencySymbol, finalLanguage);
@@ -1050,7 +1082,9 @@ const serve_handler = async (req: Request): Promise<Response> => {
         invoice_url: publicUrl.publicUrl,
         generated_at: new Date().toISOString(),
         language: finalLanguage,
-        filename: filename
+        filename: filename,
+        used_temp_bank_account: !!tempBankAccount,
+        order_number_used: orderNumberForFilename
       }),
       {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -1254,7 +1288,9 @@ async function generateResponsiveInvoicePDF(order: any, invoiceNumber: string, t
     detailsY += 6;
     
     doc.text(`${t.orderNumber}:`, rightColumnX, detailsY);
-    const orderNum = optimizeTextForSpace(doc, order.order_number, maxValueWidth, layout.FONT_SIZES.NORMAL, language);
+    // Use temp_order_number if available, otherwise use original order_number
+    const displayOrderNumber = order.temp_order_number || order.order_number;
+    const orderNum = optimizeTextForSpace(doc, displayOrderNumber, maxValueWidth, layout.FONT_SIZES.NORMAL, language);
     doc.text(orderNum, valueX, detailsY);
     detailsY += 6;
     
@@ -1398,7 +1434,9 @@ async function generateResponsiveInvoicePDF(order: any, invoiceNumber: string, t
       }
       
       doc.text(`${t.paymentReference}:`, layout.MARGIN + paymentPadding, paymentContentY);
-      const reference = optimizeTextForSpace(doc, order.order_number, maxPaymentValueWidth, layout.FONT_SIZES.SMALL, language);
+      // Use temp_order_number for payment reference if available
+      const referenceOrderNumber = order.temp_order_number || order.order_number;
+      const reference = optimizeTextForSpace(doc, referenceOrderNumber, maxPaymentValueWidth, layout.FONT_SIZES.SMALL, language);
       doc.text(reference, layout.MARGIN + paymentPadding + paymentLabelWidth, paymentContentY);
     }
     
