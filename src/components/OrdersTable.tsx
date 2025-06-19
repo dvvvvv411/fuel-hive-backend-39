@@ -4,14 +4,13 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Select, SelectContent, SelectItem, SelectTrigger } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Pagination, PaginationContent, PaginationItem, PaginationLink, PaginationNext, PaginationPrevious } from '@/components/ui/pagination';
-import { Search, RefreshCw, FileText, Eye, Download, DollarSign, Check, EyeOff, Copy } from 'lucide-react';
+import { Search, RefreshCw, FileText, Eye, DollarSign, Check, EyeOff, Copy } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import { OrderDetailsDialog } from './OrderDetailsDialog';
 import { BankAccountSelectionDialog } from './BankAccountSelectionDialog';
-import { PDFViewerDialog } from './PDFViewerDialog';
 import { Checkbox } from '@/components/ui/checkbox';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 
@@ -84,8 +83,6 @@ export function OrdersTable() {
   const [showDetailsDialog, setShowDetailsDialog] = useState(false);
   const [showBankAccountDialog, setShowBankAccountDialog] = useState(false);
   const [selectedOrderForInvoice, setSelectedOrderForInvoice] = useState<Order | null>(null);
-  const [showPDFViewer, setShowPDFViewer] = useState(false);
-  const [selectedPDFOrder, setSelectedPDFOrder] = useState<Order | null>(null);
   
   // Filter states - changed to arrays for multi-select
   const [searchTerm, setSearchTerm] = useState('');
@@ -880,19 +877,6 @@ export function OrdersTable() {
                                 <Check className="h-4 w-4" />
                               </Button>
                             )}
-                            
-                            {order.invoice_pdf_url && (
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => {
-                                  setSelectedPDFOrder(order);
-                                  setShowPDFViewer(true);
-                                }}
-                              >
-                                <Download className="h-4 w-4" />
-                              </Button>
-                            )}
 
                             {!showHidden ? (
                               <Button
@@ -995,16 +979,6 @@ export function OrdersTable() {
           onOpenChange={setShowBankAccountDialog}
           onBankAccountSelected={handleBankAccountSelected}
           orderNumber={selectedOrderForInvoice.order_number}
-        />
-      )}
-
-      {/* PDF Viewer Dialog */}
-      {selectedPDFOrder && (
-        <PDFViewerDialog
-          open={showPDFViewer}
-          onOpenChange={setShowPDFViewer}
-          pdfUrl={selectedPDFOrder.invoice_pdf_url!}
-          orderNumber={getDisplayOrderNumber(selectedPDFOrder)}
         />
       )}
     </div>
