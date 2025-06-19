@@ -22,6 +22,20 @@ const formatIBAN = (iban: string): string => {
   return cleanIban.replace(/(.{4})/g, '$1 ').trim();
 };
 
+// Optimized base64 conversion to prevent stack overflow
+const arrayBufferToBase64 = (buffer: ArrayBuffer): string => {
+  const bytes = new Uint8Array(buffer);
+  const chunkSize = 8192; // Process in smaller chunks
+  let result = '';
+  
+  for (let i = 0; i < bytes.length; i += chunkSize) {
+    const chunk = bytes.slice(i, i + chunkSize);
+    result += String.fromCharCode(...chunk);
+  }
+  
+  return btoa(result);
+};
+
 const generateConfirmationEmailTemplate = (order: any, language: string = 'de') => {
   const t = getTranslations(language);
   const shopName = (order.shops?.name || order.shops?.company_name || 'Heizöl-Service').trim();
@@ -494,35 +508,52 @@ const handler = async (req: Request): Promise<Response> => {
     };
 
     // Add PDF attachment for invoice emails
+    let attachmentAdded = false;
     if (include_invoice && order.invoice_pdf_url) {
       try {
         console.log('Adding PDF attachment for invoice:', order.order_number);
         
         // Download PDF from Supabase Storage
         const fileName = order.invoice_pdf_url.split('/').pop() || '';
+        console.log('Downloading PDF file:', fileName);
+        
         const { data: pdfData, error: downloadError } = await supabase.storage
           .from('invoices')
           .download(fileName);
 
-        if (!downloadError && pdfData) {
-          // Convert blob to base64
-          const arrayBuffer = await pdfData.arrayBuffer();
-          const base64 = btoa(String.fromCharCode(...new Uint8Array(arrayBuffer)));
-
-          const t = getTranslations(language);
-          emailPayload.attachments = [{
-            filename: `${t.invoiceFilename}-${order.order_number}.pdf`,
-            content: base64,
-            content_type: 'application/pdf',
-          }];
-
-          console.log('PDF attachment added to email');
-        } else {
-          console.warn('Could not download PDF for attachment:', downloadError);
+        if (downloadError) {
+          console.error('Error downloading PDF:', downloadError);
+          throw new Error(`Failed to download PDF: ${downloadError.message}`);
         }
+
+        if (!pdfData) {
+          console.error('No PDF data received');
+          throw new Error('No PDF data received from storage');
+        }
+
+        console.log('PDF downloaded successfully, size:', pdfData.size, 'bytes');
+
+        // Convert blob to base64 using optimized method
+        const arrayBuffer = await pdfData.arrayBuffer();
+        console.log('Converting to base64, buffer size:', arrayBuffer.byteLength, 'bytes');
+        
+        const base64 = arrayBufferToBase64(arrayBuffer);
+        console.log('Base64 conversion completed, length:', base64.length, 'characters');
+
+        const t = getTranslations(language);
+        emailPayload.attachments = [{
+          filename: `${t.invoiceFilename}-${order.order_number}.pdf`,
+          content: base64,
+          content_type: 'application/pdf',
+        }];
+
+        attachmentAdded = true;
+        console.log('PDF attachment added successfully to email');
+        
       } catch (attachmentError) {
-        console.warn('Error adding PDF attachment:', attachmentError);
-        // Continue sending email without attachment
+        console.error('Error adding PDF attachment:', attachmentError);
+        // Don't throw here - continue sending email without attachment
+        console.log('Continuing to send email without PDF attachment');
       }
     }
 
@@ -537,14 +568,40 @@ const handler = async (req: Request): Promise<Response> => {
 
     console.log('Email sent successfully:', emailResponse);
 
+    // Update order status if this is an invoice email that was sent successfully
+    let statusUpdated = false;
+    if (include_invoice && emailResponse.data?.id) {
+      try {
+        console.log('Updating order status to invoice_sent');
+        const { error: updateError } = await supabase
+          .from('orders')
+          .update({ 
+            status: 'invoice_sent',
+            invoice_sent: true
+          })
+          .eq('id', order_id);
+
+        if (updateError) {
+          console.error('Error updating order status:', updateError);
+        } else {
+          statusUpdated = true;
+          console.log('Order status updated successfully to invoice_sent');
+        }
+      } catch (updateError) {
+        console.error('Error updating order status:', updateError);
+      }
+    }
+
     return new Response(JSON.stringify({
       success: true,
       email_id: emailResponse.data?.id,
       email_type: include_invoice ? 'invoice' : 'confirmation',
       sent_to: order.customer_email,
       language: language,
-      attachment_included: !!emailPayload.attachments,
+      attachment_included: attachmentAdded,
+      attachment_attempted: include_invoice && !!order.invoice_pdf_url,
       bank_data_included: !!bankData,
+      status_updated: statusUpdated,
       sent_at: new Date().toISOString()
     }), {
       status: 200,
