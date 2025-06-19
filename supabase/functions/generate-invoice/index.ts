@@ -101,8 +101,17 @@ const serve_handler = async (req: Request): Promise<Response> => {
     const languageCode = order.shops.language || 'de';
     const filename = `${t.invoice.toLowerCase()}_${invoiceNumber.replace('/', '_')}_${languageCode}.pdf`;
 
+    console.log('Generating PDF with filename:', filename);
+
     // Generate PDF content with translations
     const pdfContent = await generateInvoicePDF(order, invoiceNumber, t, currencySymbol);
+
+    if (!pdfContent || pdfContent.length === 0) {
+      console.error('PDF generation failed: empty content');
+      throw new Error('Failed to generate PDF content');
+    }
+
+    console.log('PDF generated successfully, size:', pdfContent.length, 'bytes');
 
     // Upload PDF to Supabase Storage
     const { data: uploadData, error: uploadError } = await supabase.storage
@@ -123,6 +132,8 @@ const serve_handler = async (req: Request): Promise<Response> => {
     const { data: publicUrl } = supabase.storage
       .from('invoices')
       .getPublicUrl(filename);
+
+    console.log('PDF public URL:', publicUrl.publicUrl);
 
     // Update order with invoice details
     const updateData = {
@@ -173,256 +184,174 @@ const serve_handler = async (req: Request): Promise<Response> => {
 };
 
 async function generateInvoicePDF(order: any, invoiceNumber: string, t: any, currencySymbol: string): Promise<Uint8Array> {
-  // Calculate VAT details
-  const vatRate = order.shops.vat_rate || 19;
-  const totalWithoutVat = order.total_amount / (1 + vatRate / 100);
-  const vatAmount = order.total_amount - totalWithoutVat;
-  
-  // Calculate due date (14 days from now)
-  const dueDate = new Date();
-  dueDate.setDate(dueDate.getDate() + 14);
-  
-  const htmlContent = `
-    <!DOCTYPE html>
-    <html>
-    <head>
-      <meta charset="UTF-8">
-      <title>${t.invoice} ${invoiceNumber}</title>
-      <style>
-        body { 
-          font-family: Arial, sans-serif; 
-          margin: 40px; 
-          color: #333;
-          line-height: 1.4;
-        }
-        .header { 
-          display: flex; 
-          justify-content: space-between; 
-          margin-bottom: 40px; 
-          border-bottom: 2px solid #eee;
-          padding-bottom: 20px;
-        }
-        .company-info { 
-          text-align: right; 
-          max-width: 300px;
-        }
-        .company-info h2 {
-          margin: 0 0 10px 0;
-          color: #2563eb;
-          font-size: 20px;
-        }
-        .company-info p {
-          margin: 3px 0;
-          font-size: 12px;
-        }
-        .invoice-title { 
-          font-size: 32px; 
-          font-weight: bold; 
-          margin-bottom: 20px; 
-          color: #2563eb;
-        }
-        .invoice-details { 
-          display: grid;
-          grid-template-columns: 1fr 1fr;
-          gap: 20px;
-          margin-bottom: 30px; 
-          background: #f8f9fa;
-          padding: 20px;
-          border-radius: 8px;
-        }
-        .invoice-meta p {
-          margin: 5px 0;
-          font-size: 14px;
-        }
-        .customer-info { 
-          margin-bottom: 30px; 
-          background: #fff;
-          border: 1px solid #e3e3e3;
-          padding: 20px;
-          border-radius: 8px;
-        }
-        .customer-info h3 {
-          margin: 0 0 15px 0;
-          color: #2563eb;
-        }
-        .customer-info p {
-          margin: 3px 0;
-        }
-        .items-table { 
-          width: 100%; 
-          border-collapse: collapse; 
-          margin-bottom: 30px; 
-          box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-        }
-        .items-table th, .items-table td { 
-          border: 1px solid #ddd; 
-          padding: 12px; 
-          text-align: left; 
-        }
-        .items-table th { 
-          background-color: #2563eb; 
-          color: white;
-          font-weight: bold;
-        }
-        .items-table tbody tr:nth-child(even) {
-          background-color: #f8f9fa;
-        }
-        .items-table tbody tr:hover {
-          background-color: #e3f2fd;
-        }
-        .totals { 
-          margin-left: auto; 
-          width: 350px; 
-          background: #f8f9fa;
-          padding: 20px;
-          border-radius: 8px;
-          border: 1px solid #e3e3e3;
-        }
-        .total-row { 
-          display: flex; 
-          justify-content: space-between; 
-          margin-bottom: 8px; 
-          padding: 5px 0;
-        }
-        .grand-total { 
-          font-weight: bold; 
-          border-top: 2px solid #2563eb; 
-          padding-top: 15px; 
-          margin-top: 10px;
-          font-size: 18px;
-          color: #2563eb;
-        }
-        .payment-info { 
-          margin-top: 40px; 
-          background: #fff;
-          border: 1px solid #e3e3e3;
-          padding: 20px;
-          border-radius: 8px;
-        }
-        .payment-info h3 {
-          margin: 0 0 15px 0;
-          color: #2563eb;
-        }
-        .payment-info p {
-          margin: 5px 0;
-        }
-        .thank-you { 
-          margin-top: 40px; 
-          font-style: italic; 
-          text-align: center;
-          color: #666;
-          font-size: 14px;
-          border-top: 1px solid #eee;
-          padding-top: 20px;
-        }
-        .amount { font-weight: bold; }
-        .text-right { text-align: right; }
-      </style>
-    </head>
-    <body>
-      <div class="header">
-        <div>
-          ${order.shops.logo_url ? `<img src="${order.shops.logo_url}" alt="Logo" style="max-height: 80px; margin-bottom: 20px;">` : ''}
-        </div>
-        <div class="company-info">
-          <h2>${order.shops.company_name}</h2>
-          <p>${order.shops.company_address}</p>
-          <p>${order.shops.company_postcode} ${order.shops.company_city}</p>
-          ${order.shops.company_phone ? `<p>Tel: ${order.shops.company_phone}</p>` : ''}
-          <p>E-Mail: ${order.shops.company_email}</p>
-          ${order.shops.company_website ? `<p>Web: ${order.shops.company_website}</p>` : ''}
-          ${order.shops.vat_number ? `<p>USt-IdNr: ${order.shops.vat_number}</p>` : ''}
-          ${order.shops.business_owner ? `<p>Inhaber: ${order.shops.business_owner}</p>` : ''}
-        </div>
-      </div>
-
-      <div class="invoice-title">${t.invoice}</div>
-
-      <div class="invoice-details">
-        <div class="invoice-meta">
-          <p><strong>${t.invoiceNumber}:</strong> ${invoiceNumber}</p>
-          <p><strong>${t.invoiceDate}:</strong> ${new Date().toLocaleDateString(order.shops.language === 'en' ? 'en-US' : 'de-DE')}</p>
-          <p><strong>${t.dueDate}:</strong> ${dueDate.toLocaleDateString(order.shops.language === 'en' ? 'en-US' : 'de-DE')}</p>
-        </div>
-        <div class="invoice-meta">
-          <p><strong>Bestellnummer:</strong> ${order.order_number}</p>
-          <p><strong>Bestelldatum:</strong> ${new Date(order.created_at).toLocaleDateString(order.shops.language === 'en' ? 'en-US' : 'de-DE')}</p>
-        </div>
-      </div>
-
-      <div class="customer-info">
-        <h3>${t.customerDetails}</h3>
-        <p><strong>${order.customer_name}</strong></p>
-        <p>${order.delivery_street}</p>
-        <p>${order.delivery_postcode} ${order.delivery_city}</p>
-        <p>${order.customer_email}</p>
-        ${order.customer_phone ? `<p>${order.customer_phone}</p>` : ''}
-      </div>
-
-      <table class="items-table">
-        <thead>
-          <tr>
-            <th>${t.description}</th>
-            <th class="text-right">${t.quantity}</th>
-            <th class="text-right">${t.unitPrice}</th>
-            <th class="text-right">${t.total}</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr>
-            <td>${t.heatingOilDelivery}</td>
-            <td class="text-right">${order.liters} ${t.liters}</td>
-            <td class="text-right amount">${currencySymbol}${order.price_per_liter.toFixed(3)}</td>
-            <td class="text-right amount">${currencySymbol}${order.base_price.toFixed(2)}</td>
-          </tr>
-          ${order.delivery_fee > 0 ? `
-          <tr>
-            <td>${t.deliveryFee}</td>
-            <td class="text-right">1</td>
-            <td class="text-right amount">${currencySymbol}${order.delivery_fee.toFixed(2)}</td>
-            <td class="text-right amount">${currencySymbol}${order.delivery_fee.toFixed(2)}</td>
-          </tr>
-          ` : ''}
-        </tbody>
-      </table>
-
-      <div class="totals">
-        <div class="total-row">
-          <span>${t.subtotal}:</span>
-          <span class="amount">${currencySymbol}${totalWithoutVat.toFixed(2)}</span>
-        </div>
-        <div class="total-row">
-          <span>${t.vat} (${vatRate}%):</span>
-          <span class="amount">${currencySymbol}${vatAmount.toFixed(2)}</span>
-        </div>
-        <div class="total-row grand-total">
-          <span>${t.grandTotal}:</span>
-          <span class="amount">${currencySymbol}${order.total_amount.toFixed(2)}</span>
-        </div>
-      </div>
-
-      ${order.shops.bank_accounts ? `
-      <div class="payment-info">
-        <h3>${t.paymentDetails}</h3>
-        <p><strong>${t.accountHolder}:</strong> ${order.shops.bank_accounts.account_holder}</p>
-        <p><strong>${t.iban}:</strong> ${order.shops.bank_accounts.iban}</p>
-        ${order.shops.bank_accounts.bic ? `<p><strong>${t.bic}:</strong> ${order.shops.bank_accounts.bic}</p>` : ''}
-        <p><strong>${t.paymentReference}:</strong> ${invoiceNumber}</p>
-        <p><strong>Zahlungsziel:</strong> ${t.dueDays}</p>
-      </div>
-      ` : ''}
-
-      <div class="thank-you">
-        <p>${t.thankYou}</p>
-      </div>
-    </body>
-    </html>
-  `;
-
-  // Convert HTML to PDF bytes (simplified implementation)
-  // In a production environment, you would use a proper HTML-to-PDF library
-  const encoder = new TextEncoder();
-  return encoder.encode(htmlContent);
+  try {
+    console.log('Starting PDF generation...');
+    
+    // Import jsPDF dynamically
+    const { jsPDF } = await import("https://esm.sh/jspdf@2.5.1");
+    
+    // Create new PDF document
+    const doc = new jsPDF();
+    
+    // Calculate VAT details
+    const vatRate = order.shops.vat_rate || 19;
+    const totalWithoutVat = order.total_amount / (1 + vatRate / 100);
+    const vatAmount = order.total_amount - totalWithoutVat;
+    
+    // Calculate due date (14 days from now)
+    const dueDate = new Date();
+    dueDate.setDate(dueDate.getDate() + 14);
+    
+    // Set font
+    doc.setFont("helvetica", "normal");
+    
+    // Add company header
+    doc.setFontSize(20);
+    doc.setTextColor(37, 99, 235); // Blue color
+    doc.text(order.shops.company_name, 20, 30);
+    
+    // Company details
+    doc.setFontSize(10);
+    doc.setTextColor(0, 0, 0);
+    let yPos = 40;
+    doc.text(order.shops.company_address, 20, yPos);
+    yPos += 5;
+    doc.text(`${order.shops.company_postcode} ${order.shops.company_city}`, 20, yPos);
+    yPos += 5;
+    if (order.shops.company_phone) {
+      doc.text(`Tel: ${order.shops.company_phone}`, 20, yPos);
+      yPos += 5;
+    }
+    doc.text(`E-Mail: ${order.shops.company_email}`, 20, yPos);
+    yPos += 5;
+    if (order.shops.company_website) {
+      doc.text(`Web: ${order.shops.company_website}`, 20, yPos);
+      yPos += 5;
+    }
+    if (order.shops.vat_number) {
+      doc.text(`USt-IdNr: ${order.shops.vat_number}`, 20, yPos);
+    }
+    
+    // Invoice title
+    doc.setFontSize(24);
+    doc.setTextColor(37, 99, 235);
+    doc.text(t.invoice, 20, 80);
+    
+    // Invoice details
+    doc.setFontSize(12);
+    doc.setTextColor(0, 0, 0);
+    yPos = 100;
+    doc.text(`${t.invoiceNumber}: ${invoiceNumber}`, 20, yPos);
+    yPos += 8;
+    doc.text(`${t.invoiceDate}: ${new Date().toLocaleDateString(order.shops.language === 'en' ? 'en-US' : 'de-DE')}`, 20, yPos);
+    yPos += 8;
+    doc.text(`${t.dueDate}: ${dueDate.toLocaleDateString(order.shops.language === 'en' ? 'en-US' : 'de-DE')}`, 20, yPos);
+    yPos += 8;
+    doc.text(`Bestellnummer: ${order.order_number}`, 20, yPos);
+    yPos += 8;
+    doc.text(`Bestelldatum: ${new Date(order.created_at).toLocaleDateString(order.shops.language === 'en' ? 'en-US' : 'de-DE')}`, 20, yPos);
+    
+    // Customer details
+    yPos += 20;
+    doc.setFontSize(14);
+    doc.setTextColor(37, 99, 235);
+    doc.text(t.customerDetails, 20, yPos);
+    
+    doc.setFontSize(12);
+    doc.setTextColor(0, 0, 0);
+    yPos += 10;
+    doc.text(order.customer_name, 20, yPos);
+    yPos += 6;
+    doc.text(order.delivery_street, 20, yPos);
+    yPos += 6;
+    doc.text(`${order.delivery_postcode} ${order.delivery_city}`, 20, yPos);
+    yPos += 6;
+    doc.text(order.customer_email, 20, yPos);
+    if (order.customer_phone) {
+      yPos += 6;
+      doc.text(order.customer_phone, 20, yPos);
+    }
+    
+    // Items table header
+    yPos += 25;
+    doc.setFontSize(12);
+    doc.setFillColor(37, 99, 235);
+    doc.setTextColor(255, 255, 255);
+    doc.rect(20, yPos - 5, 170, 10, 'F');
+    doc.text(t.description, 25, yPos);
+    doc.text(t.quantity, 100, yPos);
+    doc.text(t.unitPrice, 125, yPos);
+    doc.text(t.total, 160, yPos);
+    
+    // Items
+    yPos += 15;
+    doc.setTextColor(0, 0, 0);
+    doc.text(t.heatingOilDelivery, 25, yPos);
+    doc.text(`${order.liters} ${t.liters}`, 100, yPos);
+    doc.text(`${currencySymbol}${order.price_per_liter.toFixed(3)}`, 125, yPos);
+    doc.text(`${currencySymbol}${order.base_price.toFixed(2)}`, 160, yPos);
+    
+    if (order.delivery_fee > 0) {
+      yPos += 8;
+      doc.text(t.deliveryFee, 25, yPos);
+      doc.text('1', 100, yPos);
+      doc.text(`${currencySymbol}${order.delivery_fee.toFixed(2)}`, 125, yPos);
+      doc.text(`${currencySymbol}${order.delivery_fee.toFixed(2)}`, 160, yPos);
+    }
+    
+    // Totals
+    yPos += 20;
+    doc.text(`${t.subtotal}: ${currencySymbol}${totalWithoutVat.toFixed(2)}`, 120, yPos);
+    yPos += 8;
+    doc.text(`${t.vat} (${vatRate}%): ${currencySymbol}${vatAmount.toFixed(2)}`, 120, yPos);
+    yPos += 8;
+    doc.setFontSize(14);
+    doc.setTextColor(37, 99, 235);
+    doc.text(`${t.grandTotal}: ${currencySymbol}${order.total_amount.toFixed(2)}`, 120, yPos);
+    
+    // Payment details
+    if (order.shops.bank_accounts) {
+      yPos += 25;
+      doc.setFontSize(14);
+      doc.setTextColor(37, 99, 235);
+      doc.text(t.paymentDetails, 20, yPos);
+      
+      doc.setFontSize(12);
+      doc.setTextColor(0, 0, 0);
+      yPos += 10;
+      doc.text(`${t.accountHolder}: ${order.shops.bank_accounts.account_holder}`, 20, yPos);
+      yPos += 6;
+      doc.text(`${t.iban}: ${order.shops.bank_accounts.iban}`, 20, yPos);
+      if (order.shops.bank_accounts.bic) {
+        yPos += 6;
+        doc.text(`${t.bic}: ${order.shops.bank_accounts.bic}`, 20, yPos);
+      }
+      yPos += 6;
+      doc.text(`${t.paymentReference}: ${invoiceNumber}`, 20, yPos);
+      yPos += 6;
+      doc.text(`Zahlungsziel: ${t.dueDays}`, 20, yPos);
+    }
+    
+    // Thank you message
+    yPos += 20;
+    doc.setFontSize(12);
+    doc.setTextColor(102, 102, 102);
+    doc.text(t.thankYou, 20, yPos);
+    
+    console.log('PDF content created, converting to bytes...');
+    
+    // Get PDF as array buffer
+    const pdfArrayBuffer = doc.output('arraybuffer');
+    const pdfBytes = new Uint8Array(pdfArrayBuffer);
+    
+    console.log('PDF conversion completed, size:', pdfBytes.length, 'bytes');
+    
+    return pdfBytes;
+    
+  } catch (error) {
+    console.error('Error generating PDF:', error);
+    throw new Error(`PDF generation failed: ${error.message}`);
+  }
 }
 
 serve(serve_handler);
