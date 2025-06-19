@@ -21,9 +21,18 @@ const translateProduct = (product: string): string => {
     'bio_heating_oil': 'Bio Heizöl',
     'heating_oil_standard': 'Heizöl Standard',
     'heating_oil_premium': 'Heizöl Premium',
-    'heating_oil_bio': 'Heizöl Bio'
+    'heating_oil_bio': 'Heizöl Bio',
+    'standard_heizoel': 'Standard Heizöl'
   };
   return translations[product] || product;
+};
+
+const formatIBAN = (iban: string): string => {
+  // Remove any existing spaces and convert to uppercase
+  const cleanIban = iban.replace(/\s/g, '').toUpperCase();
+  
+  // Add spaces every 4 characters
+  return cleanIban.replace(/(.{4})/g, '$1 ').trim();
 };
 
 const generateConfirmationEmailTemplate = (order: any) => {
@@ -190,6 +199,9 @@ const generateInvoiceEmailTemplate = (order: any, bankData: any) => {
   const accentColor = order.shops?.accent_color || '#2563eb';
   const invoiceNumber = order.order_number; // Use 7-digit order number as invoice number
   
+  // Use shop name as recipient when use_anyname is true, otherwise use account holder
+  const recipientName = bankData?.use_anyname ? shopName : (bankData?.account_holder || shopName);
+  
   const subject = `Rechnung ${invoiceNumber} - Ihre ${translateProduct(order.product)}-Bestellung bei ${shopName}`;
 
   const htmlContent = `
@@ -255,7 +267,7 @@ const generateInvoiceEmailTemplate = (order: any, bankData: any) => {
                           </tr>
                           <tr>
                             <td style="padding: 8px 0; color: #1e40af; font-size: 15px; font-weight: 600;">Empfänger:</td>
-                            <td style="padding: 8px 0; color: #1e3a8a; font-size: 15px; font-weight: 700;">${bankData.account_holder}</td>
+                            <td style="padding: 8px 0; color: #1e3a8a; font-size: 15px; font-weight: 700;">${recipientName}</td>
                           </tr>
                           <tr>
                             <td style="padding: 8px 0; color: #1e40af; font-size: 15px; font-weight: 600;">Bank:</td>
@@ -263,7 +275,7 @@ const generateInvoiceEmailTemplate = (order: any, bankData: any) => {
                           </tr>
                           <tr>
                             <td style="padding: 8px 0; color: #1e40af; font-size: 15px; font-weight: 600;">IBAN:</td>
-                            <td style="padding: 8px 0; color: #1e3a8a; font-size: 15px; font-weight: 700; font-family: 'Courier New', monospace;">${bankData.iban}</td>
+                            <td style="padding: 8px 0; color: #1e3a8a; font-size: 15px; font-weight: 700; font-family: 'Courier New', monospace;"><strong>${formatIBAN(bankData.iban)}</strong></td>
                           </tr>
                           ${bankData.bic ? `
                           <tr>
@@ -273,12 +285,12 @@ const generateInvoiceEmailTemplate = (order: any, bankData: any) => {
                           ` : ''}
                           <tr>
                             <td style="padding: 8px 0; color: #1e40af; font-size: 15px; font-weight: 600;">Verwendungszweck:</td>
-                            <td style="padding: 8px 0; color: #1e3a8a; font-size: 15px; font-weight: 700;">${invoiceNumber}</td>
+                            <td style="padding: 8px 0; color: #1e3a8a; font-size: 15px; font-weight: 700;">Rechnung ${invoiceNumber} - ${shopName}</td>
                           </tr>
                         </table>
                         <div style="margin-top: 16px; padding: 16px; background-color: rgba(59, 130, 246, 0.1); border-radius: 8px; border-left: 4px solid #3b82f6;">
                           <p style="margin: 0; color: #1e40af; font-size: 14px; font-weight: 600;">
-                            💡 Bitte verwenden Sie unbedingt die Rechnungsnummer <strong>${invoiceNumber}</strong> als Verwendungszweck.
+                            💡 Bitte verwenden Sie unbedingt <strong>Rechnung ${invoiceNumber} - ${shopName}</strong> als Verwendungszweck.
                           </p>
                         </div>
                       </td>
@@ -295,11 +307,7 @@ const generateInvoiceEmailTemplate = (order: any, bankData: any) => {
                         </h2>
                         <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
                           <tr>
-                            <td style="padding: 8px 0; color: #6b7280; font-size: 15px; font-weight: 600; width: 40%;">Rechnungsnummer:</td>
-                            <td style="padding: 8px 0; color: #111827; font-size: 15px; font-weight: 700;">${invoiceNumber}</td>
-                          </tr>
-                          <tr>
-                            <td style="padding: 8px 0; color: #6b7280; font-size: 15px; font-weight: 600;">Bestellnummer:</td>
+                            <td style="padding: 8px 0; color: #6b7280; font-size: 15px; font-weight: 600; width: 40%;">Bestellnummer:</td>
                             <td style="padding: 8px 0; color: #111827; font-size: 15px; font-weight: 700;">${order.order_number}</td>
                           </tr>
                           <tr>
