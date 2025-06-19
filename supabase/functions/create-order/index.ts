@@ -39,6 +39,9 @@ interface TokenOrderRequest {
   delivery_street: string;
   delivery_postal_code: string;
   delivery_city: string;
+  billing_street?: string;
+  billing_postal_code?: string;
+  billing_city?: string;
   payment_method_id: string;
   terms_accepted: boolean;
 }
@@ -138,6 +141,28 @@ const handler = async (req: Request): Promise<Response> => {
       const firstName = nameParts[0] || '';
       const lastName = nameParts.slice(1).join(' ') || '';
 
+      // Check if billing address is provided and different from delivery address
+      const hasBillingAddress = requestData.billing_street && 
+                               requestData.billing_postal_code && 
+                               requestData.billing_city;
+      
+      const isDifferentBillingAddress = hasBillingAddress && (
+        requestData.billing_street !== requestData.delivery_street ||
+        requestData.billing_postal_code !== requestData.delivery_postal_code ||
+        requestData.billing_city !== requestData.delivery_city
+      );
+
+      // Split billing name if different address is used
+      let billingFirstName = firstName;
+      let billingLastName = lastName;
+      
+      if (isDifferentBillingAddress) {
+        // For different billing addresses, we use the same customer name
+        // In a real scenario, you might want to collect separate billing contact info
+        billingFirstName = firstName;
+        billingLastName = lastName;
+      }
+
       // Map token-based request to direct order format
       orderData = {
         shop_id: tokenData.shop_id,
@@ -147,15 +172,20 @@ const handler = async (req: Request): Promise<Response> => {
         delivery_first_name: firstName,
         delivery_last_name: lastName,
         delivery_street: requestData.delivery_street,
-        delivery_postcode: requestData.delivery_postal_code, // Map postal_code to postcode
+        delivery_postcode: requestData.delivery_postal_code,
         delivery_city: requestData.delivery_city,
-        delivery_phone: requestData.customer_phone, // Use customer phone for delivery
-        use_same_address: true, // Default for token-based orders
+        delivery_phone: requestData.customer_phone,
+        use_same_address: !isDifferentBillingAddress,
+        billing_first_name: isDifferentBillingAddress ? billingFirstName : undefined,
+        billing_last_name: isDifferentBillingAddress ? billingLastName : undefined,
+        billing_street: isDifferentBillingAddress ? requestData.billing_street : undefined,
+        billing_postcode: isDifferentBillingAddress ? requestData.billing_postal_code : undefined,
+        billing_city: isDifferentBillingAddress ? requestData.billing_city : undefined,
         product: tokenData.product,
         liters: tokenData.liters,
         price_per_liter: tokenData.price_per_liter,
         delivery_fee: tokenData.delivery_fee,
-        payment_method: requestData.payment_method_id, // Map payment_method_id to payment_method
+        payment_method: requestData.payment_method_id,
       };
 
       console.log('Mapped token order to direct order format:', orderData);
@@ -221,7 +251,7 @@ const handler = async (req: Request): Promise<Response> => {
         payment_method: orderData.payment_method,
         status: initialStatus,
         processing_mode: shop.checkout_mode,
-        order_token: requestData.token || null, // Store the token if present
+        order_token: requestData.token || null,
       }])
       .select()
       .single();
