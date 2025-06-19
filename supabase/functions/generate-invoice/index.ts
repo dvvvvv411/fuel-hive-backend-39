@@ -1220,67 +1220,91 @@ async function generateResponsiveInvoicePDF(order: any, invoiceNumber: string, t
     const leftColumnWidth = contentWidth * 0.45;
     const rightColumnWidth = contentWidth * 0.4;
     
-    // LEFT COLUMN - Address(es) - Fixed height allocation
+    // LEFT COLUMN - Address(es) - MODIFIED: Two-column address layout
     let addressY = layout.POSITIONS.ADDRESS_Y;
     
-    // Billing Address (or single address if same)
     if (hasDifferentAddresses) {
-      doc.setFontSize(layout.FONT_SIZES.SECTION_HEADER);
-      doc.setTextColor(accentColor.r, accentColor.g, accentColor.b);
-      doc.text(t.billingAddress, leftColumnX, addressY);
-      addressY += 8 * layout.SCALE_FACTOR;
-    }
-    
-    doc.setFontSize(layout.FONT_SIZES.NORMAL);
-    doc.setTextColor(...layout.COLORS.PRIMARY_TEXT);
-    
-    const addressLineSpacing = 5 * layout.SCALE_FACTOR * layout.LANGUAGE_FACTOR.lineHeight;
-    
-    // Use billing name fields when available, fallback to customer_name
-    let billingDisplayName = order.customer_name;
-    if (hasDifferentAddresses && order.billing_first_name && order.billing_last_name) {
-      billingDisplayName = `${order.billing_first_name} ${order.billing_last_name}`;
-    } else if (hasDifferentAddresses && (order.billing_first_name || order.billing_last_name)) {
-      // Handle cases where only one name field is available
-      billingDisplayName = `${order.billing_first_name || ''} ${order.billing_last_name || ''}`.trim();
-    }
-    
-    const customerName = optimizeTextForSpace(doc, billingDisplayName, leftColumnWidth, layout.FONT_SIZES.NORMAL, language);
-    doc.text(customerName, leftColumnX, addressY);
-    addressY += addressLineSpacing;
-    
-    const billingStreet = order.billing_street || order.delivery_street;
-    const billingPostcode = order.billing_postcode || order.delivery_postcode;
-    const billingCity = order.billing_city || order.delivery_city;
-    
-    const street = optimizeTextForSpace(doc, billingStreet, leftColumnWidth, layout.FONT_SIZES.NORMAL, language);
-    doc.text(street, leftColumnX, addressY);
-    addressY += addressLineSpacing;
-    
-    const cityLine = optimizeTextForSpace(doc, `${billingPostcode} ${billingCity}`, leftColumnWidth, layout.FONT_SIZES.NORMAL, language);
-    doc.text(cityLine, leftColumnX, addressY);
-    addressY += addressLineSpacing * 2;
-    
-    // Delivery Address (if different) - within fixed height
-    if (hasDifferentAddresses && addressY < layout.POSITIONS.ADDRESS_Y + layout.SECTIONS.ADDRESS_HEIGHT - (20 * layout.SCALE_FACTOR)) {
-      doc.setFontSize(layout.FONT_SIZES.SECTION_HEADER);
-      doc.setTextColor(accentColor.r, accentColor.g, accentColor.b);
-      doc.text(t.deliveryAddress, leftColumnX, addressY);
-      addressY += 8 * layout.SCALE_FACTOR;
+      // TWO-COLUMN ADDRESS LAYOUT when addresses differ
+      const addressColumnWidth = leftColumnWidth * 0.48; // Split left column into two sub-columns
+      const billingAddressX = leftColumnX;
+      const deliveryAddressX = leftColumnX + (leftColumnWidth * 0.52);
       
       doc.setFontSize(layout.FONT_SIZES.NORMAL);
       doc.setTextColor(...layout.COLORS.PRIMARY_TEXT);
       
-      const deliveryName = optimizeTextForSpace(doc, `${order.delivery_first_name} ${order.delivery_last_name}`, leftColumnWidth, layout.FONT_SIZES.NORMAL, language);
-      doc.text(deliveryName, leftColumnX, addressY);
+      const addressLineSpacing = 5 * layout.SCALE_FACTOR * layout.LANGUAGE_FACTOR.lineHeight;
+      
+      // BILLING ADDRESS (left sub-column)
+      doc.setFontSize(layout.FONT_SIZES.SECTION_HEADER);
+      doc.setTextColor(accentColor.r, accentColor.g, accentColor.b);
+      doc.text(t.billingAddress, billingAddressX, addressY);
+      
+      doc.setFontSize(layout.FONT_SIZES.NORMAL);
+      doc.setTextColor(...layout.COLORS.PRIMARY_TEXT);
+      
+      let billingY = addressY + 8 * layout.SCALE_FACTOR;
+      
+      // Use billing name fields when available, fallback to customer_name
+      let billingDisplayName = order.customer_name;
+      if (order.billing_first_name && order.billing_last_name) {
+        billingDisplayName = `${order.billing_first_name} ${order.billing_last_name}`;
+      } else if (order.billing_first_name || order.billing_last_name) {
+        billingDisplayName = `${order.billing_first_name || ''} ${order.billing_last_name || ''}`.trim();
+      }
+      
+      const billingName = optimizeTextForSpace(doc, billingDisplayName, addressColumnWidth, layout.FONT_SIZES.NORMAL, language);
+      doc.text(billingName, billingAddressX, billingY);
+      billingY += addressLineSpacing;
+      
+      const billingStreet = order.billing_street || order.delivery_street;
+      const billingPostcode = order.billing_postcode || order.delivery_postcode;
+      const billingCity = order.billing_city || order.delivery_city;
+      
+      const billingStreetText = optimizeTextForSpace(doc, billingStreet, addressColumnWidth, layout.FONT_SIZES.NORMAL, language);
+      doc.text(billingStreetText, billingAddressX, billingY);
+      billingY += addressLineSpacing;
+      
+      const billingCityLine = optimizeTextForSpace(doc, `${billingPostcode} ${billingCity}`, addressColumnWidth, layout.FONT_SIZES.NORMAL, language);
+      doc.text(billingCityLine, billingAddressX, billingY);
+      
+      // DELIVERY ADDRESS (right sub-column)
+      doc.setFontSize(layout.FONT_SIZES.SECTION_HEADER);
+      doc.setTextColor(accentColor.r, accentColor.g, accentColor.b);
+      doc.text(t.deliveryAddress, deliveryAddressX, addressY);
+      
+      doc.setFontSize(layout.FONT_SIZES.NORMAL);
+      doc.setTextColor(...layout.COLORS.PRIMARY_TEXT);
+      
+      let deliveryY = addressY + 8 * layout.SCALE_FACTOR;
+      
+      const deliveryName = optimizeTextForSpace(doc, `${order.delivery_first_name} ${order.delivery_last_name}`, addressColumnWidth, layout.FONT_SIZES.NORMAL, language);
+      doc.text(deliveryName, deliveryAddressX, deliveryY);
+      deliveryY += addressLineSpacing;
+      
+      const deliveryStreetText = optimizeTextForSpace(doc, order.delivery_street, addressColumnWidth, layout.FONT_SIZES.NORMAL, language);
+      doc.text(deliveryStreetText, deliveryAddressX, deliveryY);
+      deliveryY += addressLineSpacing;
+      
+      const deliveryCityLine = optimizeTextForSpace(doc, `${order.delivery_postcode} ${order.delivery_city}`, addressColumnWidth, layout.FONT_SIZES.NORMAL, language);
+      doc.text(deliveryCityLine, deliveryAddressX, deliveryY);
+      
+    } else {
+      // SINGLE ADDRESS when addresses are the same
+      doc.setFontSize(layout.FONT_SIZES.NORMAL);
+      doc.setTextColor(...layout.COLORS.PRIMARY_TEXT);
+      
+      const addressLineSpacing = 5 * layout.SCALE_FACTOR * layout.LANGUAGE_FACTOR.lineHeight;
+      
+      const customerName = optimizeTextForSpace(doc, order.customer_name, leftColumnWidth, layout.FONT_SIZES.NORMAL, language);
+      doc.text(customerName, leftColumnX, addressY);
       addressY += addressLineSpacing;
       
-      const deliveryStreet = optimizeTextForSpace(doc, order.delivery_street, leftColumnWidth, layout.FONT_SIZES.NORMAL, language);
-      doc.text(deliveryStreet, leftColumnX, addressY);
+      const street = optimizeTextForSpace(doc, order.delivery_street, leftColumnWidth, layout.FONT_SIZES.NORMAL, language);
+      doc.text(street, leftColumnX, addressY);
       addressY += addressLineSpacing;
       
-      const deliveryCity = optimizeTextForSpace(doc, `${order.delivery_postcode} ${order.delivery_city}`, leftColumnWidth, layout.FONT_SIZES.NORMAL, language);
-      doc.text(deliveryCity, leftColumnX, addressY);
+      const cityLine = optimizeTextForSpace(doc, `${order.delivery_postcode} ${order.delivery_city}`, leftColumnWidth, layout.FONT_SIZES.NORMAL, language);
+      doc.text(cityLine, leftColumnX, addressY);
     }
     
     // RIGHT COLUMN - Invoice Details - Fixed position and height
@@ -1552,7 +1576,7 @@ async function generateResponsiveInvoicePDF(order: any, invoiceNumber: string, t
       doc.text(footerVat, col4X, footerCol4Y);
     }
     
-    console.log('Responsive PDF content created with text wrapping for company names, converting to bytes...');
+    console.log('Responsive PDF content created with two-column address layout, converting to bytes...');
     
     // Get PDF as array buffer
     const pdfArrayBuffer = doc.output('arraybuffer');
