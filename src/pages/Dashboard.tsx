@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
@@ -65,8 +66,6 @@ const Dashboard = () => {
         return <PaymentMethodAnalysis />;
       case 'status-analytics':
         return <StatusPipelineAnalysis />;
-      case 'revenue-charts':
-        return <RevenueCharts />;
       default:
         return (
           <div className="space-y-8">
@@ -78,6 +77,8 @@ const Dashboard = () => {
             <DashboardStats />
 
             <ShopPerformanceTables />
+
+            <RevenueCharts />
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               <Card className="bg-white shadow-sm border border-gray-200">
@@ -154,7 +155,7 @@ const Dashboard = () => {
                       </div>
                     </button>
                     
-                    {/* New Analytics Actions */}
+                    {/* Analytics Actions */}
                     <div className="pt-3 border-t border-gray-200">
                       <h4 className="text-sm font-medium text-gray-700 mb-3">Analytics & Reports</h4>
                       <div className="space-y-2">
@@ -183,15 +184,6 @@ const Dashboard = () => {
                           <div className="flex items-center gap-3">
                             <TrendingUp className="h-5 w-5 text-green-600" />
                             <span className="font-medium">Status Pipeline</span>
-                          </div>
-                        </button>
-                        <button 
-                          onClick={() => setActiveTab('revenue-charts')}
-                          className="w-full text-left p-3 rounded-lg border border-gray-200 hover:bg-gray-50 transition-colors"
-                        >
-                          <div className="flex items-center gap-3">
-                            <TrendingUp className="h-5 w-5 text-indigo-600" />
-                            <span className="font-medium">Revenue Charts</span>
                           </div>
                         </button>
                       </div>
@@ -226,7 +218,6 @@ const Dashboard = () => {
                activeTab === 'bank-analytics' ? 'Bank Performance' :
                activeTab === 'payment-analytics' ? 'Payment Analysis' :
                activeTab === 'status-analytics' ? 'Status Pipeline' :
-               activeTab === 'revenue-charts' ? 'Revenue Charts' :
                activeTab.replace('-', ' ')}
             </h2>
           </div>
