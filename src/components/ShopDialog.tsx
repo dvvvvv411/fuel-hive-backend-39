@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -42,8 +43,8 @@ export function ShopDialog({ open, onOpenChange, onSuccess, shop }: ShopDialogPr
     logo_url: '',
     accent_color: '#2563eb',
     support_phone: '',
-    bank_account_id: '',
-    resend_config_id: '',
+    bank_account_id: null as string | null,
+    resend_config_id: null as string | null,
   });
 
   useEffect(() => {
@@ -116,8 +117,8 @@ export function ShopDialog({ open, onOpenChange, onSuccess, shop }: ShopDialogPr
         logo_url: shop.logo_url || '',
         accent_color: shop.accent_color || '#2563eb',
         support_phone: shop.support_phone || '',
-        bank_account_id: shop.bank_account_id || '',
-        resend_config_id: shop.resend_config_id || '',
+        bank_account_id: shop.bank_account_id || null,
+        resend_config_id: shop.resend_config_id || null,
       });
     } else {
       setFormData({
@@ -141,8 +142,8 @@ export function ShopDialog({ open, onOpenChange, onSuccess, shop }: ShopDialogPr
         logo_url: '',
         accent_color: '#2563eb',
         support_phone: '',
-        bank_account_id: '',
-        resend_config_id: '',
+        bank_account_id: null,
+        resend_config_id: null,
       });
     }
   }, [shop]);
@@ -193,11 +194,20 @@ export function ShopDialog({ open, onOpenChange, onSuccess, shop }: ShopDialogPr
         }
       }
 
+      // Clean the data before saving - convert empty strings to null for UUID fields
+      const cleanedData = {
+        ...finalFormData,
+        bank_account_id: finalFormData.bank_account_id || null,
+        resend_config_id: finalFormData.resend_config_id || null,
+      };
+
+      console.log('Saving shop data:', cleanedData);
+
       // Save shop data
       if (shop) {
         const { error } = await supabase
           .from('shops')
-          .update(finalFormData)
+          .update(cleanedData)
           .eq('id', shop.id);
 
         if (error) throw error;
@@ -209,7 +219,7 @@ export function ShopDialog({ open, onOpenChange, onSuccess, shop }: ShopDialogPr
       } else {
         const { error } = await supabase
           .from('shops')
-          .insert([finalFormData]);
+          .insert([cleanedData]);
 
         if (error) throw error;
 
@@ -462,8 +472,8 @@ export function ShopDialog({ open, onOpenChange, onSuccess, shop }: ShopDialogPr
             <div className="space-y-2">
               <Label htmlFor="resend_config_id">Resend-Konfiguration</Label>
               <Select 
-                value={formData.resend_config_id} 
-                onValueChange={(value) => handleInputChange('resend_config_id', value)}
+                value={formData.resend_config_id || undefined} 
+                onValueChange={(value) => handleInputChange('resend_config_id', value || null)}
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Resend-Konfiguration auswählen..." />
@@ -494,8 +504,8 @@ export function ShopDialog({ open, onOpenChange, onSuccess, shop }: ShopDialogPr
               <div className="space-y-2">
                 <Label htmlFor="bank_account_id">Bankkonto für Sofort-Checkout</Label>
                 <Select 
-                  value={formData.bank_account_id} 
-                  onValueChange={(value) => handleInputChange('bank_account_id', value)}
+                  value={formData.bank_account_id || undefined} 
+                  onValueChange={(value) => handleInputChange('bank_account_id', value || null)}
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Bankkonto auswählen..." />
