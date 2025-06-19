@@ -1,3 +1,4 @@
+
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { Resend } from "npm:resend@2.0.0";
@@ -13,24 +14,24 @@ interface EmailRequest {
   email_type: 'instant_confirmation' | 'manual_confirmation';
 }
 
-const generateEmailTemplate = (order: any, emailType: string) => {
+const translateProduct = (product: string): string => {
+  const translations: { [key: string]: string } = {
+    'heating_oil': 'Heizöl',
+    'diesel': 'Diesel',
+    'premium_heating_oil': 'Premium Heizöl',
+    'bio_heating_oil': 'Bio Heizöl',
+    'heating_oil_standard': 'Heizöl Standard',
+    'heating_oil_premium': 'Heizöl Premium',
+    'heating_oil_bio': 'Heizöl Bio'
+  };
+  return translations[product] || product;
+};
+
+const generateConfirmationEmailTemplate = (order: any) => {
   const shopName = order.shops?.company_name || order.shops?.name || 'Heizöl-Service';
   const accentColor = order.shops?.accent_color || '#2563eb';
-  const logoUrl = order.shops?.logo_url;
   
-  const isInstant = emailType === 'instant_confirmation';
-  
-  const subject = isInstant 
-    ? `Bestellbestätigung ${order.order_number} - Ihre Heizöl-Bestellung`
-    : `Bestelleingang ${order.order_number} - Ihre Heizöl-Bestellung`;
-
-  const statusMessage = isInstant
-    ? 'Ihre Bestellung wird automatisch bearbeitet. Die Rechnung finden Sie im Anhang dieser E-Mail.'
-    : 'Ihre Bestellung wird manuell geprüft. Sie erhalten eine Bestätigung und Rechnung, sobald Ihre Bestellung bearbeitet wurde.';
-
-  const invoiceInfo = isInstant && order.invoice_number
-    ? `<li><strong>Rechnungsnummer:</strong> ${order.invoice_number}</li>`
-    : '';
+  const subject = `Bestellbestätigung ${order.order_number} - Ihre ${translateProduct(order.product)}-Bestellung bei ${shopName}`;
 
   const htmlContent = `
     <!DOCTYPE html>
@@ -53,114 +54,316 @@ const generateEmailTemplate = (order: any, emailType: string) => {
       <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="background-color: #f8fafc;">
         <tr>
           <td align="center" style="padding: 40px 20px;">
-            <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="600" style="max-width: 600px; background-color: #ffffff; border-radius: 8px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);">
+            <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="600" style="max-width: 600px; background-color: #ffffff; border-radius: 12px; box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);">
               
               <!-- Header -->
               <tr>
-                <td style="padding: 40px 40px 20px 40px; text-align: center; background: linear-gradient(135deg, ${accentColor} 0%, ${accentColor}CC 100%); border-radius: 8px 8px 0 0;">
-                  ${logoUrl ? `<img src="${logoUrl}" alt="${shopName}" style="max-height: 60px; margin-bottom: 20px;">` : ''}
-                  <h1 style="margin: 0; color: #ffffff; font-size: 28px; font-weight: 700; line-height: 1.2;">
-                    ${isInstant ? 'Bestellung bestätigt!' : 'Bestellung erhalten!'}
+                <td style="padding: 50px 40px 30px 40px; text-align: center; background: linear-gradient(135deg, ${accentColor} 0%, ${accentColor}DD 100%); border-radius: 12px 12px 0 0;">
+                  <h1 style="margin: 0; color: #ffffff; font-size: 32px; font-weight: 700; line-height: 1.2; text-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+                    ${shopName}
                   </h1>
+                  <div style="margin: 20px 0 0 0; padding: 12px 24px; background-color: rgba(255,255,255,0.2); border-radius: 50px; display: inline-block;">
+                    <span style="color: #ffffff; font-size: 18px; font-weight: 600;">
+                      ✓ Bestellung bestätigt!
+                    </span>
+                  </div>
                 </td>
               </tr>
 
               <!-- Content -->
               <tr>
                 <td style="padding: 40px;">
-                  <p style="margin: 0 0 24px 0; color: #374151; font-size: 16px; line-height: 1.6;">
+                  <p style="margin: 0 0 24px 0; color: #374151; font-size: 18px; line-height: 1.6;">
                     Liebe/r ${order.delivery_first_name} ${order.delivery_last_name},
                   </p>
                   
                   <p style="margin: 0 0 32px 0; color: #374151; font-size: 16px; line-height: 1.6;">
-                    ${isInstant 
-                      ? 'vielen Dank für Ihre Bestellung! Ihre Heizöl-Bestellung wurde erfolgreich aufgegeben und wird automatisch bearbeitet.'
-                      : 'vielen Dank für Ihre Bestellung! Wir haben Ihre Heizöl-Bestellung erhalten und werden sie schnellstmöglich bearbeiten.'
-                    }
+                    vielen Dank für Ihre Bestellung! Ihre ${translateProduct(order.product)}-Bestellung wurde erfolgreich aufgegeben und wird automatisch bearbeitet.
                   </p>
 
                   <!-- Order Details Box -->
-                  <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="background-color: #f9fafb; border-radius: 8px; border: 1px solid #e5e7eb; margin-bottom: 32px;">
+                  <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="background: linear-gradient(145deg, #f8fafc 0%, #e2e8f0 100%); border-radius: 12px; border: 2px solid ${accentColor}; margin-bottom: 32px;">
                     <tr>
-                      <td style="padding: 24px;">
-                        <h2 style="margin: 0 0 20px 0; color: #111827; font-size: 20px; font-weight: 600;">
-                          Bestelldetails
+                      <td style="padding: 30px;">
+                        <h2 style="margin: 0 0 24px 0; color: ${accentColor}; font-size: 22px; font-weight: 700; text-align: center;">
+                          📋 Ihre Bestelldetails
                         </h2>
-                        <ul style="margin: 0; padding: 0; list-style: none;">
-                          <li style="margin-bottom: 12px; color: #374151; font-size: 15px;">
-                            <strong>Bestellnummer:</strong> ${order.order_number}
-                          </li>
-                          ${invoiceInfo}
-                          <li style="margin-bottom: 12px; color: #374151; font-size: 15px;">
-                            <strong>Produkt:</strong> ${order.product}
-                          </li>
-                          <li style="margin-bottom: 12px; color: #374151; font-size: 15px;">
-                            <strong>Menge:</strong> ${order.liters} Liter
-                          </li>
-                          <li style="margin-bottom: 12px; color: #374151; font-size: 15px;">
-                            <strong>Preis pro Liter:</strong> €${order.price_per_liter.toFixed(2)}
-                          </li>
+                        <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
+                          <tr>
+                            <td style="padding: 8px 0; color: #6b7280; font-size: 15px; font-weight: 600; width: 40%;">Bestellnummer:</td>
+                            <td style="padding: 8px 0; color: #111827; font-size: 15px; font-weight: 700;">${order.order_number}</td>
+                          </tr>
+                          <tr>
+                            <td style="padding: 8px 0; color: #6b7280; font-size: 15px; font-weight: 600;">Produkt:</td>
+                            <td style="padding: 8px 0; color: #111827; font-size: 15px; font-weight: 700;">${translateProduct(order.product)}</td>
+                          </tr>
+                          <tr>
+                            <td style="padding: 8px 0; color: #6b7280; font-size: 15px; font-weight: 600;">Menge:</td>
+                            <td style="padding: 8px 0; color: #111827; font-size: 15px; font-weight: 700;">${order.liters} Liter</td>
+                          </tr>
+                          <tr>
+                            <td style="padding: 8px 0; color: #6b7280; font-size: 15px; font-weight: 600;">Preis pro Liter:</td>
+                            <td style="padding: 8px 0; color: #111827; font-size: 15px; font-weight: 700;">€${order.price_per_liter.toFixed(2)}</td>
+                          </tr>
                           ${order.delivery_fee > 0 ? `
-                          <li style="margin-bottom: 12px; color: #374151; font-size: 15px;">
-                            <strong>Liefergebühr:</strong> €${order.delivery_fee.toFixed(2)}
-                          </li>
+                          <tr>
+                            <td style="padding: 8px 0; color: #6b7280; font-size: 15px; font-weight: 600;">Liefergebühr:</td>
+                            <td style="padding: 8px 0; color: #111827; font-size: 15px; font-weight: 700;">€${order.delivery_fee.toFixed(2)}</td>
+                          </tr>
                           ` : ''}
-                          <li style="margin-bottom: 0; color: #111827; font-size: 16px; font-weight: 600; padding-top: 12px; border-top: 1px solid #e5e7eb;">
-                            <strong>Gesamtbetrag:</strong> €${order.total_amount.toFixed(2)}
-                          </li>
-                        </ul>
+                          <tr style="border-top: 2px solid ${accentColor};">
+                            <td style="padding: 16px 0 8px 0; color: ${accentColor}; font-size: 18px; font-weight: 700;">Gesamtbetrag:</td>
+                            <td style="padding: 16px 0 8px 0; color: ${accentColor}; font-size: 18px; font-weight: 700;">€${order.total_amount.toFixed(2)}</td>
+                          </tr>
+                        </table>
                       </td>
                     </tr>
                   </table>
 
                   <!-- Delivery Address Box -->
-                  <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="background-color: #f9fafb; border-radius: 8px; border: 1px solid #e5e7eb; margin-bottom: 32px;">
+                  <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="background-color: #f9fafb; border-radius: 12px; border: 1px solid #e5e7eb; margin-bottom: 32px;">
                     <tr>
                       <td style="padding: 24px;">
-                        <h2 style="margin: 0 0 16px 0; color: #111827; font-size: 18px; font-weight: 600;">
-                          Lieferadresse
-                        </h2>
-                        <div style="color: #374151; font-size: 15px; line-height: 1.5;">
+                        <h3 style="margin: 0 0 16px 0; color: #111827; font-size: 18px; font-weight: 600;">
+                          🚚 Lieferadresse
+                        </h3>
+                        <div style="color: #374151; font-size: 15px; line-height: 1.6;">
                           <div style="font-weight: 600; margin-bottom: 4px;">
                             ${order.delivery_first_name} ${order.delivery_last_name}
                           </div>
                           <div>${order.delivery_street}</div>
                           <div>${order.delivery_postcode} ${order.delivery_city}</div>
-                          ${order.delivery_phone ? `<div style="margin-top: 8px;">Tel: ${order.delivery_phone}</div>` : ''}
+                          ${order.delivery_phone ? `<div style="margin-top: 8px;">📞 ${order.delivery_phone}</div>` : ''}
                         </div>
                       </td>
                     </tr>
                   </table>
 
                   <!-- Status Box -->
-                  <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="background-color: ${isInstant ? '#ecfdf5' : '#fef3c7'}; border-radius: 8px; border: 1px solid ${isInstant ? '#10b981' : '#f59e0b'}; margin-bottom: 32px;">
+                  <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="background: linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%); border-radius: 12px; border: 2px solid #10b981; margin-bottom: 32px;">
                     <tr>
-                      <td style="padding: 20px;">
-                        <div style="color: ${isInstant ? '#047857' : '#92400e'}; font-size: 15px; line-height: 1.6;">
-                          <strong>Status:</strong> ${statusMessage}
+                      <td style="padding: 24px; text-align: center;">
+                        <div style="color: #047857; font-size: 16px; line-height: 1.6; font-weight: 600;">
+                          🎉 <strong>Status:</strong> Ihre Bestellung wird automatisch bearbeitet. Die Rechnung wird separat per E-Mail versendet.
                         </div>
                       </td>
                     </tr>
                   </table>
 
-                  <p style="margin: 0 0 8px 0; color: #374151; font-size: 16px; line-height: 1.6;">
+                  <p style="margin: 0 0 16px 0; color: #374151; font-size: 16px; line-height: 1.6;">
                     Bei Fragen kontaktieren Sie uns gerne:
                   </p>
-                  <p style="margin: 0 0 32px 0; color: ${accentColor}; font-size: 16px; font-weight: 600;">
-                    ${order.shops?.company_email}
-                    ${order.shops?.support_phone ? ` • ${order.shops.support_phone}` : ''}
-                  </p>
+                  <div style="text-align: center; margin: 24px 0;">
+                    <a href="mailto:${order.shops?.company_email}" style="display: inline-block; padding: 12px 24px; background-color: ${accentColor}; color: #ffffff; text-decoration: none; border-radius: 8px; font-weight: 600; margin-right: 16px;">
+                      📧 E-Mail senden
+                    </a>
+                    ${order.shops?.support_phone ? `
+                    <a href="tel:${order.shops.support_phone}" style="display: inline-block; padding: 12px 24px; background-color: #10b981; color: #ffffff; text-decoration: none; border-radius: 8px; font-weight: 600;">
+                      📞 Anrufen
+                    </a>
+                    ` : ''}
+                  </div>
 
-                  <p style="margin: 0; color: #374151; font-size: 16px; line-height: 1.6;">
+                  <p style="margin: 32px 0 0 0; color: #374151; font-size: 16px; line-height: 1.6; text-align: center;">
                     Mit freundlichen Grüßen<br>
-                    <strong>${shopName}</strong>
+                    <strong style="color: ${accentColor};">${shopName}</strong>
                   </p>
                 </td>
               </tr>
 
               <!-- Footer -->
               <tr>
-                <td style="padding: 24px 40px; background-color: #f9fafb; border-radius: 0 0 8px 8px; border-top: 1px solid #e5e7eb;">
+                <td style="padding: 24px 40px; background-color: #f9fafb; border-radius: 0 0 12px 12px; border-top: 1px solid #e5e7eb;">
+                  <div style="text-align: center; color: #6b7280; font-size: 13px; line-height: 1.5;">
+                    <div style="margin-bottom: 8px;">
+                      <strong>${shopName}</strong>
+                    </div>
+                    <div>
+                      ${order.shops?.company_address || ''} • ${order.shops?.company_postcode || ''} ${order.shops?.company_city || ''}
+                    </div>
+                    ${order.shops?.vat_number ? `<div style="margin-top: 8px;">USt-IdNr: ${order.shops.vat_number}</div>` : ''}
+                  </div>
+                </td>
+              </tr>
+            </table>
+          </td>
+        </tr>
+      </table>
+    </body>
+    </html>
+  `;
+
+  return { subject, htmlContent };
+};
+
+const generateInvoiceEmailTemplate = (order: any, bankData: any) => {
+  const shopName = order.shops?.company_name || order.shops?.name || 'Heizöl-Service';
+  const accentColor = order.shops?.accent_color || '#2563eb';
+  
+  const subject = `Rechnung ${order.invoice_number} - Ihre ${translateProduct(order.product)}-Bestellung bei ${shopName}`;
+
+  const htmlContent = `
+    <!DOCTYPE html>
+    <html lang="de">
+    <head>
+      <meta charset="UTF-8">
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <title>${subject}</title>
+      <!--[if mso]>
+      <noscript>
+        <xml>
+          <o:OfficeDocumentSettings>
+            <o:PixelsPerInch>96</o:PixelsPerInch>
+          </o:OfficeDocumentSettings>
+        </xml>
+      </noscript>
+      <![endif]-->
+    </head>
+    <body style="margin: 0; padding: 0; background-color: #f8fafc; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;">
+      <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="background-color: #f8fafc;">
+        <tr>
+          <td align="center" style="padding: 40px 20px;">
+            <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="600" style="max-width: 600px; background-color: #ffffff; border-radius: 12px; box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);">
+              
+              <!-- Header -->
+              <tr>
+                <td style="padding: 50px 40px 30px 40px; text-align: center; background: linear-gradient(135deg, ${accentColor} 0%, ${accentColor}DD 100%); border-radius: 12px 12px 0 0;">
+                  <h1 style="margin: 0; color: #ffffff; font-size: 32px; font-weight: 700; line-height: 1.2; text-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+                    ${shopName}
+                  </h1>
+                  <div style="margin: 20px 0 0 0; padding: 12px 24px; background-color: rgba(255,255,255,0.2); border-radius: 50px; display: inline-block;">
+                    <span style="color: #ffffff; font-size: 18px; font-weight: 600;">
+                      📄 Ihre Rechnung
+                    </span>
+                  </div>
+                </td>
+              </tr>
+
+              <!-- Content -->
+              <tr>
+                <td style="padding: 40px;">
+                  <p style="margin: 0 0 24px 0; color: #374151; font-size: 18px; line-height: 1.6;">
+                    Liebe/r ${order.delivery_first_name} ${order.delivery_last_name},
+                  </p>
+                  
+                  <p style="margin: 0 0 32px 0; color: #374151; font-size: 16px; line-height: 1.6;">
+                    anbei erhalten Sie die Rechnung für Ihre ${translateProduct(order.product)}-Bestellung. Die Rechnung finden Sie als PDF-Anhang in dieser E-Mail.
+                  </p>
+
+                  <!-- Invoice Details Box -->
+                  <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="background: linear-gradient(145deg, #f8fafc 0%, #e2e8f0 100%); border-radius: 12px; border: 2px solid ${accentColor}; margin-bottom: 32px;">
+                    <tr>
+                      <td style="padding: 30px;">
+                        <h2 style="margin: 0 0 24px 0; color: ${accentColor}; font-size: 22px; font-weight: 700; text-align: center;">
+                          📋 Rechnungsdetails
+                        </h2>
+                        <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
+                          <tr>
+                            <td style="padding: 8px 0; color: #6b7280; font-size: 15px; font-weight: 600; width: 40%;">Rechnungsnummer:</td>
+                            <td style="padding: 8px 0; color: #111827; font-size: 15px; font-weight: 700;">${order.invoice_number}</td>
+                          </tr>
+                          <tr>
+                            <td style="padding: 8px 0; color: #6b7280; font-size: 15px; font-weight: 600;">Bestellnummer:</td>
+                            <td style="padding: 8px 0; color: #111827; font-size: 15px; font-weight: 700;">${order.order_number}</td>
+                          </tr>
+                          <tr>
+                            <td style="padding: 8px 0; color: #6b7280; font-size: 15px; font-weight: 600;">Rechnungsdatum:</td>
+                            <td style="padding: 8px 0; color: #111827; font-size: 15px; font-weight: 700;">${new Date(order.invoice_date || order.created_at).toLocaleDateString('de-DE')}</td>
+                          </tr>
+                          <tr>
+                            <td style="padding: 8px 0; color: #6b7280; font-size: 15px; font-weight: 600;">Produkt:</td>
+                            <td style="padding: 8px 0; color: #111827; font-size: 15px; font-weight: 700;">${translateProduct(order.product)}</td>
+                          </tr>
+                          <tr>
+                            <td style="padding: 8px 0; color: #6b7280; font-size: 15px; font-weight: 600;">Menge:</td>
+                            <td style="padding: 8px 0; color: #111827; font-size: 15px; font-weight: 700;">${order.liters} Liter</td>
+                          </tr>
+                          <tr style="border-top: 2px solid ${accentColor};">
+                            <td style="padding: 16px 0 8px 0; color: ${accentColor}; font-size: 18px; font-weight: 700;">Rechnungsbetrag:</td>
+                            <td style="padding: 16px 0 8px 0; color: ${accentColor}; font-size: 18px; font-weight: 700;">€${order.total_amount.toFixed(2)}</td>
+                          </tr>
+                        </table>
+                      </td>
+                    </tr>
+                  </table>
+
+                  <!-- Bank Information Box -->
+                  ${bankData ? `
+                  <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%); border-radius: 12px; border: 2px solid #3b82f6; margin-bottom: 32px;">
+                    <tr>
+                      <td style="padding: 30px;">
+                        <h3 style="margin: 0 0 20px 0; color: #3b82f6; font-size: 20px; font-weight: 700; text-align: center;">
+                          💳 Zahlungsinformationen
+                        </h3>
+                        <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
+                          <tr>
+                            <td style="padding: 8px 0; color: #1e40af; font-size: 15px; font-weight: 600; width: 35%;">Empfänger:</td>
+                            <td style="padding: 8px 0; color: #1e3a8a; font-size: 15px; font-weight: 700;">${bankData.account_holder}</td>
+                          </tr>
+                          <tr>
+                            <td style="padding: 8px 0; color: #1e40af; font-size: 15px; font-weight: 600;">Bank:</td>
+                            <td style="padding: 8px 0; color: #1e3a8a; font-size: 15px; font-weight: 700;">${bankData.bank_name}</td>
+                          </tr>
+                          <tr>
+                            <td style="padding: 8px 0; color: #1e40af; font-size: 15px; font-weight: 600;">IBAN:</td>
+                            <td style="padding: 8px 0; color: #1e3a8a; font-size: 15px; font-weight: 700; font-family: 'Courier New', monospace;">${bankData.iban}</td>
+                          </tr>
+                          ${bankData.bic ? `
+                          <tr>
+                            <td style="padding: 8px 0; color: #1e40af; font-size: 15px; font-weight: 600;">BIC:</td>
+                            <td style="padding: 8px 0; color: #1e3a8a; font-size: 15px; font-weight: 700; font-family: 'Courier New', monospace;">${bankData.bic}</td>
+                          </tr>
+                          ` : ''}
+                          <tr>
+                            <td style="padding: 8px 0; color: #1e40af; font-size: 15px; font-weight: 600;">Verwendungszweck:</td>
+                            <td style="padding: 8px 0; color: #1e3a8a; font-size: 15px; font-weight: 700;">${order.invoice_number}</td>
+                          </tr>
+                        </table>
+                        <div style="margin-top: 16px; padding: 16px; background-color: rgba(59, 130, 246, 0.1); border-radius: 8px; border-left: 4px solid #3b82f6;">
+                          <p style="margin: 0; color: #1e40af; font-size: 14px; font-weight: 600;">
+                            💡 Bitte verwenden Sie unbedingt die Rechnungsnummer <strong>${order.invoice_number}</strong> als Verwendungszweck.
+                          </p>
+                        </div>
+                      </td>
+                    </tr>
+                  </table>
+                  ` : ''}
+
+                  <!-- PDF Attachment Notice -->
+                  <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%); border-radius: 12px; border: 2px solid #f59e0b; margin-bottom: 32px;">
+                    <tr>
+                      <td style="padding: 24px; text-align: center;">
+                        <div style="color: #92400e; font-size: 16px; line-height: 1.6; font-weight: 600;">
+                          📎 Die vollständige Rechnung finden Sie als PDF-Datei im Anhang dieser E-Mail.
+                        </div>
+                      </td>
+                    </tr>
+                  </table>
+
+                  <p style="margin: 0 0 16px 0; color: #374151; font-size: 16px; line-height: 1.6;">
+                    Bei Fragen zu Ihrer Rechnung kontaktieren Sie uns gerne:
+                  </p>
+                  <div style="text-align: center; margin: 24px 0;">
+                    <a href="mailto:${order.shops?.company_email}" style="display: inline-block; padding: 12px 24px; background-color: ${accentColor}; color: #ffffff; text-decoration: none; border-radius: 8px; font-weight: 600; margin-right: 16px;">
+                      📧 E-Mail senden
+                    </a>
+                    ${order.shops?.support_phone ? `
+                    <a href="tel:${order.shops.support_phone}" style="display: inline-block; padding: 12px 24px; background-color: #10b981; color: #ffffff; text-decoration: none; border-radius: 8px; font-weight: 600;">
+                      📞 Anrufen
+                    </a>
+                    ` : ''}
+                  </div>
+
+                  <p style="margin: 32px 0 0 0; color: #374151; font-size: 16px; line-height: 1.6; text-align: center;">
+                    Vielen Dank für Ihr Vertrauen!<br>
+                    <strong style="color: ${accentColor};">${shopName}</strong>
+                  </p>
+                </td>
+              </tr>
+
+              <!-- Footer -->
+              <tr>
+                <td style="padding: 24px 40px; background-color: #f9fafb; border-radius: 0 0 12px 12px; border-top: 1px solid #e5e7eb;">
                   <div style="text-align: center; color: #6b7280; font-size: 13px; line-height: 1.5;">
                     <div style="margin-bottom: 8px;">
                       <strong>${shopName}</strong>
@@ -218,9 +421,9 @@ const handler = async (req: Request): Promise<Response> => {
           company_city,
           company_postcode,
           vat_number,
-          logo_url,
           accent_color,
           support_phone,
+          bank_account_id,
           resend_configs (
             resend_api_key,
             from_email,
@@ -248,11 +451,35 @@ const handler = async (req: Request): Promise<Response> => {
       });
     }
 
+    // Get bank data for invoice emails
+    let bankData = null;
+    if (include_invoice && order.shops?.bank_account_id) {
+      try {
+        const { data: bank, error: bankError } = await supabase
+          .from('bank_accounts')
+          .select('account_holder, bank_name, iban, bic, use_anyname')
+          .eq('id', order.shops.bank_account_id)
+          .eq('active', true)
+          .single();
+
+        if (!bankError && bank) {
+          bankData = {
+            ...bank,
+            account_holder: bank.use_anyname ? order.shops.company_name : bank.account_holder
+          };
+        }
+      } catch (bankError) {
+        console.warn('Could not fetch bank data:', bankError);
+      }
+    }
+
     // Initialize Resend
     const resend = new Resend(resendConfig.resend_api_key);
 
-    // Generate email template
-    const { subject, htmlContent } = generateEmailTemplate(order, email_type);
+    // Generate email template based on type
+    const { subject, htmlContent } = include_invoice
+      ? generateInvoiceEmailTemplate(order, bankData)
+      : generateConfirmationEmailTemplate(order);
 
     // Prepare email payload
     const emailPayload: any = {
@@ -262,7 +489,7 @@ const handler = async (req: Request): Promise<Response> => {
       html: htmlContent,
     };
 
-    // Add PDF attachment for orders with invoices
+    // Add PDF attachment for invoice emails
     if (include_invoice && order.invoice_pdf_url) {
       try {
         console.log('Adding PDF attachment for invoice:', order.invoice_number);
@@ -305,18 +532,13 @@ const handler = async (req: Request): Promise<Response> => {
 
     console.log('Email sent successfully:', emailResponse);
 
-    // DO NOT update order status here - it should already be correct
-    // The generate-invoice function sets the status to invoice_sent
-    // Manual confirmation emails don't change status
-    console.log('Email sent without changing order status - status should already be correct');
-
     return new Response(JSON.stringify({
       success: true,
       email_id: emailResponse.data?.id,
-      email_type,
+      email_type: include_invoice ? 'invoice' : 'confirmation',
       sent_to: order.customer_email,
       attachment_included: !!emailPayload.attachments,
-      status_updated: false, // We no longer update status in this function
+      bank_data_included: !!bankData,
       sent_at: new Date().toISOString()
     }), {
       status: 200,
