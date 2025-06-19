@@ -122,8 +122,8 @@ export function OrderDetailsDialog({ order, open, onOpenChange, onOrderUpdate }:
         description: `Bestätigungsmail wurde erfolgreich an ${order.customer_email} gesendet`,
       });
 
-      // If sending invoice email, update status accordingly
-      if (emailType === 'instant_confirmation' || includeInvoice) {
+      // Update status to invoice_sent when sending invoice email
+      if (includeInvoice) {
         await updateOrderStatus('invoice_sent');
       }
       
@@ -154,10 +154,10 @@ export function OrderDetailsDialog({ order, open, onOpenChange, onOrderUpdate }:
         description: 'Die Rechnung wird im Hintergrund erstellt',
       });
       
-      // Update status to confirmed
+      // Update status to confirmed after generation
       await updateOrderStatus('confirmed');
       
-      // Send confirmation email with invoice
+      // Send confirmation email with invoice and update status to invoice_sent
       await sendOrderConfirmationEmail('instant_confirmation', true);
       
     } catch (error) {
@@ -177,7 +177,7 @@ export function OrderDetailsDialog({ order, open, onOpenChange, onOrderUpdate }:
       setUpdating(true);
       
       if (order.invoice_pdf_generated) {
-        // Send email with existing invoice
+        // Send email with existing invoice and update status to invoice_sent
         await sendOrderConfirmationEmail('instant_confirmation', true);
       } else {
         // Generate and send invoice
