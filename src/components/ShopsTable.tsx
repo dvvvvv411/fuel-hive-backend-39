@@ -5,7 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { MoreHorizontal, Edit, Trash2, CheckCircle, XCircle } from 'lucide-react';
+import { MoreHorizontal, Edit, Trash2, CheckCircle, XCircle, Globe } from 'lucide-react';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -16,7 +16,6 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { toast } from '@/hooks/use-toast';
 import { ShopDialog } from './ShopDialog';
-import { VATDisplay } from './VATDisplay';
 
 interface Shop {
   id: string;
@@ -41,6 +40,7 @@ interface Shop {
   business_owner: string | null;
   registration_number: string | null;
   vat_rate: number | null;
+  logo_url: string | null;
 }
 
 interface ShopsTableProps {
@@ -127,11 +127,21 @@ export function ShopsTable({ shops, onShopsChange }: ShopsTableProps) {
     }
   };
 
+  const getLanguageName = (code: string) => {
+    switch (code) {
+      case 'de': return 'Deutsch';
+      case 'en': return 'English';
+      case 'fr': return 'Français';
+      default: return code;
+    }
+  };
+
   const getCheckoutModeLabel = (mode: string) => {
     switch (mode) {
       case 'standard': return 'Standard';
       case 'express': return 'Express';
       case 'custom': return 'Benutzerdefiniert';
+      case 'instant': return 'Sofort';
       default: return mode;
     }
   };
@@ -150,12 +160,13 @@ export function ShopsTable({ shops, onShopsChange }: ShopsTableProps) {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Name</TableHead>
+                  <TableHead>Logo</TableHead>
                   <TableHead>Firma</TableHead>
+                  <TableHead>E-Mail</TableHead>
+                  <TableHead>Website</TableHead>
                   <TableHead>Land</TableHead>
-                  <TableHead>Währung</TableHead>
-                  <TableHead>MwSt-Satz</TableHead>
-                  <TableHead>Checkout</TableHead>
+                  <TableHead>Sprache</TableHead>
+                  <TableHead>Checkout-Modus</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead className="text-right">Aktionen</TableHead>
                 </TableRow>
@@ -164,24 +175,48 @@ export function ShopsTable({ shops, onShopsChange }: ShopsTableProps) {
                 {shops.map((shop) => (
                   <TableRow key={shop.id}>
                     <TableCell>
-                      <div>
-                        <div className="font-medium">{shop.name}</div>
-                        <div className="text-sm text-gray-500">{shop.company_email}</div>
+                      <div className="flex items-center justify-center">
+                        {shop.logo_url ? (
+                          <img 
+                            src={shop.logo_url} 
+                            alt={`${shop.company_name} Logo`}
+                            className="h-8 w-8 object-contain rounded"
+                          />
+                        ) : (
+                          <div className="h-8 w-8 bg-gray-100 rounded flex items-center justify-center">
+                            <span className="text-xs text-gray-400 font-medium">
+                              {shop.company_name.charAt(0)}
+                            </span>
+                          </div>
+                        )}
                       </div>
                     </TableCell>
                     <TableCell>
                       <div>
                         <div className="font-medium">{shop.company_name}</div>
-                        <div className="text-sm text-gray-500">
-                          {shop.company_city}, {shop.company_postcode}
-                        </div>
+                        <div className="text-sm text-gray-500">{shop.name}</div>
                       </div>
                     </TableCell>
-                    <TableCell>{getCountryName(shop.country_code)}</TableCell>
-                    <TableCell>{shop.currency}</TableCell>
                     <TableCell>
-                      <VATDisplay vatRate={shop.vat_rate} />
+                      <div className="text-sm">{shop.company_email}</div>
                     </TableCell>
+                    <TableCell>
+                      {shop.company_website ? (
+                        <a 
+                          href={shop.company_website} 
+                          target="_blank" 
+                          rel="noopener noreferrer"
+                          className="flex items-center text-blue-600 hover:text-blue-800 text-sm"
+                        >
+                          <Globe className="h-3 w-3 mr-1" />
+                          Website
+                        </a>
+                      ) : (
+                        <span className="text-gray-400 text-sm">-</span>
+                      )}
+                    </TableCell>
+                    <TableCell>{getCountryName(shop.country_code)}</TableCell>
+                    <TableCell>{getLanguageName(shop.language)}</TableCell>
                     <TableCell>
                       <Badge variant="outline">
                         {getCheckoutModeLabel(shop.checkout_mode)}
