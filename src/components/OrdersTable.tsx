@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Pagination, PaginationContent, PaginationItem, PaginationLink, PaginationNext, PaginationPrevious } from '@/components/ui/pagination';
-import { Search, RefreshCw, FileText, Eye, Download, DollarSign, Check } from 'lucide-react';
+import { Search, RefreshCw, FileText, Eye, Download, DollarSign, Check, EyeOff } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import { OrderDetailsDialog } from './OrderDetailsDialog';
 import { BankAccountSelectionDialog } from './BankAccountSelectionDialog';
@@ -54,6 +54,7 @@ interface Order {
   processing_mode: string | null;
   created_at: string;
   shop_id: string;
+  hidden: boolean;
   shops?: {
     name: string;
     bank_account_id: string | null;
@@ -92,6 +93,7 @@ export function OrdersTable() {
   const [selectedStatuses, setSelectedStatuses] = useState<string[]>([]);
   const [dateFrom, setDateFrom] = useState('');
   const [dateTo, setDateTo] = useState('');
+  const [showHidden, setShowHidden] = useState(false);
   
   // Pagination states
   const [currentPage, setCurrentPage] = useState(1);
@@ -101,7 +103,7 @@ export function OrdersTable() {
   useEffect(() => {
     fetchShops();
     fetchOrders();
-  }, [currentPage, searchTerm, selectedShops, selectedStatuses, dateFrom, dateTo]);
+  }, [currentPage, searchTerm, selectedShops, selectedStatuses, dateFrom, dateTo, showHidden]);
 
   const fetchShops = async () => {
     try {
@@ -141,6 +143,9 @@ export function OrdersTable() {
             iban
           )
         `, { count: 'exact' });
+
+      // Filter by hidden status
+      query = query.eq('hidden', showHidden);
 
       // Apply filters
       if (searchTerm) {
@@ -212,6 +217,58 @@ export function OrdersTable() {
       toast({
         title: 'Fehler',
         description: 'Status konnte nicht aktualisiert werden',
+        variant: 'destructive',
+      });
+    }
+  };
+
+  const hideOrder = async (orderId: string) => {
+    try {
+      const { error } = await supabase
+        .from('orders')
+        .update({ hidden: true })
+        .eq('id', orderId);
+
+      if (error) throw error;
+
+      // Remove order from current view
+      setOrders(orders.filter(order => order.id !== orderId));
+
+      toast({
+        title: 'Erfolg',
+        description: 'Bestellung wurde ausgeblendet',
+      });
+    } catch (error) {
+      console.error('Error hiding order:', error);
+      toast({
+        title: 'Fehler',
+        description: 'Bestellung konnte nicht ausgeblendet werden',
+        variant: 'destructive',
+      });
+    }
+  };
+
+  const showOrder = async (orderId: string) => {
+    try {
+      const { error } = await supabase
+        .from('orders')
+        .update({ hidden: false })
+        .eq('id', orderId);
+
+      if (error) throw error;
+
+      // Remove order from current view
+      setOrders(orders.filter(order => order.id !== orderId));
+
+      toast({
+        title: 'Erfolg',
+        description: 'Bestellung wird wieder angezeigt',
+      });
+    } catch (error) {
+      console.error('Error showing order:', error);
+      toast({
+        title: 'Fehler',
+        description: 'Bestellung konnte nicht wieder angezeigt werden',
         variant: 'destructive',
       });
     }
@@ -606,6 +663,15 @@ export function OrdersTable() {
               placeholder="Bis Datum"
             />
 
+            <Button 
+              variant={showHidden ? "default" : "outline"} 
+              onClick={() => setShowHidden(!showHidden)}
+              className="w-full lg:w-auto"
+            >
+              <EyeOff className="h-4 w-4 mr-2" />
+              {showHidden ? 'Normale anzeigen' : 'Ausgeblendete anzeigen'}
+            </Button>
+
             <Button variant="outline" onClick={refreshOrders} className="w-full lg:w-auto">
               <RefreshCw className="h-4 w-4 mr-2" />
               Aktualisieren
@@ -642,7 +708,7 @@ export function OrdersTable() {
                 ) : orders.length === 0 ? (
                   <TableRow>
                     <TableCell colSpan={13} className="text-center py-8">
-                      Keine Bestellungen gefunden
+                      {showHidden ? 'Keine ausgeblendeten Bestellungen gefunden' : 'Keine Bestellungen gefunden'}
                     </TableCell>
                   </TableRow>
                 ) : (
@@ -724,7 +790,7 @@ export function OrdersTable() {
                               <Eye className="h-4 w-4" />
                             </Button>
                             
-                            {order.status === 'pending' && (
+                            {order.status === 'pending' && !showHidden && (
                               <Button
                                 size="sm"
                                 onClick={() => handleInvoiceClick(order)}
@@ -734,7 +800,7 @@ export function OrdersTable() {
                               </Button>
                             )}
 
-                            {order.status === 'invoice_sent' && (
+                            {order.status === 'invoice_sent' && !showHidden && (
                               <Button
                                 size="sm"
                                 onClick={() => markAsPaid(order.id)}
@@ -744,7 +810,7 @@ export function OrdersTable() {
                               </Button>
                             )}
 
-                            {order.status === 'paid' && (
+                            {order.status === 'paid' && !showHidden && (
                               <Button
                                 size="sm"
                                 onClick={() => markAsExchanged(order.id)}
@@ -764,6 +830,26 @@ export function OrdersTable() {
                                 }}
                               >
                                 <Download className="h-4 w-4" />
+                              </Button>
+                            )}
+
+                            {!showHidden ? (
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => hideOrder(order.id)}
+                                className="text-orange-600 hover:text-orange-700"
+                              >
+                                <EyeOff className="h-4 w-4" />
+                              </Button>
+                            ) : (
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => showOrder(order.id)}
+                                className="text-green-600 hover:text-green-700"
+                              >
+                                <Eye className="h-4 w-4" />
                               </Button>
                             )}
                           </div>

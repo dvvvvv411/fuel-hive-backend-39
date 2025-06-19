@@ -143,6 +143,7 @@ export type Database = {
           delivery_phone: string | null
           delivery_postcode: string
           delivery_street: string
+          hidden: boolean
           id: string
           invoice_date: string | null
           invoice_generation_date: string | null
@@ -185,6 +186,7 @@ export type Database = {
           delivery_phone?: string | null
           delivery_postcode: string
           delivery_street: string
+          hidden?: boolean
           id?: string
           invoice_date?: string | null
           invoice_generation_date?: string | null
@@ -227,6 +229,7 @@ export type Database = {
           delivery_phone?: string | null
           delivery_postcode?: string
           delivery_street?: string
+          hidden?: boolean
           id?: string
           invoice_date?: string | null
           invoice_generation_date?: string | null
