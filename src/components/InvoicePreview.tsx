@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -24,6 +23,7 @@ interface Shop {
   vat_rate: number;
   accent_color?: string;
   support_phone?: string;
+  logo_url?: string;
   bank_accounts?: {
     account_holder: string;
     iban: string;
@@ -52,11 +52,19 @@ export function InvoicePreview() {
   const [selectedShop, setSelectedShop] = useState<Shop | null>(null);
   const [language, setLanguage] = useState('de');
   const [isGenerating, setIsGenerating] = useState(false);
+  const [logoLoaded, setLogoLoaded] = useState(false);
+  const [logoError, setLogoError] = useState(false);
   const { toast } = useToast();
 
   useEffect(() => {
     fetchShops();
   }, []);
+
+  // Reset logo state when shop changes
+  useEffect(() => {
+    setLogoLoaded(false);
+    setLogoError(false);
+  }, [selectedShop?.id]);
 
   const fetchShops = async () => {
     try {
@@ -78,6 +86,7 @@ export function InvoicePreview() {
           vat_rate,
           accent_color,
           support_phone,
+          logo_url,
           bank_accounts(
             account_holder,
             iban,
@@ -211,6 +220,16 @@ export function InvoicePreview() {
     }
   };
 
+  const handleLogoLoad = () => {
+    setLogoLoaded(true);
+    setLogoError(false);
+  };
+
+  const handleLogoError = () => {
+    setLogoError(true);
+    setLogoLoaded(false);
+  };
+
   if (!selectedShop) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -291,9 +310,39 @@ export function InvoicePreview() {
             
             {/* Modern Header */}
             <div className="flex items-start mb-12">
-              {/* Logo placeholder */}
-              <div className="w-20 h-16 bg-gray-100 border-2 border-dashed border-gray-300 flex items-center justify-center mr-6">
-                <span className="text-xs text-gray-500">LOGO</span>
+              {/* Logo section */}
+              <div className="w-20 h-16 mr-6 flex items-center justify-center">
+                {selectedShop.logo_url ? (
+                  <div className="relative w-full h-full">
+                    {/* Loading placeholder shown while image loads */}
+                    {!logoLoaded && !logoError && (
+                      <div className="absolute inset-0 bg-gray-100 border-2 border-dashed border-gray-300 flex items-center justify-center animate-pulse">
+                        <span className="text-xs text-gray-500">Loading...</span>
+                      </div>
+                    )}
+                    
+                    {/* Actual logo */}
+                    <img
+                      src={selectedShop.logo_url}
+                      alt={`${selectedShop.company_name} Logo`}
+                      className={`w-full h-full object-contain ${logoLoaded ? 'block' : 'hidden'}`}
+                      onLoad={handleLogoLoad}
+                      onError={handleLogoError}
+                    />
+                    
+                    {/* Error fallback */}
+                    {logoError && (
+                      <div className="w-full h-full bg-gray-100 border-2 border-dashed border-gray-300 flex items-center justify-center">
+                        <span className="text-xs text-gray-500">LOGO</span>
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  // No logo URL - show placeholder
+                  <div className="w-full h-full bg-gray-100 border-2 border-dashed border-gray-300 flex items-center justify-center">
+                    <span className="text-xs text-gray-500">LOGO</span>
+                  </div>
+                )}
               </div>
               
               {/* Company details */}
