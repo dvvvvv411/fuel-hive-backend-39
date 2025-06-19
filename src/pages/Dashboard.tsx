@@ -62,59 +62,7 @@ const Dashboard = () => {
               <p className="text-gray-600 mt-2">Welcome to your heating oil admin dashboard</p>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-              <Card className="bg-white shadow-sm border border-gray-200 hover:shadow-md transition-shadow">
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
-                  <CardTitle className="text-sm font-medium text-gray-600">Total Shops</CardTitle>
-                  <div className="h-10 w-10 rounded-lg bg-blue-50 flex items-center justify-center">
-                    <Store className="h-5 w-5 text-blue-600" />
-                  </div>
-                </CardHeader>
-                <CardContent className="pb-4">
-                  <div className="text-3xl font-bold text-gray-900">0</div>
-                  <p className="text-sm text-gray-500 mt-1">Active heating oil shops</p>
-                </CardContent>
-              </Card>
-              
-              <Card className="bg-white shadow-sm border border-gray-200 hover:shadow-md transition-shadow">
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
-                  <CardTitle className="text-sm font-medium text-gray-600">Total Orders</CardTitle>
-                  <div className="h-10 w-10 rounded-lg bg-green-50 flex items-center justify-center">
-                    <FileText className="h-5 w-5 text-green-600" />
-                  </div>
-                </CardHeader>
-                <CardContent className="pb-4">
-                  <div className="text-3xl font-bold text-gray-900">0</div>
-                  <p className="text-sm text-gray-500 mt-1">Orders processed</p>
-                </CardContent>
-              </Card>
-              
-              <Card className="bg-white shadow-sm border border-gray-200 hover:shadow-md transition-shadow">
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
-                  <CardTitle className="text-sm font-medium text-gray-600">Bank Accounts</CardTitle>
-                  <div className="h-10 w-10 rounded-lg bg-purple-50 flex items-center justify-center">
-                    <CreditCard className="h-5 w-5 text-purple-600" />
-                  </div>
-                </CardHeader>
-                <CardContent className="pb-4">
-                  <div className="text-3xl font-bold text-gray-900">0</div>
-                  <p className="text-sm text-gray-500 mt-1">Connected accounts</p>
-                </CardContent>
-              </Card>
-
-              <Card className="bg-white shadow-sm border border-gray-200 hover:shadow-md transition-shadow">
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
-                  <CardTitle className="text-sm font-medium text-gray-600">Revenue</CardTitle>
-                  <div className="h-10 w-10 rounded-lg bg-orange-50 flex items-center justify-center">
-                    <TrendingUp className="h-5 w-5 text-orange-600" />
-                  </div>
-                </CardHeader>
-                <CardContent className="pb-4">
-                  <div className="text-3xl font-bold text-gray-900">€0</div>
-                  <p className="text-sm text-gray-500 mt-1">Total revenue</p>
-                </CardContent>
-              </Card>
-            </div>
+            <DashboardStats />
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               <Card className="bg-white shadow-sm border border-gray-200">
