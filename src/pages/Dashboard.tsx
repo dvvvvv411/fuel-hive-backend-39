@@ -14,6 +14,11 @@ import { InvoicePreview } from '@/components/InvoicePreview';
 import { DashboardStats } from '@/components/DashboardStats';
 import { Store, CreditCard, FileText, TrendingUp, Mail, Banknote, Eye } from 'lucide-react';
 import { ShopPerformanceTables } from '@/components/ShopPerformanceTables';
+import { BankAccountPerformance } from '@/components/BankAccountPerformance';
+import { PaymentMethodAnalysis } from '@/components/PaymentMethodAnalysis';
+import { StatusPipelineAnalysis } from '@/components/StatusPipelineAnalysis';
+import { RevenueCharts } from '@/components/RevenueCharts';
+import { BarChart3 } from 'lucide-react';
 
 const Dashboard = () => {
   const [activeTab, setActiveTab] = useState('overview');
@@ -54,6 +59,14 @@ const Dashboard = () => {
         return <ResendConfigsList />;
       case 'preview':
         return <InvoicePreview />;
+      case 'bank-analytics':
+        return <BankAccountPerformance />;
+      case 'payment-analytics':
+        return <PaymentMethodAnalysis />;
+      case 'status-analytics':
+        return <StatusPipelineAnalysis />;
+      case 'revenue-charts':
+        return <RevenueCharts />;
       default:
         return (
           <div className="space-y-8">
@@ -140,6 +153,49 @@ const Dashboard = () => {
                         <span className="font-medium">Invoice Preview</span>
                       </div>
                     </button>
+                    
+                    {/* New Analytics Actions */}
+                    <div className="pt-3 border-t border-gray-200">
+                      <h4 className="text-sm font-medium text-gray-700 mb-3">Analytics & Reports</h4>
+                      <div className="space-y-2">
+                        <button 
+                          onClick={() => setActiveTab('bank-analytics')}
+                          className="w-full text-left p-3 rounded-lg border border-gray-200 hover:bg-gray-50 transition-colors"
+                        >
+                          <div className="flex items-center gap-3">
+                            <CreditCard className="h-5 w-5 text-blue-600" />
+                            <span className="font-medium">Bank Performance</span>
+                          </div>
+                        </button>
+                        <button 
+                          onClick={() => setActiveTab('payment-analytics')}
+                          className="w-full text-left p-3 rounded-lg border border-gray-200 hover:bg-gray-50 transition-colors"
+                        >
+                          <div className="flex items-center gap-3">
+                            <BarChart3 className="h-5 w-5 text-purple-600" />
+                            <span className="font-medium">Payment Analysis</span>
+                          </div>
+                        </button>
+                        <button 
+                          onClick={() => setActiveTab('status-analytics')}
+                          className="w-full text-left p-3 rounded-lg border border-gray-200 hover:bg-gray-50 transition-colors"
+                        >
+                          <div className="flex items-center gap-3">
+                            <TrendingUp className="h-5 w-5 text-green-600" />
+                            <span className="font-medium">Status Pipeline</span>
+                          </div>
+                        </button>
+                        <button 
+                          onClick={() => setActiveTab('revenue-charts')}
+                          className="w-full text-left p-3 rounded-lg border border-gray-200 hover:bg-gray-50 transition-colors"
+                        >
+                          <div className="flex items-center gap-3">
+                            <TrendingUp className="h-5 w-5 text-indigo-600" />
+                            <span className="font-medium">Revenue Charts</span>
+                          </div>
+                        </button>
+                      </div>
+                    </div>
                   </div>
                 </CardContent>
               </Card>
@@ -167,6 +223,10 @@ const Dashboard = () => {
                activeTab === 'resend-configs' ? 'Resend Configuration' :
                activeTab === 'payment-methods' ? 'Payment Methods' :
                activeTab === 'preview' ? 'Invoice Preview' :
+               activeTab === 'bank-analytics' ? 'Bank Performance' :
+               activeTab === 'payment-analytics' ? 'Payment Analysis' :
+               activeTab === 'status-analytics' ? 'Status Pipeline' :
+               activeTab === 'revenue-charts' ? 'Revenue Charts' :
                activeTab.replace('-', ' ')}
             </h2>
           </div>
