@@ -1,4 +1,3 @@
-
 import { useLocation, useNavigate } from 'react-router-dom';
 import { User } from '@supabase/supabase-js';
 import {
@@ -12,107 +11,52 @@ import {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
-  SidebarSeparator,
 } from '@/components/ui/sidebar';
 import { Button } from '@/components/ui/button';
-import { Avatar, AvatarFallback } from '@/components/ui/avatar';
-import { Badge } from '@/components/ui/badge';
-import { 
-  Store, 
-  FileText, 
-  CreditCard, 
-  LayoutDashboard, 
-  LogOut, 
-  Fuel, 
-  Mail, 
-  Banknote, 
-  Eye, 
-  BarChart3,
-  PieChart,
-  TrendingUp,
-  Settings,
-  User as UserIcon
-} from 'lucide-react';
+import { Store, FileText, CreditCard, LayoutDashboard, LogOut, Fuel, Mail, Banknote, Eye } from 'lucide-react';
 
-const mainItems = [
+const navigationItems = [
   {
     title: "Dashboard",
     url: "/dashboard",
     icon: LayoutDashboard,
-    value: "dashboard",
-    description: "Übersicht & Statistiken"
+    value: "dashboard"
   },
   {
     title: "Shops",
     url: "/dashboard",
     icon: Store,
-    value: "shops",
-    description: "Shop-Verwaltung"
+    value: "shops"
   },
   {
-    title: "Bestellungen",
+    title: "Orders",
     url: "/dashboard",
     icon: FileText,
-    value: "orders",
-    description: "Bestellübersicht"
+    value: "orders"
   },
-];
-
-const financeItems = [
   {
-    title: "Bankkonten",
+    title: "Bank Accounts",
     url: "/dashboard",
     icon: CreditCard,
-    value: "bank-accounts",
-    description: "Konten verwalten"
+    value: "bank-accounts"
   },
   {
-    title: "Zahlungsmethoden",
+    title: "Payment Methods",
     url: "/dashboard",
     icon: Banknote,
-    value: "payment-methods",
-    description: "Zahlungsoptionen"
-  },
-];
-
-const analyticsItems = [
-  {
-    title: "Bank Performance",
-    url: "/dashboard",
-    icon: BarChart3,
-    value: "bank-analytics",
-    description: "Bankanalyse"
+    value: "payment-methods"
   },
   {
-    title: "Zahlungsanalyse",
-    url: "/dashboard",
-    icon: PieChart,
-    value: "payment-analytics",
-    description: "Payment-Insights"
-  },
-  {
-    title: "Status Pipeline",
-    url: "/dashboard",
-    icon: TrendingUp,
-    value: "status-analytics",
-    description: "Workflow-Analyse"
-  },
-];
-
-const configItems = [
-  {
-    title: "E-Mail Konfiguration",
+    title: "Resend Config",
     url: "/dashboard",
     icon: Mail,
-    value: "resend-configs",
-    description: "E-Mail Setup"
+    value: "resend-configs"
   },
   {
-    title: "Rechnungsvorschau",
+    title: "Invoice Preview",
     url: "/dashboard",
     icon: Eye,
-    value: "preview",
-    description: "PDF-Vorschau"
+    value: "preview"
   },
 ];
 
@@ -132,7 +76,7 @@ export function AppSidebar({ activeTab, onTabChange, user, onSignOut }: AppSideb
     navigate('/auth');
   };
 
-  const handleNavigation = (item: typeof mainItems[0]) => {
+  const handleNavigation = (item: typeof navigationItems[0]) => {
     if (item.value === "dashboard") {
       onTabChange("overview");
     } else {
@@ -140,139 +84,39 @@ export function AppSidebar({ activeTab, onTabChange, user, onSignOut }: AppSideb
     }
   };
 
-  const isActive = (itemValue: string) => {
-    return (itemValue === "dashboard" && activeTab === "overview") || activeTab === itemValue;
-  };
-
   return (
-    <Sidebar className="border-r border-gray-200/80 bg-white/95 backdrop-blur-sm">
-      <SidebarHeader className="border-b border-gray-200/50 p-6 bg-gradient-to-r from-blue-50 to-indigo-50">
+    <Sidebar className="border-r border-gray-200">
+      <SidebarHeader className="border-b border-gray-200 p-6">
         <div className="flex items-center gap-3">
-          <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-blue-600 to-indigo-600 shadow-lg">
+          <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-blue-600">
             <Fuel className="h-6 w-6 text-white" />
           </div>
-          <div className="flex-1">
-            <h1 className="text-xl font-bold text-gray-900">Heating Oil</h1>
-            <p className="text-sm text-gray-600 font-medium">Admin Panel</p>
+          <div>
+            <h1 className="text-lg font-semibold text-gray-900">Heating Oil</h1>
+            <p className="text-sm text-gray-500">Admin Panel</p>
           </div>
-          <Badge variant="secondary" className="text-xs px-2 py-1">
-            Pro
-          </Badge>
         </div>
       </SidebarHeader>
       
-      <SidebarContent className="px-4 py-6 space-y-6">
-        {/* Main Navigation */}
+      <SidebarContent className="p-4">
         <SidebarGroup>
-          <SidebarGroupLabel className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3 px-2">
-            Hauptbereich
+          <SidebarGroupLabel className="text-xs font-medium text-gray-500 uppercase tracking-wider mb-3">
+            Navigation
           </SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu className="space-y-1">
-              {mainItems.map((item) => (
+              {navigationItems.map((item) => (
                 <SidebarMenuItem key={item.title}>
                   <SidebarMenuButton
                     onClick={() => handleNavigation(item)}
-                    isActive={isActive(item.value)}
-                    className="w-full justify-start gap-3 px-3 py-3 rounded-xl text-sm font-medium transition-all duration-200 hover:bg-blue-50 hover:text-blue-700 data-[active=true]:bg-blue-100 data-[active=true]:text-blue-800 data-[active=true]:shadow-sm group"
+                    isActive={
+                      (item.value === "dashboard" && activeTab === "overview") ||
+                      activeTab === item.value
+                    }
+                    className="w-full justify-start gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors hover:bg-gray-100 data-[active=true]:bg-blue-50 data-[active=true]:text-blue-700 data-[active=true]:border-blue-200"
                   >
-                    <item.icon className="h-5 w-5 transition-transform group-hover:scale-110" />
-                    <div className="flex-1 text-left">
-                      <div className="font-medium">{item.title}</div>
-                      <div className="text-xs text-gray-500 group-hover:text-blue-600 data-[active=true]:text-blue-600">
-                        {item.description}
-                      </div>
-                    </div>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              ))}
-            </SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
-
-        <SidebarSeparator className="mx-2" />
-
-        {/* Finance Section */}
-        <SidebarGroup>
-          <SidebarGroupLabel className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3 px-2">
-            Finanzen
-          </SidebarGroupLabel>
-          <SidebarGroupContent>
-            <SidebarMenu className="space-y-1">
-              {financeItems.map((item) => (
-                <SidebarMenuItem key={item.title}>
-                  <SidebarMenuButton
-                    onClick={() => handleNavigation(item)}
-                    isActive={isActive(item.value)}
-                    className="w-full justify-start gap-3 px-3 py-3 rounded-xl text-sm font-medium transition-all duration-200 hover:bg-green-50 hover:text-green-700 data-[active=true]:bg-green-100 data-[active=true]:text-green-800 data-[active=true]:shadow-sm group"
-                  >
-                    <item.icon className="h-5 w-5 transition-transform group-hover:scale-110" />
-                    <div className="flex-1 text-left">
-                      <div className="font-medium">{item.title}</div>
-                      <div className="text-xs text-gray-500 group-hover:text-green-600 data-[active=true]:text-green-600">
-                        {item.description}
-                      </div>
-                    </div>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              ))}
-            </SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
-
-        <SidebarSeparator className="mx-2" />
-
-        {/* Analytics Section */}
-        <SidebarGroup>
-          <SidebarGroupLabel className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3 px-2">
-            Analytics
-          </SidebarGroupLabel>
-          <SidebarGroupContent>
-            <SidebarMenu className="space-y-1">
-              {analyticsItems.map((item) => (
-                <SidebarMenuItem key={item.title}>
-                  <SidebarMenuButton
-                    onClick={() => handleNavigation(item)}
-                    isActive={isActive(item.value)}
-                    className="w-full justify-start gap-3 px-3 py-3 rounded-xl text-sm font-medium transition-all duration-200 hover:bg-purple-50 hover:text-purple-700 data-[active=true]:bg-purple-100 data-[active=true]:text-purple-800 data-[active=true]:shadow-sm group"
-                  >
-                    <item.icon className="h-5 w-5 transition-transform group-hover:scale-110" />
-                    <div className="flex-1 text-left">
-                      <div className="font-medium">{item.title}</div>
-                      <div className="text-xs text-gray-500 group-hover:text-purple-600 data-[active=true]:text-purple-600">
-                        {item.description}
-                      </div>
-                    </div>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              ))}
-            </SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
-
-        <SidebarSeparator className="mx-2" />
-
-        {/* Configuration Section */}
-        <SidebarGroup>
-          <SidebarGroupLabel className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3 px-2">
-            Konfiguration
-          </SidebarGroupLabel>
-          <SidebarGroupContent>
-            <SidebarMenu className="space-y-1">
-              {configItems.map((item) => (
-                <SidebarMenuItem key={item.title}>
-                  <SidebarMenuButton
-                    onClick={() => handleNavigation(item)}
-                    isActive={isActive(item.value)}
-                    className="w-full justify-start gap-3 px-3 py-3 rounded-xl text-sm font-medium transition-all duration-200 hover:bg-orange-50 hover:text-orange-700 data-[active=true]:bg-orange-100 data-[active=true]:text-orange-800 data-[active=true]:shadow-sm group"
-                  >
-                    <item.icon className="h-5 w-5 transition-transform group-hover:scale-110" />
-                    <div className="flex-1 text-left">
-                      <div className="font-medium">{item.title}</div>
-                      <div className="text-xs text-gray-500 group-hover:text-orange-600 data-[active=true]:text-orange-600">
-                        {item.description}
-                      </div>
-                    </div>
+                    <item.icon className="h-5 w-5" />
+                    <span>{item.title}</span>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
               ))}
@@ -281,32 +125,19 @@ export function AppSidebar({ activeTab, onTabChange, user, onSignOut }: AppSideb
         </SidebarGroup>
       </SidebarContent>
       
-      <SidebarFooter className="border-t border-gray-200/50 p-4 bg-gray-50/50">
-        <div className="space-y-4">
-          {/* User Profile */}
-          <div className="flex items-center gap-3 px-3 py-2 rounded-xl bg-white border border-gray-200 shadow-sm">
-            <Avatar className="h-10 w-10">
-              <AvatarFallback className="bg-gradient-to-br from-blue-500 to-indigo-600 text-white font-semibold">
-                {user?.email?.charAt(0).toUpperCase() || 'A'}
-              </AvatarFallback>
-            </Avatar>
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium text-gray-900 truncate">
-                {user?.email || 'Administrator'}
-              </p>
-              <p className="text-xs text-gray-500">Administrator</p>
-            </div>
-            <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" title="Online"></div>
+      <SidebarFooter className="border-t border-gray-200 p-4">
+        <div className="space-y-3">
+          <div className="px-3 py-2">
+            <p className="text-sm font-medium text-gray-900">{user?.email}</p>
+            <p className="text-xs text-gray-500">Administrator</p>
           </div>
-
-          {/* Sign Out Button */}
           <Button 
             onClick={handleSignOut} 
             variant="ghost" 
-            className="w-full justify-start gap-3 px-3 py-2 text-sm font-medium text-gray-600 hover:text-red-600 hover:bg-red-50 transition-all duration-200 rounded-xl group"
+            className="w-full justify-start gap-3 px-3 py-2 text-sm font-medium text-gray-600 hover:text-gray-900 hover:bg-gray-100"
           >
-            <LogOut className="h-4 w-4 transition-transform group-hover:scale-110" />
-            Abmelden
+            <LogOut className="h-4 w-4" />
+            Sign Out
           </Button>
         </div>
       </SidebarFooter>
