@@ -310,14 +310,14 @@ export function InvoicePreview() {
             
             {/* Modern Header */}
             <div className="flex items-start mb-12">
-              {/* Logo section */}
-              <div className="w-20 h-16 mr-6 flex items-center justify-center">
+              {/* Logo section - doubled size from w-20 h-16 to w-40 h-32 */}
+              <div className="w-40 h-32 mr-6 flex items-center justify-center">
                 {selectedShop.logo_url ? (
                   <div className="relative w-full h-full">
                     {/* Loading placeholder shown while image loads */}
                     {!logoLoaded && !logoError && (
                       <div className="absolute inset-0 bg-gray-100 border-2 border-dashed border-gray-300 flex items-center justify-center animate-pulse">
-                        <span className="text-xs text-gray-500">Loading...</span>
+                        <span className="text-sm text-gray-500">Loading...</span>
                       </div>
                     )}
                     
@@ -333,14 +333,14 @@ export function InvoicePreview() {
                     {/* Error fallback */}
                     {logoError && (
                       <div className="w-full h-full bg-gray-100 border-2 border-dashed border-gray-300 flex items-center justify-center">
-                        <span className="text-xs text-gray-500">LOGO</span>
+                        <span className="text-sm text-gray-500">LOGO</span>
                       </div>
                     )}
                   </div>
                 ) : (
                   // No logo URL - show placeholder
                   <div className="w-full h-full bg-gray-100 border-2 border-dashed border-gray-300 flex items-center justify-center">
-                    <span className="text-xs text-gray-500">LOGO</span>
+                    <span className="text-sm text-gray-500">LOGO</span>
                   </div>
                 )}
               </div>

@@ -679,31 +679,31 @@ async function generateInvoicePDF(order: any, invoiceNumber: string, t: any, cur
     }
     
     if (logoBase64) {
-      // Display actual logo
+      // Display actual logo - doubled size from 40x25 to 80x50
       try {
         console.log('Adding logo to PDF');
-        doc.addImage(logoBase64, 'JPEG', margin, yPos, 40, 25);
+        doc.addImage(logoBase64, 'JPEG', margin, yPos, 80, 50);
       } catch (logoError) {
         console.error('Error adding logo to PDF:', logoError);
         // Fall back to placeholder if logo fails to render
         doc.setFillColor(240, 240, 240);
-        doc.rect(margin, yPos, 40, 25, 'F');
-        doc.setFontSize(8);
+        doc.rect(margin, yPos, 80, 50, 'F');
+        doc.setFontSize(12);
         doc.setTextColor(120, 120, 120);
-        doc.text('LOGO', margin + 20, yPos + 13.5, { align: 'center' });
+        doc.text('LOGO', margin + 40, yPos + 25, { align: 'center' });
       }
     } else {
-      // Logo placeholder (left side) - fallback
+      // Logo placeholder (left side) - fallback with doubled size
       console.log('Using logo placeholder');
       doc.setFillColor(240, 240, 240);
-      doc.rect(margin, yPos, 40, 25, 'F');
-      doc.setFontSize(8);
+      doc.rect(margin, yPos, 80, 50, 'F');
+      doc.setFontSize(12);
       doc.setTextColor(120, 120, 120);
-      doc.text('LOGO', margin + 20, yPos + 13.5, { align: 'center' });
+      doc.text('LOGO', margin + 40, yPos + 25, { align: 'center' });
     }
     
-    // Company name and details (center-right)
-    const companyStartX = margin + 50;
+    // Company name and details (center-right) - adjusted positioning for larger logo
+    const companyStartX = margin + 90; // Increased from 50 to 90
     doc.setFontSize(20);
     doc.setTextColor(rgb.r, rgb.g, rgb.b);
     doc.text(order.shops.company_name, companyStartX, yPos + 10);
@@ -729,8 +729,8 @@ async function generateInvoicePDF(order: any, invoiceNumber: string, t: any, cur
       doc.text(`USt-IdNr: ${order.shops.vat_number}`, companyStartX, yPos);
     }
     
-    // Reset position for invoice content
-    yPos = margin + 50;
+    // Reset position for invoice content - increased spacing for larger logo
+    yPos = margin + 70; // Increased from 50 to 70
     
     // INVOICE TITLE
     doc.setFontSize(28);
