@@ -1,3 +1,4 @@
+
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { Resend } from "npm:resend@2.0.0";
@@ -262,8 +263,8 @@ const handler = async (req: Request): Promise<Response> => {
       html: htmlContent,
     };
 
-    // Add PDF attachment for instant orders with invoices
-    if (include_invoice && order.invoice_pdf_url && email_type === 'instant_confirmation') {
+    // Add PDF attachment for orders with invoices
+    if (include_invoice && order.invoice_pdf_url) {
       try {
         console.log('Adding PDF attachment for invoice:', order.invoice_number);
         
@@ -305,9 +306,9 @@ const handler = async (req: Request): Promise<Response> => {
 
     console.log('Email sent successfully:', emailResponse);
 
-    // Update order status to invoice_sent if this is an instant confirmation with invoice
-    if (email_type === 'instant_confirmation' && include_invoice) {
-      console.log('Updating order status to invoice_sent');
+    // Update order status to invoice_sent if invoice was included
+    if (include_invoice) {
+      console.log('Updating order status to invoice_sent because invoice was included');
       const { error: statusUpdateError } = await supabase
         .from('orders')
         .update({ 
@@ -330,7 +331,7 @@ const handler = async (req: Request): Promise<Response> => {
       email_type,
       sent_to: order.customer_email,
       attachment_included: !!emailPayload.attachments,
-      status_updated: email_type === 'instant_confirmation' && include_invoice,
+      status_updated: include_invoice,
       sent_at: new Date().toISOString()
     }), {
       status: 200,
