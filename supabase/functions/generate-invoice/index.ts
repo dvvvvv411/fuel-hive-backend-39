@@ -190,8 +190,18 @@ async function generateInvoicePDF(order: any, invoiceNumber: string, t: any, cur
     // Import jsPDF dynamically
     const { jsPDF } = await import("https://esm.sh/jspdf@2.5.1");
     
-    // Create new PDF document
-    const doc = new jsPDF();
+    // Create new PDF document with A4 format and proper margins
+    const doc = new jsPDF({
+      orientation: 'portrait',
+      unit: 'mm',
+      format: 'a4'
+    });
+    
+    // A4 dimensions: 210mm x 297mm
+    const pageWidth = 210;
+    const pageHeight = 297;
+    const margin = 20;
+    const contentWidth = pageWidth - (2 * margin);
     
     // Calculate VAT details
     const vatRate = order.shops.vat_rate || 19;
@@ -202,143 +212,181 @@ async function generateInvoicePDF(order: any, invoiceNumber: string, t: any, cur
     const dueDate = new Date();
     dueDate.setDate(dueDate.getDate() + 14);
     
-    // Set font
+    // Set font encoding to support special characters
     doc.setFont("helvetica", "normal");
     
-    // Add company header
-    doc.setFontSize(20);
-    doc.setTextColor(37, 99, 235); // Blue color
-    doc.text(order.shops.company_name, 20, 30);
+    let yPos = margin + 10; // Start position
     
-    // Company details
-    doc.setFontSize(10);
-    doc.setTextColor(0, 0, 0);
-    let yPos = 40;
-    doc.text(order.shops.company_address, 20, yPos);
-    yPos += 5;
-    doc.text(`${order.shops.company_postcode} ${order.shops.company_city}`, 20, yPos);
-    yPos += 5;
+    // Company header with proper A4 positioning
+    doc.setFontSize(18);
+    doc.setTextColor(37, 99, 235); // Blue color
+    doc.text(order.shops.company_name, margin, yPos);
+    yPos += 15;
+    
+    // Company details with proper spacing for A4
+    doc.setFontSize(9);
+    doc.setTextColor(100, 100, 100);
+    doc.text(order.shops.company_address, margin, yPos);
+    yPos += 4;
+    doc.text(`${order.shops.company_postcode} ${order.shops.company_city}`, margin, yPos);
+    yPos += 4;
     if (order.shops.company_phone) {
-      doc.text(`Tel: ${order.shops.company_phone}`, 20, yPos);
-      yPos += 5;
+      doc.text(`Tel: ${order.shops.company_phone}`, margin, yPos);
+      yPos += 4;
     }
-    doc.text(`E-Mail: ${order.shops.company_email}`, 20, yPos);
-    yPos += 5;
+    doc.text(`E-Mail: ${order.shops.company_email}`, margin, yPos);
+    yPos += 4;
     if (order.shops.company_website) {
-      doc.text(`Web: ${order.shops.company_website}`, 20, yPos);
-      yPos += 5;
+      doc.text(`Web: ${order.shops.company_website}`, margin, yPos);
+      yPos += 4;
     }
     if (order.shops.vat_number) {
-      doc.text(`USt-IdNr: ${order.shops.vat_number}`, 20, yPos);
+      doc.text(`USt-IdNr: ${order.shops.vat_number}`, margin, yPos);
     }
     
-    // Invoice title
-    doc.setFontSize(24);
-    doc.setTextColor(37, 99, 235);
-    doc.text(t.invoice, 20, 80);
-    
-    // Invoice details
-    doc.setFontSize(12);
+    // Customer address (positioned on the right side for proper invoice layout)
+    yPos = margin + 10;
+    const customerAddressX = margin + (contentWidth * 0.6);
+    doc.setFontSize(10);
     doc.setTextColor(0, 0, 0);
-    yPos = 100;
-    doc.text(`${t.invoiceNumber}: ${invoiceNumber}`, 20, yPos);
-    yPos += 8;
-    doc.text(`${t.invoiceDate}: ${new Date().toLocaleDateString(order.shops.language === 'en' ? 'en-US' : 'de-DE')}`, 20, yPos);
-    yPos += 8;
-    doc.text(`${t.dueDate}: ${dueDate.toLocaleDateString(order.shops.language === 'en' ? 'en-US' : 'de-DE')}`, 20, yPos);
-    yPos += 8;
-    doc.text(`Bestellnummer: ${order.order_number}`, 20, yPos);
-    yPos += 8;
-    doc.text(`Bestelldatum: ${new Date(order.created_at).toLocaleDateString(order.shops.language === 'en' ? 'en-US' : 'de-DE')}`, 20, yPos);
+    doc.text(order.customer_name, customerAddressX, yPos);
+    yPos += 5;
+    doc.text(order.delivery_street, customerAddressX, yPos);
+    yPos += 5;
+    doc.text(`${order.delivery_postcode} ${order.delivery_city}`, customerAddressX, yPos);
     
-    // Customer details
+    // Invoice title with proper A4 spacing
+    yPos = margin + 60;
+    doc.setFontSize(20);
+    doc.setTextColor(37, 99, 235);
+    doc.text(t.invoice, margin, yPos);
+    
+    // Invoice details with proper table-like layout
     yPos += 20;
-    doc.setFontSize(14);
-    doc.setTextColor(37, 99, 235);
-    doc.text(t.customerDetails, 20, yPos);
-    
-    doc.setFontSize(12);
+    doc.setFontSize(10);
     doc.setTextColor(0, 0, 0);
-    yPos += 10;
-    doc.text(order.customer_name, 20, yPos);
-    yPos += 6;
-    doc.text(order.delivery_street, 20, yPos);
-    yPos += 6;
-    doc.text(`${order.delivery_postcode} ${order.delivery_city}`, 20, yPos);
-    yPos += 6;
-    doc.text(order.customer_email, 20, yPos);
-    if (order.customer_phone) {
-      yPos += 6;
-      doc.text(order.customer_phone, 20, yPos);
-    }
     
-    // Items table header
+    const detailsStartY = yPos;
+    const labelWidth = 50;
+    
+    doc.text(`${t.invoiceNumber}:`, margin, yPos);
+    doc.text(invoiceNumber, margin + labelWidth, yPos);
+    yPos += 6;
+    
+    doc.text(`${t.invoiceDate}:`, margin, yPos);
+    doc.text(new Date().toLocaleDateString(order.shops.language === 'en' ? 'en-US' : 'de-DE'), margin + labelWidth, yPos);
+    yPos += 6;
+    
+    doc.text(`${t.dueDate}:`, margin, yPos);
+    doc.text(dueDate.toLocaleDateString(order.shops.language === 'en' ? 'en-US' : 'de-DE'), margin + labelWidth, yPos);
+    yPos += 6;
+    
+    doc.text(`Bestellnummer:`, margin, yPos);
+    doc.text(order.order_number, margin + labelWidth, yPos);
+    yPos += 6;
+    
+    doc.text(`Bestelldatum:`, margin, yPos);
+    doc.text(new Date(order.created_at).toLocaleDateString(order.shops.language === 'en' ? 'en-US' : 'de-DE'), margin + labelWidth, yPos);
+    
+    // Items table with proper A4 layout
     yPos += 25;
-    doc.setFontSize(12);
+    const tableStartY = yPos;
+    
+    // Table header with background
     doc.setFillColor(37, 99, 235);
+    doc.rect(margin, yPos - 3, contentWidth, 8, 'F');
+    
+    doc.setFontSize(9);
     doc.setTextColor(255, 255, 255);
-    doc.rect(20, yPos - 5, 170, 10, 'F');
-    doc.text(t.description, 25, yPos);
-    doc.text(t.quantity, 100, yPos);
-    doc.text(t.unitPrice, 125, yPos);
-    doc.text(t.total, 160, yPos);
+    doc.text(t.description, margin + 2, yPos + 2);
+    doc.text(t.quantity, margin + (contentWidth * 0.55), yPos + 2);
+    doc.text(t.unitPrice, margin + (contentWidth * 0.7), yPos + 2);
+    doc.text(t.total, margin + (contentWidth * 0.85), yPos + 2);
     
-    // Items
-    yPos += 15;
+    yPos += 12;
+    
+    // Table content
     doc.setTextColor(0, 0, 0);
-    doc.text(t.heatingOilDelivery, 25, yPos);
-    doc.text(`${order.liters} ${t.liters}`, 100, yPos);
-    doc.text(`${currencySymbol}${order.price_per_liter.toFixed(3)}`, 125, yPos);
-    doc.text(`${currencySymbol}${order.base_price.toFixed(2)}`, 160, yPos);
+    doc.setFontSize(9);
     
+    // Main product line
+    doc.text(t.heatingOilDelivery, margin + 2, yPos);
+    doc.text(`${order.liters} ${t.liters}`, margin + (contentWidth * 0.55), yPos);
+    doc.text(`${currencySymbol}${order.price_per_liter.toFixed(3)}`, margin + (contentWidth * 0.7), yPos);
+    doc.text(`${currencySymbol}${order.base_price.toFixed(2)}`, margin + (contentWidth * 0.85), yPos);
+    yPos += 6;
+    
+    // Delivery fee if applicable
     if (order.delivery_fee > 0) {
-      yPos += 8;
-      doc.text(t.deliveryFee, 25, yPos);
-      doc.text('1', 100, yPos);
-      doc.text(`${currencySymbol}${order.delivery_fee.toFixed(2)}`, 125, yPos);
-      doc.text(`${currencySymbol}${order.delivery_fee.toFixed(2)}`, 160, yPos);
+      doc.text(t.deliveryFee, margin + 2, yPos);
+      doc.text('1', margin + (contentWidth * 0.55), yPos);
+      doc.text(`${currencySymbol}${order.delivery_fee.toFixed(2)}`, margin + (contentWidth * 0.7), yPos);
+      doc.text(`${currencySymbol}${order.delivery_fee.toFixed(2)}`, margin + (contentWidth * 0.85), yPos);
+      yPos += 6;
     }
     
-    // Totals
-    yPos += 20;
-    doc.text(`${t.subtotal}: ${currencySymbol}${totalWithoutVat.toFixed(2)}`, 120, yPos);
-    yPos += 8;
-    doc.text(`${t.vat} (${vatRate}%): ${currencySymbol}${vatAmount.toFixed(2)}`, 120, yPos);
-    yPos += 8;
-    doc.setFontSize(14);
-    doc.setTextColor(37, 99, 235);
-    doc.text(`${t.grandTotal}: ${currencySymbol}${order.total_amount.toFixed(2)}`, 120, yPos);
+    // Table border
+    doc.setDrawColor(200, 200, 200);
+    doc.rect(margin, tableStartY - 3, contentWidth, yPos - tableStartY + 3);
     
-    // Payment details
+    // Totals section with right alignment
+    yPos += 15;
+    const totalsX = margin + (contentWidth * 0.6);
+    
+    doc.setFontSize(10);
+    doc.text(`${t.subtotal}:`, totalsX, yPos);
+    doc.text(`${currencySymbol}${totalWithoutVat.toFixed(2)}`, totalsX + 40, yPos);
+    yPos += 6;
+    
+    doc.text(`${t.vat} (${vatRate}%):`, totalsX, yPos);
+    doc.text(`${currencySymbol}${vatAmount.toFixed(2)}`, totalsX + 40, yPos);
+    yPos += 8;
+    
+    doc.setFontSize(12);
+    doc.setTextColor(37, 99, 235);
+    doc.text(`${t.grandTotal}:`, totalsX, yPos);
+    doc.text(`${currencySymbol}${order.total_amount.toFixed(2)}`, totalsX + 40, yPos);
+    
+    // Payment details section
     if (order.shops.bank_accounts) {
       yPos += 25;
-      doc.setFontSize(14);
-      doc.setTextColor(37, 99, 235);
-      doc.text(t.paymentDetails, 20, yPos);
-      
       doc.setFontSize(12);
-      doc.setTextColor(0, 0, 0);
+      doc.setTextColor(37, 99, 235);
+      doc.text(t.paymentDetails, margin, yPos);
+      
       yPos += 10;
-      doc.text(`${t.accountHolder}: ${order.shops.bank_accounts.account_holder}`, 20, yPos);
+      doc.setFontSize(10);
+      doc.setTextColor(0, 0, 0);
+      
+      doc.text(`${t.accountHolder}:`, margin, yPos);
+      doc.text(order.shops.bank_accounts.account_holder, margin + 35, yPos);
       yPos += 6;
-      doc.text(`${t.iban}: ${order.shops.bank_accounts.iban}`, 20, yPos);
+      
+      doc.text(`${t.iban}:`, margin, yPos);
+      doc.text(order.shops.bank_accounts.iban, margin + 35, yPos);
+      yPos += 6;
+      
       if (order.shops.bank_accounts.bic) {
+        doc.text(`${t.bic}:`, margin, yPos);
+        doc.text(order.shops.bank_accounts.bic, margin + 35, yPos);
         yPos += 6;
-        doc.text(`${t.bic}: ${order.shops.bank_accounts.bic}`, 20, yPos);
       }
+      
+      doc.text(`${t.paymentReference}:`, margin, yPos);
+      doc.text(invoiceNumber, margin + 35, yPos);
       yPos += 6;
-      doc.text(`${t.paymentReference}: ${invoiceNumber}`, 20, yPos);
-      yPos += 6;
-      doc.text(`Zahlungsziel: ${t.dueDays}`, 20, yPos);
+      
+      doc.text(`Zahlungsziel:`, margin, yPos);
+      doc.text(t.dueDays, margin + 35, yPos);
     }
     
-    // Thank you message
-    yPos += 20;
-    doc.setFontSize(12);
+    // Footer with thank you message
+    yPos = pageHeight - margin - 20;
+    doc.setFontSize(10);
     doc.setTextColor(102, 102, 102);
-    doc.text(t.thankYou, 20, yPos);
+    doc.text(t.thankYou, margin, yPos);
     
-    console.log('PDF content created, converting to bytes...');
+    console.log('PDF content created with A4 format, converting to bytes...');
     
     // Get PDF as array buffer
     const pdfArrayBuffer = doc.output('arraybuffer');
