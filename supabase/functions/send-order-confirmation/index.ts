@@ -196,8 +196,8 @@ const generateConfirmationEmailTemplate = (order: any) => {
 };
 
 const generateInvoiceEmailTemplate = (order: any, bankData: any) => {
-  // Properly trim shop name to ensure no extra spaces
-  const shopName = (order.shops?.name || order.shops?.company_name || 'Heizöl-Service').trim();
+  // Use shop name specifically, not company name
+  const shopName = (order.shops?.name || 'Heizöl-Service').trim();
   const accentColor = order.shops?.accent_color || '#2563eb';
   
   // Set variables correctly - invoiceNumber is the order number, recipientName depends on use_anyname
@@ -212,8 +212,8 @@ const generateInvoiceEmailTemplate = (order: any, bankData: any) => {
   console.log('- use_anyname:', bankData?.use_anyname);
   console.log('- account_holder:', bankData?.account_holder);
   
-  // Fixed subject line - no extra spaces
-  const subject = `Rechnung ${invoiceNumber} - Ihre ${translateProduct(order.product)}-Bestellung bei ${shopName}`;
+  // Simplified subject line as requested
+  const subject = `Ihre Rechnung - Heizöl-Bestellung bei ${shopName}`;
 
   const htmlContent = `
     <!DOCTYPE html>
