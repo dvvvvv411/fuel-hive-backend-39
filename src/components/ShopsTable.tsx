@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -180,11 +179,11 @@ export function ShopsTable({ shops, onShopsChange }: ShopsTableProps) {
                           <img 
                             src={shop.logo_url} 
                             alt={`${shop.company_name} Logo`}
-                            className="h-8 w-8 object-contain rounded"
+                            className="h-24 w-24 object-contain rounded"
                           />
                         ) : (
-                          <div className="h-8 w-8 bg-gray-100 rounded flex items-center justify-center">
-                            <span className="text-xs text-gray-400 font-medium">
+                          <div className="h-24 w-24 bg-gray-100 rounded flex items-center justify-center">
+                            <span className="text-lg text-gray-400 font-medium">
                               {shop.company_name.charAt(0)}
                             </span>
                           </div>
