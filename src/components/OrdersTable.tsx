@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -357,10 +358,17 @@ export function OrdersTable() {
   };
 
   const getBankAccountInfo = (order: Order) => {
+    // If processing_mode is 'manual' and no invoice has been generated yet
+    if (order.processing_mode === 'manual' && !order.invoice_number) {
+      return 'Noch nicht zugewiesen';
+    }
+    
+    // For all other cases (manual with invoice, instant mode, or fallback)
     if (order.shops?.bank_accounts) {
       const bankAccount = order.shops.bank_accounts;
       return bankAccount.account_name;
     }
+    
     return 'Kein Bankkonto';
   };
 
