@@ -20,6 +20,7 @@ export function ShopDialog({ open, onOpenChange, onSuccess, shop }: ShopDialogPr
   const [loading, setLoading] = useState(false);
   const [logoUploading, setLogoUploading] = useState(false);
   const [bankAccounts, setBankAccounts] = useState<any[]>([]);
+  const [resendConfigs, setResendConfigs] = useState<any[]>([]);
   
   const [formData, setFormData] = useState({
     name: '',
@@ -43,11 +44,13 @@ export function ShopDialog({ open, onOpenChange, onSuccess, shop }: ShopDialogPr
     accent_color: '#2563eb',
     support_phone: '',
     bank_account_id: '',
+    resend_config_id: '',
   });
 
   useEffect(() => {
     if (open) {
       fetchBankAccounts();
+      fetchResendConfigs();
     }
   }, [open]);
 
@@ -66,6 +69,26 @@ export function ShopDialog({ open, onOpenChange, onSuccess, shop }: ShopDialogPr
       toast({
         title: 'Fehler',
         description: 'Fehler beim Laden der Bankkonten',
+        variant: 'destructive',
+      });
+    }
+  };
+
+  const fetchResendConfigs = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('resend_configs')
+        .select('*')
+        .eq('active', true)
+        .order('config_name');
+
+      if (error) throw error;
+      setResendConfigs(data || []);
+    } catch (error) {
+      console.error('Error fetching resend configs:', error);
+      toast({
+        title: 'Fehler',
+        description: 'Fehler beim Laden der Resend-Konfigurationen',
         variant: 'destructive',
       });
     }
@@ -95,6 +118,7 @@ export function ShopDialog({ open, onOpenChange, onSuccess, shop }: ShopDialogPr
         accent_color: shop.accent_color || '#2563eb',
         support_phone: shop.support_phone || '',
         bank_account_id: shop.bank_account_id || '',
+        resend_config_id: shop.resend_config_id || '',
       });
     } else {
       setFormData({
@@ -119,6 +143,7 @@ export function ShopDialog({ open, onOpenChange, onSuccess, shop }: ShopDialogPr
         accent_color: '#2563eb',
         support_phone: '',
         bank_account_id: '',
+        resend_config_id: '',
       });
     }
   }, [shop]);
@@ -383,6 +408,37 @@ export function ShopDialog({ open, onOpenChange, onSuccess, shop }: ShopDialogPr
                   <SelectItem value="instant">Sofort</SelectItem>
                 </SelectContent>
               </Select>
+            </div>
+          </div>
+
+          {/* Email Configuration Section */}
+          <div className="border-t pt-6">
+            <h3 className="text-lg font-semibold mb-4">E-Mail-Konfiguration</h3>
+            <div className="space-y-2">
+              <Label htmlFor="resend_config_id">Resend-Konfiguration</Label>
+              <Select 
+                value={formData.resend_config_id} 
+                onValueChange={(value) => handleInputChange('resend_config_id', value)}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Resend-Konfiguration auswählen..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {resendConfigs.map((config) => (
+                    <SelectItem key={config.id} value={config.id}>
+                      {config.config_name} - {config.from_email}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {resendConfigs.length === 0 && (
+                <p className="text-sm text-gray-500">
+                  Keine aktiven Resend-Konfigurationen gefunden. Bitte erstellen Sie zuerst eine Resend-Konfiguration.
+                </p>
+              )}
+              <p className="text-sm text-gray-600">
+                Wählen Sie eine Resend-Konfiguration für den E-Mail-Versand dieses Shops.
+              </p>
             </div>
           </div>
 
