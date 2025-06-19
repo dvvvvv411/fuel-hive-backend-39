@@ -1236,7 +1236,16 @@ async function generateResponsiveInvoicePDF(order: any, invoiceNumber: string, t
     
     const addressLineSpacing = 5 * layout.SCALE_FACTOR * layout.LANGUAGE_FACTOR.lineHeight;
     
-    const customerName = optimizeTextForSpace(doc, order.customer_name, leftColumnWidth, layout.FONT_SIZES.NORMAL, language);
+    // Use billing name fields when available, fallback to customer_name
+    let billingDisplayName = order.customer_name;
+    if (hasDifferentAddresses && order.billing_first_name && order.billing_last_name) {
+      billingDisplayName = `${order.billing_first_name} ${order.billing_last_name}`;
+    } else if (hasDifferentAddresses && (order.billing_first_name || order.billing_last_name)) {
+      // Handle cases where only one name field is available
+      billingDisplayName = `${order.billing_first_name || ''} ${order.billing_last_name || ''}`.trim();
+    }
+    
+    const customerName = optimizeTextForSpace(doc, billingDisplayName, leftColumnWidth, layout.FONT_SIZES.NORMAL, language);
     doc.text(customerName, leftColumnX, addressY);
     addressY += addressLineSpacing;
     
