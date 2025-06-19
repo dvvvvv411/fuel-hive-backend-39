@@ -1,4 +1,3 @@
-
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
@@ -454,8 +453,8 @@ function calculateResponsiveLayout(order: any, t: any, language: string): any {
   // Calculate required content height
   let requiredHeight = 0;
   
-  // Header section
-  requiredHeight += BASE_LAYOUT.MIN_SECTIONS.HEADER;
+  // Header section - increased to accommodate potential multi-line company names
+  requiredHeight += BASE_LAYOUT.MIN_SECTIONS.HEADER * 1.3;
   
   // Title section
   requiredHeight += BASE_LAYOUT.MIN_SECTIONS.TITLE;
@@ -485,8 +484,8 @@ function calculateResponsiveLayout(order: any, t: any, language: string): any {
     requiredHeight += BASE_LAYOUT.MIN_SECTIONS.PAYMENT * langFactor.textDensity;
   }
   
-  // Footer section
-  requiredHeight += BASE_LAYOUT.MIN_SECTIONS.FOOTER;
+  // Footer section - increased to accommodate potential multi-line company names
+  requiredHeight += BASE_LAYOUT.MIN_SECTIONS.FOOTER * 1.3;
   
   console.log(`[LAYOUT] Required content height: ${requiredHeight}mm, Available: ${BASE_LAYOUT.CONTENT_HEIGHT}mm`);
   
@@ -503,7 +502,7 @@ function calculateResponsiveLayout(order: any, t: any, language: string): any {
     
     // Scaled dimensions
     HEADER: {
-      HEIGHT: BASE_LAYOUT.MIN_SECTIONS.HEADER * scaleFactor,
+      HEIGHT: BASE_LAYOUT.MIN_SECTIONS.HEADER * scaleFactor * 1.3,
       LOGO_MAX_WIDTH: 25 * scaleFactor, // Reduced base size
       LOGO_MAX_HEIGHT: 18 * scaleFactor,
       COMPANY_START_X_OFFSET: (25 * scaleFactor) + 6
@@ -516,7 +515,7 @@ function calculateResponsiveLayout(order: any, t: any, language: string): any {
       TABLE_HEADER_HEIGHT: 8 * scaleFactor,
       TOTALS_HEIGHT: BASE_LAYOUT.MIN_SECTIONS.TOTALS * scaleFactor,
       PAYMENT_HEIGHT: BASE_LAYOUT.MIN_SECTIONS.PAYMENT * scaleFactor * langFactor.textDensity,
-      FOOTER_HEIGHT: BASE_LAYOUT.MIN_SECTIONS.FOOTER * scaleFactor
+      FOOTER_HEIGHT: BASE_LAYOUT.MIN_SECTIONS.FOOTER * scaleFactor * 1.3
     },
     
     // Dynamic font sizes based on scaling
@@ -589,6 +588,67 @@ function optimizeTextForSpace(doc: any, text: string, maxWidth: number, fontSize
   }
   
   return result + (result !== text ? '...' : '');
+}
+
+// New function to wrap text to multiple lines
+function wrapTextToFitWidth(doc: any, text: string, maxWidth: number, fontSize: number, language: string): string[] {
+  const langFactor = LANGUAGE_FACTORS[language as keyof typeof LANGUAGE_FACTORS] || LANGUAGE_FACTORS.de;
+  const adjustedMaxWidth = maxWidth * langFactor.textDensity;
+  
+  doc.setFontSize(fontSize);
+  const textWidth = doc.getTextWidth(text);
+  
+  // If text fits on one line, return as single line
+  if (textWidth <= adjustedMaxWidth) {
+    return [text];
+  }
+  
+  console.log(`[WRAP] Text "${text}" (${textWidth.toFixed(1)}mm) exceeds max width ${adjustedMaxWidth.toFixed(1)}mm, wrapping...`);
+  
+  const words = text.split(' ');
+  const lines: string[] = [];
+  let currentLine = '';
+  
+  for (const word of words) {
+    const testLine = currentLine ? `${currentLine} ${word}` : word;
+    const testWidth = doc.getTextWidth(testLine);
+    
+    if (testWidth <= adjustedMaxWidth) {
+      currentLine = testLine;
+    } else {
+      // If current line has content, add it and start new line with current word
+      if (currentLine) {
+        lines.push(currentLine);
+        currentLine = word;
+      } else {
+        // Single word is too long, truncate it
+        let truncated = word;
+        while (doc.getTextWidth(truncated) > adjustedMaxWidth && truncated.length > 1) {
+          truncated = truncated.slice(0, -1);
+        }
+        lines.push(truncated);
+        currentLine = '';
+      }
+    }
+  }
+  
+  // Add the last line if it has content
+  if (currentLine) {
+    lines.push(currentLine);
+  }
+  
+  console.log(`[WRAP] Wrapped into ${lines.length} lines:`, lines);
+  return lines;
+}
+
+// Helper function to render wrapped text and return the total height used
+function renderWrappedText(doc: any, lines: string[], x: number, y: number, lineSpacing: number): number {
+  let currentY = y;
+  for (const line of lines) {
+    doc.text(line, x, currentY);
+    currentY += lineSpacing;
+  }
+  return (lines.length - 1) * lineSpacing; // Return additional height used beyond first line
 }
 
 // Helper function to convert hex color to RGB
@@ -1046,7 +1106,7 @@ async function generateResponsiveInvoicePDF(order: any, invoiceNumber: string, t
     // Set font encoding to support special characters
     doc.setFont("helvetica", "normal");
     
-    // HEADER SECTION - Enhanced logo handling with improved debugging
+    // HEADER SECTION - Enhanced with text wrapping
     let logoData = null;
     
     // Fetch logo with enhanced analysis
@@ -1061,16 +1121,26 @@ async function generateResponsiveInvoicePDF(order: any, invoiceNumber: string, t
     // Render responsive logo
     renderResponsiveLogo(doc, logoData, layout, layout.MARGIN, layout.POSITIONS.HEADER_Y, accentColor);
     
-    // Company details - updated position for smaller logo
+    // Company details with text wrapping
     const companyStartX = layout.MARGIN + layout.HEADER.COMPANY_START_X_OFFSET;
     const maxCompanyWidth = contentWidth - layout.HEADER.COMPANY_START_X_OFFSET;
     
     doc.setFontSize(layout.FONT_SIZES.TITLE);
     doc.setTextColor(accentColor.r, accentColor.g, accentColor.b);
-    const companyName = optimizeTextForSpace(doc, order.shops.company_name, maxCompanyWidth, layout.FONT_SIZES.TITLE, language);
-    doc.text(companyName, companyStartX, layout.POSITIONS.HEADER_Y + (10 * layout.SCALE_FACTOR));
     
-    let companyY = layout.POSITIONS.HEADER_Y + (15 * layout.SCALE_FACTOR);
+    // Wrap company name instead of truncating
+    const companyNameLines = wrapTextToFitWidth(doc, order.shops.company_name, maxCompanyWidth, layout.FONT_SIZES.TITLE, language);
+    let companyY = layout.POSITIONS.HEADER_Y + (10 * layout.SCALE_FACTOR);
+    const titleLineSpacing = 6 * layout.SCALE_FACTOR * layout.LANGUAGE_FACTOR.lineHeight;
+    
+    for (const line of companyNameLines) {
+      doc.text(line, companyStartX, companyY);
+      companyY += titleLineSpacing;
+    }
+    
+    // Adjust starting position for company details based on company name height
+    companyY += 3 * layout.SCALE_FACTOR; // Small gap after company name
+    
     doc.setFontSize(layout.FONT_SIZES.SMALL);
     doc.setTextColor(...layout.COLORS.SECONDARY_TEXT);
     
@@ -1332,12 +1402,12 @@ async function generateResponsiveInvoicePDF(order: any, invoiceNumber: string, t
       doc.text(reference, layout.MARGIN + paymentPadding + paymentLabelWidth, paymentContentY);
     }
     
-    // FOOTER - Fixed position
+    // FOOTER - Enhanced with text wrapping
     const footerY = layout.POSITIONS.FOOTER_Y;
     
     // Footer background
     doc.setFillColor(...layout.COLORS.BACKGROUND_LIGHT);
-    doc.rect(0, footerY - 5, layout.PAGE_WIDTH, 30, 'F');
+    doc.rect(0, footerY - 5, layout.PAGE_WIDTH, layout.SECTIONS.FOOTER_HEIGHT, 'F');
     
     // 4-column layout
     const col1X = layout.MARGIN;
@@ -1348,35 +1418,47 @@ async function generateResponsiveInvoicePDF(order: any, invoiceNumber: string, t
     
     doc.setFontSize(layout.FONT_SIZES.FOOTER);
     doc.setTextColor(...layout.COLORS.SECONDARY_TEXT);
+    const footerLineSpacing = 4 * layout.SCALE_FACTOR;
     
-    // Column 1: Company name and address
+    // Column 1: Company name and address with wrapping
     doc.setFont("helvetica", "bold");
-    const footerCompanyName = optimizeTextForSpace(doc, order.shops.company_name, colWidth, layout.FONT_SIZES.FOOTER, language);
-    doc.text(footerCompanyName, col1X, footerY);
+    const footerCompanyNameLines = wrapTextToFitWidth(doc, order.shops.company_name, colWidth, layout.FONT_SIZES.FOOTER, language);
+    let footerCol1Y = footerY;
+    
+    for (const line of footerCompanyNameLines) {
+      doc.text(line, col1X, footerCol1Y);
+      footerCol1Y += footerLineSpacing;
+    }
+    
     doc.setFont("helvetica", "normal");
     
     const footerAddress = optimizeTextForSpace(doc, order.shops.company_address, colWidth, layout.FONT_SIZES.FOOTER, language);
-    doc.text(footerAddress, col1X, footerY + 4);
+    doc.text(footerAddress, col1X, footerCol1Y);
+    footerCol1Y += footerLineSpacing;
     
     const footerCity = optimizeTextForSpace(doc, `${order.shops.company_postcode} ${order.shops.company_city}`, colWidth, layout.FONT_SIZES.FOOTER, language);
-    doc.text(footerCity, col1X, footerY + 8);
+    doc.text(footerCity, col1X, footerCol1Y);
     
     // Column 2: Contact information
     doc.setFont("helvetica", "bold");
     doc.text('Kontakt', col2X, footerY);
     doc.setFont("helvetica", "normal");
     
+    let footerCol2Y = footerY + footerLineSpacing;
+    
     if (order.shops.company_phone) {
       const footerPhone = optimizeTextForSpace(doc, order.shops.company_phone, colWidth, layout.FONT_SIZES.FOOTER, language);
-      doc.text(footerPhone, col2X, footerY + 4);
+      doc.text(footerPhone, col2X, footerCol2Y);
+      footerCol2Y += footerLineSpacing;
     }
     
     const footerEmail = optimizeTextForSpace(doc, order.shops.company_email, colWidth, layout.FONT_SIZES.FOOTER, language);
-    doc.text(footerEmail, col2X, footerY + 8);
+    doc.text(footerEmail, col2X, footerCol2Y);
+    footerCol2Y += footerLineSpacing;
     
     if (order.shops.company_website) {
       const footerWebsite = optimizeTextForSpace(doc, order.shops.company_website, colWidth, layout.FONT_SIZES.FOOTER, language);
-      doc.text(footerWebsite, col2X, footerY + 12);
+      doc.text(footerWebsite, col2X, footerCol2Y);
     }
     
     // Column 3: Bank information
@@ -1385,19 +1467,23 @@ async function generateResponsiveInvoicePDF(order: any, invoiceNumber: string, t
       doc.text('Bankinformationen', col3X, footerY);
       doc.setFont("helvetica", "normal");
       
+      let footerCol3Y = footerY + footerLineSpacing;
+      
       const accountHolderName = order.shops.bank_accounts.use_anyname 
         ? order.shops.name 
         : order.shops.bank_accounts.account_holder;
       
       const footerAccountHolder = optimizeTextForSpace(doc, accountHolderName, colWidth, layout.FONT_SIZES.FOOTER, language);
-      doc.text(footerAccountHolder, col3X, footerY + 4);
+      doc.text(footerAccountHolder, col3X, footerCol3Y);
+      footerCol3Y += footerLineSpacing;
       
       const footerIban = optimizeTextForSpace(doc, order.shops.bank_accounts.iban, colWidth, layout.FONT_SIZES.FOOTER, language);
-      doc.text(footerIban, col3X, footerY + 8);
+      doc.text(footerIban, col3X, footerCol3Y);
+      footerCol3Y += footerLineSpacing;
       
       if (order.shops.bank_accounts.bic) {
         const footerBic = optimizeTextForSpace(doc, order.shops.bank_accounts.bic, colWidth, layout.FONT_SIZES.FOOTER, language);
-        doc.text(footerBic, col3X, footerY + 12);
+        doc.text(footerBic, col3X, footerCol3Y);
       }
     }
     
@@ -1406,17 +1492,20 @@ async function generateResponsiveInvoicePDF(order: any, invoiceNumber: string, t
     doc.text('Geschäftsdaten', col4X, footerY);
     doc.setFont("helvetica", "normal");
     
+    let footerCol4Y = footerY + footerLineSpacing;
+    
     if (order.shops.business_owner) {
       const footerOwner = optimizeTextForSpace(doc, order.shops.business_owner, colWidth, layout.FONT_SIZES.FOOTER, language);
-      doc.text(footerOwner, col4X, footerY + 4);
+      doc.text(footerOwner, col4X, footerCol4Y);
+      footerCol4Y += footerLineSpacing;
     }
     
     if (order.shops.vat_number) {
       const footerVat = optimizeTextForSpace(doc, order.shops.vat_number, colWidth, layout.FONT_SIZES.FOOTER, language);
-      doc.text(footerVat, col4X, footerY + 8);
+      doc.text(footerVat, col4X, footerCol4Y);
     }
     
-    console.log('Responsive PDF content created with enhanced logo handling and debugging, converting to bytes...');
+    console.log('Responsive PDF content created with text wrapping for company names, converting to bytes...');
     
     // Get PDF as array buffer
     const pdfArrayBuffer = doc.output('arraybuffer');
