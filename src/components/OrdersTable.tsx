@@ -530,14 +530,23 @@ export function OrdersTable() {
   };
 
   const checkAddressDifference = (order: Order) => {
-    // Check if billing address is different from delivery address
-    const billingStreet = order.billing_street || '';
-    const billingCity = order.billing_city || '';
-    const billingPostcode = order.billing_postcode || '';
+    // Check if billing address fields are provided (not null, undefined, or empty)
+    const hasBillingAddress = order.billing_street && 
+                             order.billing_city && 
+                             order.billing_postcode &&
+                             order.billing_street.trim() !== '' &&
+                             order.billing_city.trim() !== '' &&
+                             order.billing_postcode.trim() !== '';
     
-    const isDifferent = billingStreet !== order.delivery_street || 
-                       billingCity !== order.delivery_city || 
-                       billingPostcode !== order.delivery_postcode;
+    // If no billing address is provided, addresses are considered identical (return false for different)
+    if (!hasBillingAddress) {
+      return false;
+    }
+    
+    // If billing address is provided, check if it's different from delivery address
+    const isDifferent = order.billing_street !== order.delivery_street || 
+                       order.billing_city !== order.delivery_city || 
+                       order.billing_postcode !== order.delivery_postcode;
     
     return isDifferent;
   };
