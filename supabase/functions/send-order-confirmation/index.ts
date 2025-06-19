@@ -1,4 +1,3 @@
-
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { Resend } from "npm:resend@2.0.0";
@@ -306,24 +305,10 @@ const handler = async (req: Request): Promise<Response> => {
 
     console.log('Email sent successfully:', emailResponse);
 
-    // Update order status to invoice_sent if invoice was included
-    if (include_invoice) {
-      console.log('Updating order status to invoice_sent because invoice was included');
-      const { error: statusUpdateError } = await supabase
-        .from('orders')
-        .update({ 
-          status: 'invoice_sent',
-          invoice_sent: true 
-        })
-        .eq('id', order_id);
-
-      if (statusUpdateError) {
-        console.error('Error updating order status:', statusUpdateError);
-        // Don't fail the entire request for status update error
-      } else {
-        console.log('Order status updated to invoice_sent');
-      }
-    }
+    // DO NOT update order status here - it should already be correct
+    // The generate-invoice function sets the status to invoice_sent
+    // Manual confirmation emails don't change status
+    console.log('Email sent without changing order status - status should already be correct');
 
     return new Response(JSON.stringify({
       success: true,
@@ -331,7 +316,7 @@ const handler = async (req: Request): Promise<Response> => {
       email_type,
       sent_to: order.customer_email,
       attachment_included: !!emailPayload.attachments,
-      status_updated: include_invoice,
+      status_updated: false, // We no longer update status in this function
       sent_at: new Date().toISOString()
     }), {
       status: 200,

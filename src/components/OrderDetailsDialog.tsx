@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import {
@@ -160,7 +161,7 @@ export function OrderDetailsDialog({ order, open, onOpenChange, onOrderUpdate }:
 
       toast({
         title: 'Rechnung generiert',
-        description: 'Die Rechnung wurde erfolgreich erstellt',
+        description: 'Die Rechnung wurde erfolgreich erstellt und der Status auf "Rechnung versendet" gesetzt',
       });
       
       // Now send the confirmation email with invoice
@@ -184,11 +185,11 @@ export function OrderDetailsDialog({ order, open, onOpenChange, onOrderUpdate }:
       setUpdating(true);
       
       if (order.invoice_pdf_generated) {
-        // Send email with existing invoice
+        // Send email with existing invoice - status should already be invoice_sent
         console.log('Sending existing invoice via email');
         await sendOrderConfirmationEmail('instant_confirmation', true);
       } else {
-        // Generate and send invoice
+        // Generate and send invoice - this will set status to invoice_sent
         console.log('Generating new invoice and sending');
         await generateInvoice();
       }
@@ -301,7 +302,7 @@ export function OrderDetailsDialog({ order, open, onOpenChange, onOrderUpdate }:
                       </Button>
                       <Button onClick={generateInvoice} disabled={updating} size="sm">
                         <FileText className="h-4 w-4 mr-2" />
-                        Rechnung generieren & senden
+                        Rechnung erstellen
                       </Button>
                     </>
                   )}
@@ -314,15 +315,26 @@ export function OrderDetailsDialog({ order, open, onOpenChange, onOrderUpdate }:
                   )}
 
                   {order.status === 'invoice_sent' && (
-                    <Button 
-                      onClick={markAsPaid} 
-                      disabled={updating}
-                      className="bg-green-600 hover:bg-green-700 text-white"
-                      size="sm"
-                    >
-                      <DollarSign className="h-4 w-4 mr-2" />
-                      Als bezahlt markieren
-                    </Button>
+                    <>
+                      <Button 
+                        variant="outline"
+                        onClick={() => sendOrderConfirmationEmail('instant_confirmation', true)} 
+                        disabled={updating || !order.invoice_pdf_generated}
+                        size="sm"
+                      >
+                        <Send className="h-4 w-4 mr-2" />
+                        Rechnung erneut senden
+                      </Button>
+                      <Button 
+                        onClick={markAsPaid} 
+                        disabled={updating}
+                        className="bg-green-600 hover:bg-green-700 text-white"
+                        size="sm"
+                      >
+                        <DollarSign className="h-4 w-4 mr-2" />
+                        Als bezahlt markieren
+                      </Button>
+                    </>
                   )}
                   
                   {order.invoice_pdf_url && (

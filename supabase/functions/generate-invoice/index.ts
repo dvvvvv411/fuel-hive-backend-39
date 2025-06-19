@@ -269,8 +269,8 @@ const handler = async (req: Request): Promise<Response> => {
     const publicUrl = urlData.publicUrl;
     console.log('Public URL generated:', publicUrl);
 
-    // Update order with invoice information - DO NOT change status here
-    // Let the frontend handle status updates through the email sending flow
+    // Update order with invoice information AND set status to invoice_sent
+    console.log('Updating order with invoice data and setting status to invoice_sent');
     const { error: updateError } = await supabase
       .from('orders')
       .update({
@@ -279,6 +279,8 @@ const handler = async (req: Request): Promise<Response> => {
         invoice_pdf_generated: true,
         invoice_pdf_url: publicUrl,
         invoice_generation_date: new Date().toISOString(),
+        status: 'invoice_sent',
+        invoice_sent: true
       })
       .eq('id', order_id);
 
@@ -290,13 +292,14 @@ const handler = async (req: Request): Promise<Response> => {
       });
     }
 
-    console.log('Invoice generated successfully for order:', order_id);
+    console.log('Invoice generated successfully and order status updated to invoice_sent for order:', order_id);
 
     return new Response(JSON.stringify({
       invoice_number: invoiceNumber,
       invoice_url: publicUrl,
       generated_at: new Date().toISOString(),
       file_name: fileName,
+      status_updated: true,
     }), {
       status: 201,
       headers: { 'Content-Type': 'application/json', ...corsHeaders },
