@@ -256,8 +256,24 @@ export function OrdersTable() {
         console.log('Invoice email sent successfully:', emailData);
       }
 
-      // Refresh orders to get the updated status
-      await fetchOrders();
+      // Update local state directly instead of refetching all orders
+      setOrders(prevOrders => 
+        prevOrders.map(order => {
+          if (order.id === orderId) {
+            return {
+              ...order,
+              status: 'invoice_sent',
+              invoice_sent: true,
+              invoice_number: invoiceData.invoice_number,
+              invoice_pdf_generated: true,
+              invoice_pdf_url: invoiceData.invoice_url,
+              invoice_generation_date: invoiceData.generated_at || new Date().toISOString(),
+              invoice_date: new Date().toISOString().split('T')[0]
+            };
+          }
+          return order;
+        })
+      );
 
       const successMessage = emailError 
         ? 'Rechnung wurde erfolgreich generiert (E-Mail-Versand fehlgeschlagen)'
