@@ -1,6 +1,8 @@
+
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { Resend } from "npm:resend@2.0.0";
+import { getTranslations, detectLanguage, interpolateString } from './translations.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -13,20 +15,6 @@ interface EmailRequest {
   email_type: 'instant_confirmation' | 'manual_confirmation';
 }
 
-const translateProduct = (product: string): string => {
-  const translations: { [key: string]: string } = {
-    'heating_oil': 'Heizöl',
-    'diesel': 'Diesel',
-    'premium_heating_oil': 'Premium Heizöl',
-    'bio_heating_oil': 'Bio Heizöl',
-    'heating_oil_standard': 'Heizöl Standard',
-    'heating_oil_premium': 'Heizöl Premium',
-    'heating_oil_bio': 'Heizöl Bio',
-    'standard_heizoel': 'Standard Heizöl'
-  };
-  return translations[product] || product;
-};
-
 const formatIBAN = (iban: string): string => {
   // Remove any existing spaces and convert to uppercase
   const cleanIban = iban.replace(/\s/g, '').toUpperCase();
@@ -35,16 +23,21 @@ const formatIBAN = (iban: string): string => {
   return cleanIban.replace(/(.{4})/g, '$1 ').trim();
 };
 
-const generateConfirmationEmailTemplate = (order: any) => {
-  // Properly trim shop name to ensure no extra spaces
+const generateConfirmationEmailTemplate = (order: any, language: string = 'de') => {
+  const t = getTranslations(language);
   const shopName = (order.shops?.name || order.shops?.company_name || 'Heizöl-Service').trim();
   const accentColor = order.shops?.accent_color || '#2563eb';
+  const translatedProduct = t.products[order.product] || order.product;
   
-  const subject = `Bestellbestätigung ${order.order_number} - Ihre ${translateProduct(order.product)}-Bestellung bei ${shopName}`;
+  const subject = interpolateString(t.confirmationSubject, {
+    orderNumber: order.order_number,
+    product: translatedProduct,
+    shopName: shopName
+  });
 
   const htmlContent = `
     <!DOCTYPE html>
-    <html lang="de">
+    <html lang="${language}">
     <head>
       <meta charset="UTF-8">
       <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -73,7 +66,7 @@ const generateConfirmationEmailTemplate = (order: any) => {
                   </h1>
                   <div style="margin: 20px 0 0 0; padding: 12px 24px; background-color: rgba(255,255,255,0.2); border-radius: 50px; display: inline-block;">
                     <span style="color: #ffffff; font-size: 18px; font-weight: 600;">
-                      ✓ Bestellung bestätigt!
+                      ${t.orderConfirmed}
                     </span>
                   </div>
                 </td>
@@ -83,11 +76,11 @@ const generateConfirmationEmailTemplate = (order: any) => {
               <tr>
                 <td style="padding: 40px;">
                   <p style="margin: 0 0 24px 0; color: #374151; font-size: 18px; line-height: 1.6;">
-                    Liebe/r ${order.delivery_first_name} ${order.delivery_last_name},
+                    ${t.greeting(order.delivery_first_name, order.delivery_last_name)}
                   </p>
                   
                   <p style="margin: 0 0 32px 0; color: #374151; font-size: 16px; line-height: 1.6;">
-                    vielen Dank für Ihre Bestellung! Ihre ${translateProduct(order.product)}-Bestellung wurde erfolgreich aufgegeben und wird automatisch bearbeitet.
+                    ${interpolateString(t.thanks, { product: translatedProduct })}
                   </p>
 
                   <!-- Order Details Box -->
@@ -95,33 +88,33 @@ const generateConfirmationEmailTemplate = (order: any) => {
                     <tr>
                       <td style="padding: 30px;">
                         <h2 style="margin: 0 0 24px 0; color: ${accentColor}; font-size: 22px; font-weight: 700; text-align: center;">
-                          📋 Ihre Bestelldetails
+                          ${t.orderDetails}
                         </h2>
                         <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
                           <tr>
-                            <td style="padding: 8px 0; color: #6b7280; font-size: 15px; font-weight: 600; width: 40%;">Bestellnummer:</td>
+                            <td style="padding: 8px 0; color: #6b7280; font-size: 15px; font-weight: 600; width: 40%;">${t.orderNumber}</td>
                             <td style="padding: 8px 0; color: #111827; font-size: 15px; font-weight: 700;">${order.order_number}</td>
                           </tr>
                           <tr>
-                            <td style="padding: 8px 0; color: #6b7280; font-size: 15px; font-weight: 600;">Produkt:</td>
-                            <td style="padding: 8px 0; color: #111827; font-size: 15px; font-weight: 700;">${translateProduct(order.product)}</td>
+                            <td style="padding: 8px 0; color: #6b7280; font-size: 15px; font-weight: 600;">${t.product}</td>
+                            <td style="padding: 8px 0; color: #111827; font-size: 15px; font-weight: 700;">${translatedProduct}</td>
                           </tr>
                           <tr>
-                            <td style="padding: 8px 0; color: #6b7280; font-size: 15px; font-weight: 600;">Menge:</td>
-                            <td style="padding: 8px 0; color: #111827; font-size: 15px; font-weight: 700;">${order.liters} Liter</td>
+                            <td style="padding: 8px 0; color: #6b7280; font-size: 15px; font-weight: 600;">${t.quantity}</td>
+                            <td style="padding: 8px 0; color: #111827; font-size: 15px; font-weight: 700;">${order.liters} ${language === 'en' ? 'Liters' : 'Liter'}</td>
                           </tr>
                           <tr>
-                            <td style="padding: 8px 0; color: #6b7280; font-size: 15px; font-weight: 600;">Preis pro Liter:</td>
+                            <td style="padding: 8px 0; color: #6b7280; font-size: 15px; font-weight: 600;">${t.pricePerLiter}</td>
                             <td style="padding: 8px 0; color: #111827; font-size: 15px; font-weight: 700;">€${order.price_per_liter.toFixed(2)}</td>
                           </tr>
                           ${order.delivery_fee > 0 ? `
                           <tr>
-                            <td style="padding: 8px 0; color: #6b7280; font-size: 15px; font-weight: 600;">Liefergebühr:</td>
+                            <td style="padding: 8px 0; color: #6b7280; font-size: 15px; font-weight: 600;">${t.deliveryFee}</td>
                             <td style="padding: 8px 0; color: #111827; font-size: 15px; font-weight: 700;">€${order.delivery_fee.toFixed(2)}</td>
                           </tr>
                           ` : ''}
                           <tr style="border-top: 2px solid ${accentColor};">
-                            <td style="padding: 16px 0 8px 0; color: ${accentColor}; font-size: 18px; font-weight: 700;">Gesamtbetrag:</td>
+                            <td style="padding: 16px 0 8px 0; color: ${accentColor}; font-size: 18px; font-weight: 700;">${t.totalAmount}</td>
                             <td style="padding: 16px 0 8px 0; color: ${accentColor}; font-size: 18px; font-weight: 700;">€${order.total_amount.toFixed(2)}</td>
                           </tr>
                         </table>
@@ -134,7 +127,7 @@ const generateConfirmationEmailTemplate = (order: any) => {
                     <tr>
                       <td style="padding: 24px;">
                         <h3 style="margin: 0 0 16px 0; color: #111827; font-size: 18px; font-weight: 600;">
-                          🚚 Lieferadresse
+                          ${t.deliveryAddress}
                         </h3>
                         <div style="color: #374151; font-size: 15px; line-height: 1.6;">
                           <div style="font-weight: 600; margin-bottom: 4px;">
@@ -153,18 +146,18 @@ const generateConfirmationEmailTemplate = (order: any) => {
                     <tr>
                       <td style="padding: 24px; text-align: center;">
                         <div style="color: #047857; font-size: 16px; line-height: 1.6; font-weight: 600;">
-                          🎉 <strong>Status:</strong> Ihre Bestellung wird automatisch bearbeitet. Die Rechnung wird separat per E-Mail versendet.
+                          ${t.orderProcessedAutomatically}
                         </div>
                       </td>
                     </tr>
                   </table>
 
                   <p style="margin: 0 0 16px 0; color: #374151; font-size: 16px; line-height: 1.6;">
-                    Bei Fragen kontaktieren Sie uns gerne unter ${order.shops?.company_email}.
+                    ${language === 'de' ? 'Bei Fragen kontaktieren Sie uns gerne unter' : language === 'en' ? 'If you have any questions, please contact us at' : language === 'fr' ? 'Pour toute question, contactez-nous à' : language === 'it' ? 'Per domande, contattaci a' : language === 'es' ? 'Para preguntas, contáctanos en' : language === 'pl' ? 'W przypadku pytań skontaktuj się z nami pod adresem' : 'Voor vragen kunt u contact met ons opnemen via'} ${order.shops?.company_email}.
                   </p>
 
                   <p style="margin: 32px 0 0 0; color: #374151; font-size: 16px; line-height: 1.6; text-align: center;">
-                    Mit freundlichen Grüßen<br>
+                    ${t.regards}<br>
                     <strong style="color: ${accentColor};">${shopName}</strong>
                   </p>
                 </td>
@@ -180,7 +173,7 @@ const generateConfirmationEmailTemplate = (order: any) => {
                     <div>
                       ${order.shops?.company_address || ''} • ${order.shops?.company_postcode || ''} ${order.shops?.company_city || ''}
                     </div>
-                    ${order.shops?.vat_number ? `<div style="margin-top: 8px;">USt-IdNr: ${order.shops.vat_number}</div>` : ''}
+                    ${order.shops?.vat_number ? `<div style="margin-top: 8px;">${language === 'de' ? 'USt-IdNr:' : language === 'en' ? 'VAT ID:' : language === 'fr' ? 'N° TVA:' : language === 'it' ? 'P.IVA:' : language === 'es' ? 'CIF:' : language === 'pl' ? 'NIP:' : 'BTW-nr:'} ${order.shops.vat_number}</div>` : ''}
                   </div>
                 </td>
               </tr>
@@ -195,10 +188,11 @@ const generateConfirmationEmailTemplate = (order: any) => {
   return { subject, htmlContent };
 };
 
-const generateInvoiceEmailTemplate = (order: any, bankData: any) => {
-  // Use shop name specifically, not company name
+const generateInvoiceEmailTemplate = (order: any, bankData: any, language: string = 'de') => {
+  const t = getTranslations(language);
   const shopName = (order.shops?.name || 'Heizöl-Service').trim();
   const accentColor = order.shops?.accent_color || '#2563eb';
+  const translatedProduct = t.products[order.product] || order.product;
   
   // Set variables correctly - invoiceNumber is the order number, recipientName depends on use_anyname
   const invoiceNumber = order.order_number;
@@ -211,13 +205,15 @@ const generateInvoiceEmailTemplate = (order: any, bankData: any) => {
   console.log('- recipientName:', recipientName);
   console.log('- use_anyname:', bankData?.use_anyname);
   console.log('- account_holder:', bankData?.account_holder);
+  console.log('- language:', language);
   
-  // Simplified subject line as requested
-  const subject = `Ihre Rechnung - Heizöl-Bestellung bei ${shopName}`;
+  const subject = interpolateString(t.invoiceSubject, {
+    shopName: shopName
+  });
 
   const htmlContent = `
     <!DOCTYPE html>
-    <html lang="de">
+    <html lang="${language}">
     <head>
       <meta charset="UTF-8">
       <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -246,7 +242,7 @@ const generateInvoiceEmailTemplate = (order: any, bankData: any) => {
                   </h1>
                   <div style="margin: 20px 0 0 0; padding: 12px 24px; background-color: rgba(255,255,255,0.2); border-radius: 50px; display: inline-block;">
                     <span style="color: #ffffff; font-size: 18px; font-weight: 600;">
-                      📄 Ihre Rechnung
+                      ${t.invoiceAttached}
                     </span>
                   </div>
                 </td>
@@ -256,11 +252,11 @@ const generateInvoiceEmailTemplate = (order: any, bankData: any) => {
               <tr>
                 <td style="padding: 40px;">
                   <p style="margin: 0 0 24px 0; color: #374151; font-size: 18px; line-height: 1.6;">
-                    Liebe/r ${order.delivery_first_name} ${order.delivery_last_name},
+                    ${t.greeting(order.delivery_first_name, order.delivery_last_name)}
                   </p>
                   
                   <p style="margin: 0 0 32px 0; color: #374151; font-size: 16px; line-height: 1.6;">
-                    anbei erhalten Sie die Rechnung für Ihre ${translateProduct(order.product)}-Bestellung. Die Rechnung finden Sie als PDF-Anhang in dieser E-Mail.
+                    ${interpolateString(t.invoiceInPdf, { product: translatedProduct })}
                   </p>
 
                   <!-- Payment Information Box -->
@@ -269,19 +265,19 @@ const generateInvoiceEmailTemplate = (order: any, bankData: any) => {
                     <tr>
                       <td style="padding: 30px;">
                         <h3 style="margin: 0 0 20px 0; color: #3b82f6; font-size: 20px; font-weight: 700; text-align: center;">
-                          💳 Zahlungsinformationen
+                          ${t.paymentInfo}
                         </h3>
                         <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
                           <tr>
-                            <td style="padding: 8px 0; color: #1e40af; font-size: 15px; font-weight: 600; width: 35%;">Rechnungsbetrag:</td>
+                            <td style="padding: 8px 0; color: #1e40af; font-size: 15px; font-weight: 600; width: 35%;">${t.invoiceAmount}</td>
                             <td style="padding: 8px 0; color: #1e3a8a; font-size: 18px; font-weight: 700;">€${order.total_amount.toFixed(2)}</td>
                           </tr>
                           <tr>
-                            <td style="padding: 8px 0; color: #1e40af; font-size: 15px; font-weight: 600;">Empfänger:</td>
+                            <td style="padding: 8px 0; color: #1e40af; font-size: 15px; font-weight: 600;">${t.recipient}</td>
                             <td style="padding: 8px 0; color: #1e3a8a; font-size: 15px; font-weight: 700;">${recipientName}</td>
                           </tr>
                           <tr>
-                            <td style="padding: 8px 0; color: #1e40af; font-size: 15px; font-weight: 600;">Bank:</td>
+                            <td style="padding: 8px 0; color: #1e40af; font-size: 15px; font-weight: 600;">${t.bank}</td>
                             <td style="padding: 8px 0; color: #1e3a8a; font-size: 15px; font-weight: 700;">${bankData.bank_name}</td>
                           </tr>
                           <tr>
@@ -295,13 +291,13 @@ const generateInvoiceEmailTemplate = (order: any, bankData: any) => {
                           </tr>
                           ` : ''}
                           <tr>
-                            <td style="padding: 8px 0; color: #1e40af; font-size: 15px; font-weight: 600;">Verwendungszweck:</td>
+                            <td style="padding: 8px 0; color: #1e40af; font-size: 15px; font-weight: 600;">${t.paymentReference}</td>
                             <td style="padding: 8px 0; color: #1e3a8a; font-size: 15px; font-weight: 700;">${invoiceNumber}</td>
                           </tr>
                         </table>
                         <div style="margin-top: 16px; padding: 16px; background-color: rgba(59, 130, 246, 0.1); border-radius: 8px; border-left: 4px solid #3b82f6;">
                           <p style="margin: 0; color: #1e40af; font-size: 14px; font-weight: 600;">
-                            💡 Bitte verwenden Sie unbedingt die Rechnungsnummer <strong>"${invoiceNumber}"</strong> als Verwendungszweck und den Empfängernamen <strong>"${recipientName}"</strong> bei der Überweisung.
+                            ${t.paymentNote(invoiceNumber, recipientName)}
                           </p>
                         </div>
                       </td>
@@ -314,27 +310,27 @@ const generateInvoiceEmailTemplate = (order: any, bankData: any) => {
                     <tr>
                       <td style="padding: 30px;">
                         <h2 style="margin: 0 0 24px 0; color: ${accentColor}; font-size: 22px; font-weight: 700; text-align: center;">
-                          📋 Rechnungsdetails
+                          ${t.invoiceDetails}
                         </h2>
                         <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
                           <tr>
-                            <td style="padding: 8px 0; color: #6b7280; font-size: 15px; font-weight: 600; width: 40%;">Bestellnummer:</td>
+                            <td style="padding: 8px 0; color: #6b7280; font-size: 15px; font-weight: 600; width: 40%;">${t.orderNumber}</td>
                             <td style="padding: 8px 0; color: #111827; font-size: 15px; font-weight: 700;">${order.order_number}</td>
                           </tr>
                           <tr>
-                            <td style="padding: 8px 0; color: #6b7280; font-size: 15px; font-weight: 600;">Rechnungsdatum:</td>
-                            <td style="padding: 8px 0; color: #111827; font-size: 15px; font-weight: 700;">${new Date(order.invoice_date || order.created_at).toLocaleDateString('de-DE')}</td>
+                            <td style="padding: 8px 0; color: #6b7280; font-size: 15px; font-weight: 600;">${t.invoiceDate}</td>
+                            <td style="padding: 8px 0; color: #111827; font-size: 15px; font-weight: 700;">${new Date(order.invoice_date || order.created_at).toLocaleDateString(language === 'de' ? 'de-DE' : language === 'en' ? 'en-US' : language === 'fr' ? 'fr-FR' : language === 'it' ? 'it-IT' : language === 'es' ? 'es-ES' : language === 'pl' ? 'pl-PL' : 'nl-NL')}</td>
                           </tr>
                           <tr>
-                            <td style="padding: 8px 0; color: #6b7280; font-size: 15px; font-weight: 600;">Produkt:</td>
-                            <td style="padding: 8px 0; color: #111827; font-size: 15px; font-weight: 700;">${translateProduct(order.product)}</td>
+                            <td style="padding: 8px 0; color: #6b7280; font-size: 15px; font-weight: 600;">${t.product}</td>
+                            <td style="padding: 8px 0; color: #111827; font-size: 15px; font-weight: 700;">${translatedProduct}</td>
                           </tr>
                           <tr>
-                            <td style="padding: 8px 0; color: #6b7280; font-size: 15px; font-weight: 600;">Menge:</td>
-                            <td style="padding: 8px 0; color: #111827; font-size: 15px; font-weight: 700;">${order.liters} Liter</td>
+                            <td style="padding: 8px 0; color: #6b7280; font-size: 15px; font-weight: 600;">${t.quantity}</td>
+                            <td style="padding: 8px 0; color: #111827; font-size: 15px; font-weight: 700;">${order.liters} ${language === 'en' ? 'Liters' : 'Liter'}</td>
                           </tr>
                           <tr style="border-top: 2px solid ${accentColor};">
-                            <td style="padding: 16px 0 8px 0; color: ${accentColor}; font-size: 18px; font-weight: 700;">Rechnungsbetrag:</td>
+                            <td style="padding: 16px 0 8px 0; color: ${accentColor}; font-size: 18px; font-weight: 700;">${t.invoiceAmount}</td>
                             <td style="padding: 16px 0 8px 0; color: ${accentColor}; font-size: 18px; font-weight: 700;">€${order.total_amount.toFixed(2)}</td>
                           </tr>
                         </table>
@@ -347,18 +343,18 @@ const generateInvoiceEmailTemplate = (order: any, bankData: any) => {
                     <tr>
                       <td style="padding: 24px; text-align: center;">
                         <div style="color: #92400e; font-size: 16px; line-height: 1.6; font-weight: 600;">
-                          📎 Die vollständige Rechnung finden Sie als PDF-Datei im Anhang dieser E-Mail.
+                          ${t.pdfAttachmentNotice}
                         </div>
                       </td>
                     </tr>
                   </table>
 
                   <p style="margin: 0 0 16px 0; color: #374151; font-size: 16px; line-height: 1.6;">
-                    Bei Fragen zu Ihrer Rechnung kontaktieren Sie uns gerne unter ${order.shops?.company_email}.
+                    ${language === 'de' ? 'Bei Fragen zu Ihrer Rechnung kontaktieren Sie uns gerne unter' : language === 'en' ? 'If you have any questions about your invoice, please contact us at' : language === 'fr' ? 'Pour toute question concernant votre facture, contactez-nous à' : language === 'it' ? 'Per domande sulla tua fattura, contattaci a' : language === 'es' ? 'Para preguntas sobre tu factura, contáctanos en' : language === 'pl' ? 'W przypadku pytań dotyczących faktury skontaktuj się z nami pod adresem' : 'Voor vragen over uw factuur kunt u contact met ons opnemen via'} ${order.shops?.company_email}.
                   </p>
 
                   <p style="margin: 32px 0 0 0; color: #374151; font-size: 16px; line-height: 1.6; text-align: center;">
-                    Vielen Dank für Ihr Vertrauen!<br>
+                    ${t.thankYouTrust}<br>
                     <strong style="color: ${accentColor};">${shopName}</strong>
                   </p>
                 </td>
@@ -374,7 +370,7 @@ const generateInvoiceEmailTemplate = (order: any, bankData: any) => {
                     <div>
                       ${order.shops?.company_address || ''} • ${order.shops?.company_postcode || ''} ${order.shops?.company_city || ''}
                     </div>
-                    ${order.shops?.vat_number ? `<div style="margin-top: 8px;">USt-IdNr: ${order.shops.vat_number}</div>` : ''}
+                    ${order.shops?.vat_number ? `<div style="margin-top: 8px;">${language === 'de' ? 'USt-IdNr:' : language === 'en' ? 'VAT ID:' : language === 'fr' ? 'N° TVA:' : language === 'it' ? 'P.IVA:' : language === 'es' ? 'CIF:' : language === 'pl' ? 'NIP:' : 'BTW-nr:'} ${order.shops.vat_number}</div>` : ''}
                   </div>
                 </td>
               </tr>
@@ -427,6 +423,8 @@ const handler = async (req: Request): Promise<Response> => {
           accent_color,
           support_phone,
           bank_account_id,
+          country_code,
+          language,
           resend_configs (
             resend_api_key,
             from_email,
@@ -453,6 +451,10 @@ const handler = async (req: Request): Promise<Response> => {
         headers: { 'Content-Type': 'application/json', ...corsHeaders },
       });
     }
+
+    // Detect language for the email
+    const language = detectLanguage(order);
+    console.log('Detected language:', language);
 
     // Get bank data for invoice emails
     let bankData = null;
@@ -481,8 +483,8 @@ const handler = async (req: Request): Promise<Response> => {
 
     // Generate email template based on type
     const { subject, htmlContent } = include_invoice
-      ? generateInvoiceEmailTemplate(order, bankData)
-      : generateConfirmationEmailTemplate(order);
+      ? generateInvoiceEmailTemplate(order, bankData, language)
+      : generateConfirmationEmailTemplate(order, language);
 
     // Prepare email payload
     const emailPayload: any = {
@@ -509,7 +511,7 @@ const handler = async (req: Request): Promise<Response> => {
           const base64 = btoa(String.fromCharCode(...new Uint8Array(arrayBuffer)));
 
           emailPayload.attachments = [{
-            filename: `Rechnung-${order.order_number}.pdf`,
+            filename: `${language === 'de' ? 'Rechnung' : language === 'en' ? 'Invoice' : language === 'fr' ? 'Facture' : language === 'it' ? 'Fattura' : language === 'es' ? 'Factura' : language === 'pl' ? 'Faktura' : 'Factuur'}-${order.order_number}.pdf`,
             content: base64,
             content_type: 'application/pdf',
           }];
@@ -525,7 +527,7 @@ const handler = async (req: Request): Promise<Response> => {
     }
 
     // Send email
-    console.log('Sending email to:', order.customer_email);
+    console.log('Sending email to:', order.customer_email, 'in language:', language);
     const emailResponse = await resend.emails.send(emailPayload);
 
     if (emailResponse.error) {
@@ -540,6 +542,7 @@ const handler = async (req: Request): Promise<Response> => {
       email_id: emailResponse.data?.id,
       email_type: include_invoice ? 'invoice' : 'confirmation',
       sent_to: order.customer_email,
+      language: language,
       attachment_included: !!emailPayload.attachments,
       bank_data_included: !!bankData,
       sent_at: new Date().toISOString()
