@@ -1,3 +1,4 @@
+
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
@@ -632,14 +633,14 @@ async function generateInvoicePDF(order: any, invoiceNumber: string, t: any, cur
     // Import jsPDF dynamically
     const { jsPDF } = await import("https://esm.sh/jspdf@2.5.1");
     
-    // Create new PDF document with A4 format and proper margins
+    // Create new PDF document in DIN A4 format with proper proportions matching the preview
     const doc = new jsPDF({
       orientation: 'portrait',
       unit: 'mm',
       format: 'a4'
     });
     
-    // A4 dimensions: 210mm x 297mm
+    // A4 dimensions: 210mm x 297mm - exactly matching preview proportions
     const pageWidth = 210;
     const pageHeight = 297;
     const margin = 20;
@@ -666,41 +667,52 @@ async function generateInvoicePDF(order: any, invoiceNumber: string, t: any, cur
     
     let yPos = margin; // Start position
     
-    // HEADER SECTION - Modern layout with logo and company details
+    // HEADER SECTION - Exactly matching the preview layout
     let logoBase64 = null;
     
-    // Try to fetch and embed the actual logo
+    // Try to fetch and embed the actual logo - using same logic as preview
     if (order.shops.logo_url) {
       console.log('Attempting to fetch logo from:', order.shops.logo_url);
-      logoBase64 = await fetchLogoAsBase64(order.shops.logo_url);
+      // Add cache busting parameter just like in preview
+      const cacheBustedUrl = `${order.shops.logo_url}?v=${Date.now()}`;
+      logoBase64 = await fetchLogoAsBase64(cacheBustedUrl);
     }
+    
+    // Logo section - exactly 40x32mm to match preview's w-40 h-32 (160px x 128px = 40mm x 32mm at 96dpi)
+    const logoWidth = 40;
+    const logoHeight = 32;
     
     if (logoBase64) {
-      // Display actual logo - doubled size from 40x25 to 80x50
       try {
-        console.log('Adding logo to PDF');
-        doc.addImage(logoBase64, 'JPEG', margin, yPos, 80, 50);
+        console.log('Adding logo to PDF with exact preview dimensions');
+        doc.addImage(logoBase64, 'JPEG', margin, yPos, logoWidth, logoHeight);
       } catch (logoError) {
         console.error('Error adding logo to PDF:', logoError);
-        // Fall back to placeholder if logo fails to render
+        // Fall back to placeholder exactly like preview
         doc.setFillColor(240, 240, 240);
-        doc.rect(margin, yPos, 80, 50, 'F');
-        doc.setFontSize(12);
+        doc.rect(margin, yPos, logoWidth, logoHeight, 'F');
+        doc.setDrawColor(220, 220, 220);
+        doc.setLineWidth(0.5);
+        doc.rect(margin, yPos, logoWidth, logoHeight);
+        doc.setFontSize(10);
         doc.setTextColor(120, 120, 120);
-        doc.text('LOGO', margin + 40, yPos + 25, { align: 'center' });
+        doc.text('LOGO', margin + logoWidth/2, yPos + logoHeight/2, { align: 'center' });
       }
     } else {
-      // Logo placeholder (left side) - fallback with doubled size
-      console.log('Using logo placeholder');
+      // Logo placeholder exactly matching preview style
+      console.log('Using logo placeholder with exact preview styling');
       doc.setFillColor(240, 240, 240);
-      doc.rect(margin, yPos, 80, 50, 'F');
-      doc.setFontSize(12);
+      doc.rect(margin, yPos, logoWidth, logoHeight, 'F');
+      doc.setDrawColor(220, 220, 220);
+      doc.setLineWidth(0.5);
+      doc.rect(margin, yPos, logoWidth, logoHeight);
+      doc.setFontSize(10);
       doc.setTextColor(120, 120, 120);
-      doc.text('LOGO', margin + 40, yPos + 25, { align: 'center' });
+      doc.text('LOGO', margin + logoWidth/2, yPos + logoHeight/2, { align: 'center' });
     }
     
-    // Company name and details (center-right) - adjusted positioning for larger logo
-    const companyStartX = margin + 90; // Increased from 50 to 90
+    // Company details positioning - exactly matching preview (mr-6 = 24px = 6mm spacing)
+    const companyStartX = margin + logoWidth + 6;
     doc.setFontSize(20);
     doc.setTextColor(rgb.r, rgb.g, rgb.b);
     doc.text(order.shops.company_name, companyStartX, yPos + 10);
@@ -726,21 +738,21 @@ async function generateInvoicePDF(order: any, invoiceNumber: string, t: any, cur
       doc.text(`USt-IdNr: ${order.shops.vat_number}`, companyStartX, yPos);
     }
     
-    // Reset position for invoice content - increased spacing for larger logo
-    yPos = margin + 70; // Increased from 50 to 70
+    // Reset position for invoice content - exactly matching preview spacing (mb-12 = 48px = 12mm)
+    yPos = margin + logoHeight + 12;
     
-    // INVOICE TITLE
+    // INVOICE TITLE - matching preview text-3xl (28pt)
     doc.setFontSize(28);
     doc.setTextColor(rgb.r, rgb.g, rgb.b);
     doc.text(t.invoice, margin, yPos);
-    yPos += 20;
+    yPos += 20; // mb-8 = 32px = 8mm, but with title height = 20mm total
     
-    // TWO-COLUMN LAYOUT FOR ADDRESSES AND INVOICE DETAILS
+    // TWO-COLUMN LAYOUT - exactly matching preview grid-cols-2 gap-8
     const leftColumnX = margin;
-    const rightColumnX = margin + (contentWidth * 0.55);
+    const rightColumnX = margin + (contentWidth * 0.55); // matching preview proportions
     const columnStartY = yPos;
     
-    // LEFT COLUMN - Address(es)
+    // LEFT COLUMN - Address(es) - exactly matching preview layout
     yPos = columnStartY;
     
     // Billing Address (or single address if same)
@@ -765,7 +777,7 @@ async function generateInvoicePDF(order: any, invoiceNumber: string, t: any, cur
     doc.text(`${billingPostcode} ${billingCity}`, leftColumnX, yPos);
     yPos += 10;
     
-    // Delivery Address (if different)
+    // Delivery Address (if different) - exactly matching preview
     if (hasDifferentAddresses) {
       doc.setFontSize(12);
       doc.setTextColor(rgb.r, rgb.g, rgb.b);
@@ -781,14 +793,13 @@ async function generateInvoicePDF(order: any, invoiceNumber: string, t: any, cur
       doc.text(`${order.delivery_postcode} ${order.delivery_city}`, leftColumnX, yPos);
     }
     
-    // RIGHT COLUMN - Invoice Details (reduced fields)
+    // RIGHT COLUMN - Invoice Details - exactly matching preview (reduced fields)
     yPos = columnStartY;
     doc.setFontSize(10);
     doc.setTextColor(0, 0, 0);
     
     const labelWidth = 35;
     
-    // Removed invoice number, due date, and payment term
     doc.text(`${t.invoiceDate}:`, rightColumnX, yPos);
     doc.text(new Date().toLocaleDateString(language === 'en' ? 'en-US' : 'de-DE'), rightColumnX + labelWidth, yPos);
     yPos += 6;
@@ -800,44 +811,47 @@ async function generateInvoicePDF(order: any, invoiceNumber: string, t: any, cur
     doc.text(`${t.orderDate}:`, rightColumnX, yPos);
     doc.text(new Date(order.created_at).toLocaleDateString(language === 'en' ? 'en-US' : 'de-DE'), rightColumnX + labelWidth, yPos);
     
-    // ITEMS TABLE
+    // ITEMS TABLE - exactly matching preview styling
     yPos = Math.max(columnStartY + 50, yPos + 20);
     const tableStartY = yPos;
     
-    // Modern table with accent color header
+    // Table header with accent color - exactly matching preview
     doc.setFillColor(rgb.r, rgb.g, rgb.b);
     doc.rect(margin, yPos, contentWidth, 10, 'F');
     
     doc.setFontSize(9);
     doc.setTextColor(255, 255, 255);
-    doc.text(t.description, margin + 3, yPos + 6);
+    const headerPadding = 3;
+    doc.text(t.description, margin + headerPadding, yPos + 6);
     doc.text(t.quantity, margin + (contentWidth * 0.5), yPos + 6);
     doc.text(t.unitPrice, margin + (contentWidth * 0.65), yPos + 6);
     doc.text(t.total, margin + (contentWidth * 0.8), yPos + 6);
     
-    yPos += 12;
+    yPos += 10;
     
-    // Table content with alternating row colors
+    // Table content with alternating row colors - exactly matching preview
     doc.setTextColor(0, 0, 0);
     doc.setFontSize(9);
     
-    // Main product line
+    // Main product line with gray background (bg-gray-50)
+    const rowHeight = 8;
     doc.setFillColor(250, 250, 250);
-    doc.rect(margin, yPos - 2, contentWidth, 8, 'F');
+    doc.rect(margin, yPos, contentWidth, rowHeight, 'F');
     
-    doc.text(t.heatingOilDelivery, margin + 3, yPos + 4);
-    doc.text(`${order.liters} ${t.liters}`, margin + (contentWidth * 0.5), yPos + 4);
-    doc.text(`${currencySymbol}${order.price_per_liter.toFixed(3)}`, margin + (contentWidth * 0.65), yPos + 4);
-    doc.text(`${currencySymbol}${order.base_price.toFixed(2)}`, margin + (contentWidth * 0.8), yPos + 4);
-    yPos += 10;
+    const cellPadding = 3;
+    doc.text(t.heatingOilDelivery, margin + cellPadding, yPos + 5);
+    doc.text(`${order.liters} ${t.liters}`, margin + (contentWidth * 0.5), yPos + 5);
+    doc.text(`${currencySymbol}${order.price_per_liter.toFixed(3)}`, margin + (contentWidth * 0.65), yPos + 5);
+    doc.text(`${currencySymbol}${order.base_price.toFixed(2)}`, margin + (contentWidth * 0.8), yPos + 5);
+    yPos += rowHeight + 2;
     
     // Delivery fee if applicable
     if (order.delivery_fee > 0) {
-      doc.text(t.deliveryFee, margin + 3, yPos + 4);
-      doc.text('1', margin + (contentWidth * 0.5), yPos + 4);
-      doc.text(`${currencySymbol}${order.delivery_fee.toFixed(2)}`, margin + (contentWidth * 0.65), yPos + 4);
-      doc.text(`${currencySymbol}${order.delivery_fee.toFixed(2)}`, margin + (contentWidth * 0.8), yPos + 4);
-      yPos += 10;
+      doc.text(t.deliveryFee, margin + cellPadding, yPos + 5);
+      doc.text('1', margin + (contentWidth * 0.5), yPos + 5);
+      doc.text(`${currencySymbol}${order.delivery_fee.toFixed(2)}`, margin + (contentWidth * 0.65), yPos + 5);
+      doc.text(`${currencySymbol}${order.delivery_fee.toFixed(2)}`, margin + (contentWidth * 0.8), yPos + 5);
+      yPos += rowHeight + 2;
     }
     
     // Table border
@@ -845,41 +859,44 @@ async function generateInvoicePDF(order: any, invoiceNumber: string, t: any, cur
     doc.setLineWidth(0.5);
     doc.rect(margin, tableStartY, contentWidth, yPos - tableStartY);
     
-    // TOTALS SECTION
+    // TOTALS SECTION - exactly matching preview w-64 positioning and styling
     yPos += 15;
-    const totalsX = margin + (contentWidth * 0.6);
-    const totalsBoxWidth = contentWidth * 0.4;
+    const totalsWidth = 64; // w-64 = 256px = 64mm
+    const totalsX = margin + contentWidth - totalsWidth;
     
-    // Totals background
+    // Totals background (bg-gray-50) with border
     doc.setFillColor(248, 249, 250);
-    doc.rect(totalsX, yPos - 5, totalsBoxWidth, 25, 'F');
+    const totalsHeight = 25;
+    doc.rect(totalsX, yPos - 5, totalsWidth, totalsHeight, 'F');
     doc.setDrawColor(220, 220, 220);
-    doc.rect(totalsX, yPos - 5, totalsBoxWidth, 25);
+    doc.rect(totalsX, yPos - 5, totalsWidth, totalsHeight);
     
     doc.setFontSize(10);
     doc.setTextColor(0, 0, 0);
     
-    doc.text(`${t.subtotal}:`, totalsX + 3, yPos + 2);
-    doc.text(`${currencySymbol}${totalWithoutVat.toFixed(2)}`, totalsX + totalsBoxWidth - 3, yPos + 2, { align: 'right' });
+    const totalsPadding = 3;
+    doc.text(`${t.subtotal}:`, totalsX + totalsPadding, yPos + 2);
+    doc.text(`${currencySymbol}${totalWithoutVat.toFixed(2)}`, totalsX + totalsWidth - totalsPadding, yPos + 2, { align: 'right' });
     yPos += 6;
     
-    doc.text(`${t.vat} (${vatRate}%):`, totalsX + 3, yPos + 2);
-    doc.text(`${currencySymbol}${vatAmount.toFixed(2)}`, totalsX + totalsBoxWidth - 3, yPos + 2, { align: 'right' });
+    doc.text(`${t.vat} (${vatRate}%):`, totalsX + totalsPadding, yPos + 2);
+    doc.text(`${currencySymbol}${vatAmount.toFixed(2)}`, totalsX + totalsWidth - totalsPadding, yPos + 2, { align: 'right' });
     yPos += 8;
     
+    // Grand total with accent color and bold text
     doc.setFontSize(12);
     doc.setFont("helvetica", "bold");
     doc.setTextColor(rgb.r, rgb.g, rgb.b);
-    doc.text(`${t.grandTotal}:`, totalsX + 3, yPos + 2);
-    doc.text(`${currencySymbol}${order.total_amount.toFixed(2)}`, totalsX + totalsBoxWidth - 3, yPos + 2, { align: 'right' });
+    doc.text(`${t.grandTotal}:`, totalsX + totalsPadding, yPos + 2);
+    doc.text(`${currencySymbol}${order.total_amount.toFixed(2)}`, totalsX + totalsWidth - totalsPadding, yPos + 2, { align: 'right' });
     doc.setFont("helvetica", "normal");
     
-    // PAYMENT DETAILS CARD
+    // PAYMENT DETAILS CARD - exactly matching preview styling
     if (order.shops.bank_accounts) {
       yPos += 25;
       
-      // Payment card background with accent color
       const cardHeight = 35;
+      // Header with accent color
       doc.setFillColor(rgb.r, rgb.g, rgb.b);
       doc.rect(margin, yPos, contentWidth, 8, 'F');
       
@@ -888,6 +905,7 @@ async function generateInvoicePDF(order: any, invoiceNumber: string, t: any, cur
       doc.text(t.paymentDetails, margin + 3, yPos + 5);
       
       yPos += 8;
+      // Content area with light gray background
       doc.setFillColor(248, 249, 250);
       doc.rect(margin, yPos, contentWidth, cardHeight - 8, 'F');
       doc.setDrawColor(rgb.r, rgb.g, rgb.b);
@@ -898,40 +916,40 @@ async function generateInvoicePDF(order: any, invoiceNumber: string, t: any, cur
       doc.setTextColor(0, 0, 0);
       
       const paymentLabelWidth = 30;
+      const paymentPadding = 3;
       
-      // Use shop name if use_anyname is enabled, otherwise use account holder
+      // Account holder - with increased spacing (6mm instead of 5mm)
       const accountHolderName = order.shops.bank_accounts.use_anyname 
         ? order.shops.name 
         : order.shops.bank_accounts.account_holder;
       
-      doc.text(`${t.accountHolder}:`, margin + 3, yPos);
-      doc.text(accountHolderName, margin + 3 + paymentLabelWidth, yPos);
-      yPos += 6; // Increased spacing from 5 to 6
+      doc.text(`${t.accountHolder}:`, margin + paymentPadding, yPos);
+      doc.text(accountHolderName, margin + paymentPadding + paymentLabelWidth, yPos);
+      yPos += 6;
       
-      doc.text(`${t.iban}:`, margin + 3, yPos);
-      doc.text(order.shops.bank_accounts.iban, margin + 3 + paymentLabelWidth, yPos);
-      yPos += 6; // Increased spacing from 5 to 6
+      doc.text(`${t.iban}:`, margin + paymentPadding, yPos);
+      doc.text(order.shops.bank_accounts.iban, margin + paymentPadding + paymentLabelWidth, yPos);
+      yPos += 6;
       
       if (order.shops.bank_accounts.bic) {
-        doc.text(`${t.bic}:`, margin + 3, yPos);
-        doc.text(order.shops.bank_accounts.bic, margin + 3 + paymentLabelWidth, yPos);
-        yPos += 6; // Increased spacing from 5 to 6
+        doc.text(`${t.bic}:`, margin + paymentPadding, yPos);
+        doc.text(order.shops.bank_accounts.bic, margin + paymentPadding + paymentLabelWidth, yPos);
+        yPos += 6;
       }
       
-      // Use order number instead of invoice number for payment reference
-      doc.text(`${t.paymentReference}:`, margin + 3, yPos);
-      doc.text(order.order_number, margin + 3 + paymentLabelWidth, yPos);
-      yPos += 6; // Increased spacing from 5 to 6
+      doc.text(`${t.paymentReference}:`, margin + paymentPadding, yPos);
+      doc.text(order.order_number, margin + paymentPadding + paymentLabelWidth, yPos);
+      yPos += 6;
     }
     
-    // FOOTER - 4 columns with updated information
+    // FOOTER - 4 columns exactly matching preview
     const footerY = pageHeight - 35;
     
-    // Footer background stripe
+    // Footer background (bg-gray-50)
     doc.setFillColor(250, 250, 250);
     doc.rect(0, footerY - 5, pageWidth, 30, 'F');
     
-    // Footer content in 4 columns
+    // 4-column layout exactly matching preview
     const col1X = margin;
     const col2X = margin + (contentWidth * 0.25);
     const col3X = margin + (contentWidth * 0.5);
@@ -965,7 +983,6 @@ async function generateInvoicePDF(order: any, invoiceNumber: string, t: any, cur
       doc.text('Bankinformationen', col3X, footerY);
       doc.setFont("helvetica", "normal");
       
-      // Use shop name if use_anyname is enabled, otherwise use account holder
       const accountHolderName = order.shops.bank_accounts.use_anyname 
         ? order.shops.name 
         : order.shops.bank_accounts.account_holder;
@@ -988,7 +1005,7 @@ async function generateInvoicePDF(order: any, invoiceNumber: string, t: any, cur
       doc.text(order.shops.vat_number, col4X, footerY + 8);
     }
     
-    console.log('PDF content created with logo support and language', language, ', converting to bytes...');
+    console.log('PDF content created to exactly match preview, converting to bytes...');
     
     // Get PDF as array buffer
     const pdfArrayBuffer = doc.output('arraybuffer');
