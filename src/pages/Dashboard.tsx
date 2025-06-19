@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
@@ -17,6 +16,7 @@ import { BankAccountPerformance } from '@/components/BankAccountPerformance';
 import { PaymentMethodAnalysis } from '@/components/PaymentMethodAnalysis';
 import { StatusPipelineAnalysis } from '@/components/StatusPipelineAnalysis';
 import { RevenueCharts } from '@/components/RevenueCharts';
+import { DashboardStats } from '@/components/DashboardStats';
 
 const Dashboard = () => {
   const [activeTab, setActiveTab] = useState('overview');
