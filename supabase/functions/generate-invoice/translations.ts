@@ -28,6 +28,12 @@ export interface InvoiceTranslations {
   deliveryFee: string;
   dueDays: string;
   currency: string;
+  phone: string;
+  email: string;
+  website: string;
+  paymentTerm: string;
+  orderNumber: string;
+  orderDate: string;
 }
 
 export const translations: Record<string, InvoiceTranslations> = {
@@ -36,6 +42,8 @@ export const translations: Record<string, InvoiceTranslations> = {
     invoiceNumber: 'Rechnungsnummer',
     invoiceDate: 'Rechnungsdatum',
     dueDate: 'Fälligkeitsdatum',
+    orderNumber: 'Bestellnummer',
+    orderDate: 'Bestelldatum',
     customerDetails: 'Kundendetails',
     companyDetails: 'Firmendetails',
     description: 'Beschreibung',
@@ -59,13 +67,19 @@ export const translations: Record<string, InvoiceTranslations> = {
     pricePerLiter: 'Preis pro Liter',
     deliveryFee: 'Liefergebühr',
     dueDays: '14 Tage',
-    currency: '€'
+    currency: '€',
+    phone: 'Telefon',
+    email: 'E-Mail',
+    website: 'Website',
+    paymentTerm: 'Zahlungsziel'
   },
   en: {
     invoice: 'Invoice',
     invoiceNumber: 'Invoice Number',
     invoiceDate: 'Invoice Date',
     dueDate: 'Due Date',
+    orderNumber: 'Order Number',
+    orderDate: 'Order Date',
     customerDetails: 'Customer Details',
     companyDetails: 'Company Details',
     description: 'Description',
@@ -89,13 +103,19 @@ export const translations: Record<string, InvoiceTranslations> = {
     pricePerLiter: 'Price per Liter',
     deliveryFee: 'Delivery Fee',
     dueDays: '14 days',
-    currency: '€'
+    currency: '€',
+    phone: 'Phone',
+    email: 'Email',
+    website: 'Website',
+    paymentTerm: 'Payment Term'
   },
   fr: {
     invoice: 'Facture',
     invoiceNumber: 'Numéro de facture',
     invoiceDate: 'Date de facture',
     dueDate: 'Date d\'échéance',
+    orderNumber: 'Numéro de commande',
+    orderDate: 'Date de commande',
     customerDetails: 'Détails du client',
     companyDetails: 'Détails de l\'entreprise',
     description: 'Description',
@@ -119,13 +139,19 @@ export const translations: Record<string, InvoiceTranslations> = {
     pricePerLiter: 'Prix par litre',
     deliveryFee: 'Frais de livraison',
     dueDays: '14 jours',
-    currency: '€'
+    currency: '€',
+    phone: 'Téléphone',
+    email: 'Email',
+    website: 'Site web',
+    paymentTerm: 'Délai de paiement'
   },
   es: {
     invoice: 'Factura',
     invoiceNumber: 'Número de factura',
     invoiceDate: 'Fecha de factura',
     dueDate: 'Fecha de vencimiento',
+    orderNumber: 'Número de pedido',
+    orderDate: 'Fecha de pedido',
     customerDetails: 'Detalles del cliente',
     companyDetails: 'Detalles de la empresa',
     description: 'Descripción',
@@ -149,13 +175,19 @@ export const translations: Record<string, InvoiceTranslations> = {
     pricePerLiter: 'Precio por litro',
     deliveryFee: 'Tarifa de entrega',
     dueDays: '14 días',
-    currency: '€'
+    currency: '€',
+    phone: 'Teléfono',
+    email: 'Email',
+    website: 'Sitio web',
+    paymentTerm: 'Plazo de pago'
   },
   it: {
     invoice: 'Fattura',
     invoiceNumber: 'Numero fattura',
     invoiceDate: 'Data fattura',
     dueDate: 'Data di scadenza',
+    orderNumber: 'Numero ordine',
+    orderDate: 'Data ordine',
     customerDetails: 'Dettagli cliente',
     companyDetails: 'Dettagli azienda',
     description: 'Descrizione',
@@ -179,10 +211,59 @@ export const translations: Record<string, InvoiceTranslations> = {
     pricePerLiter: 'Prezzo per litro',
     deliveryFee: 'Tassa di consegna',
     dueDays: '14 giorni',
-    currency: '€'
+    currency: '€',
+    phone: 'Telefono',
+    email: 'Email',
+    website: 'Sito web',
+    paymentTerm: 'Termine di pagamento'
   }
 };
 
 export function getInvoiceTranslations(language: string): InvoiceTranslations {
   return translations[language] || translations.de;
+}
+
+export function detectLanguage(order: any): string {
+  // Try to detect language from various order fields
+  if (order.language) {
+    return order.language.toLowerCase();
+  }
+  
+  // Check shop language
+  if (order.shops?.language) {
+    return order.shops.language.toLowerCase();
+  }
+  
+  // Check country code and map to language
+  const countryCode = order.shops?.country_code?.toLowerCase();
+  const countryToLanguage: { [key: string]: string } = {
+    'de': 'de',
+    'at': 'de', // Austria
+    'ch': 'de', // Switzerland (German speaking)
+    'us': 'en',
+    'gb': 'en',
+    'ca': 'en',
+    'au': 'en',
+    'fr': 'fr',
+    'be': 'fr', // Belgium (French speaking areas)
+    'it': 'it',
+    'es': 'es',
+    'mx': 'es',
+    'ar': 'es',
+    'pl': 'pl',
+    'nl': 'nl'
+  };
+  
+  if (countryCode && countryToLanguage[countryCode]) {
+    return countryToLanguage[countryCode];
+  }
+  
+  // Default to German
+  return 'de';
+}
+
+export function interpolateString(template: string, variables: { [key: string]: string }): string {
+  return template.replace(/\{(\w+)\}/g, (match, key) => {
+    return variables[key] || match;
+  });
 }
