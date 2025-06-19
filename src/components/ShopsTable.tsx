@@ -1,10 +1,11 @@
+
 import { useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { MoreHorizontal, Edit, Trash2, CheckCircle, XCircle, Globe } from 'lucide-react';
+import { MoreHorizontal, Edit, Trash2, CheckCircle, XCircle, Globe, Phone } from 'lucide-react';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -162,6 +163,7 @@ export function ShopsTable({ shops, onShopsChange }: ShopsTableProps) {
                   <TableHead>Logo</TableHead>
                   <TableHead>Firma</TableHead>
                   <TableHead>E-Mail</TableHead>
+                  <TableHead>Telefon</TableHead>
                   <TableHead>Website</TableHead>
                   <TableHead>Land</TableHead>
                   <TableHead>Sprache</TableHead>
@@ -198,6 +200,16 @@ export function ShopsTable({ shops, onShopsChange }: ShopsTableProps) {
                     </TableCell>
                     <TableCell>
                       <div className="text-sm">{shop.company_email}</div>
+                    </TableCell>
+                    <TableCell>
+                      {shop.company_phone ? (
+                        <div className="flex items-center text-sm">
+                          <Phone className="h-3 w-3 mr-1" />
+                          {shop.company_phone}
+                        </div>
+                      ) : (
+                        <span className="text-gray-400 text-sm">LEER</span>
+                      )}
                     </TableCell>
                     <TableCell>
                       {shop.company_website ? (
