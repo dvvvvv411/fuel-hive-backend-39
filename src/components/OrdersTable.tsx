@@ -218,27 +218,54 @@ export function OrdersTable() {
       
       toast({
         title: 'Rechnung wird generiert',
-        description: 'Die Rechnung wird im Hintergrund erstellt',
+        description: 'Die Rechnung wird erstellt und per E-Mail versendet',
       });
 
       // Call the edge function to generate the invoice
-      const { data, error } = await supabase.functions.invoke('generate-invoice', {
+      const { data: invoiceData, error: invoiceError } = await supabase.functions.invoke('generate-invoice', {
         body: { order_id: orderId }
       });
 
-      if (error) {
-        console.error('Error calling generate-invoice function:', error);
-        throw error;
+      if (invoiceError) {
+        console.error('Error calling generate-invoice function:', invoiceError);
+        throw invoiceError;
       }
 
-      console.log('Invoice generation response:', data);
+      console.log('Invoice generation response:', invoiceData);
+
+      // Now automatically send the email with the invoice PDF
+      console.log('Sending invoice email for order:', orderId);
+      
+      const { data: emailData, error: emailError } = await supabase.functions.invoke('send-order-confirmation', {
+        body: { 
+          order_id: orderId,
+          include_invoice: true,
+          email_type: 'instant_confirmation'
+        }
+      });
+
+      if (emailError) {
+        console.error('Error sending invoice email:', emailError);
+        // Don't throw here - invoice was generated successfully, just email failed
+        toast({
+          title: 'Warnung',
+          description: 'Rechnung wurde generiert, aber E-Mail konnte nicht versendet werden',
+          variant: 'destructive',
+        });
+      } else {
+        console.log('Invoice email sent successfully:', emailData);
+      }
 
       // Refresh orders to get the updated status
       await fetchOrders();
 
+      const successMessage = emailError 
+        ? 'Rechnung wurde erfolgreich generiert (E-Mail-Versand fehlgeschlagen)'
+        : 'Rechnung wurde erfolgreich generiert und per E-Mail versendet';
+
       toast({
         title: 'Erfolg',
-        description: 'Rechnung wurde erfolgreich generiert und Status auf "Rechnung versendet" aktualisiert',
+        description: successMessage,
       });
 
     } catch (error) {
