@@ -183,18 +183,18 @@ export function DashboardStats() {
         <h3 className="text-xl font-semibold text-gray-900 mb-6">Haupt-Statistiken</h3>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
           <LargeMetricCard
-            title="Umsatz"
-            mainValue={formatCurrency(data.totalRevenue)}
-            secondaryValue={`Heute: ${formatCurrency(data.todayRevenue)}`}
+            title="Umsatz Heute"
+            mainValue={formatCurrency(data.todayRevenue)}
+            secondaryValue={`Gesamt: ${formatCurrency(data.totalRevenue)}`}
             icon={Euro}
             iconColor="text-green-600"
             iconBgColor="bg-green-50"
           />
           
           <LargeMetricCard
-            title="Bestellungen"
-            mainValue={formatNumber(data.totalOrders)}
-            secondaryValue={`Heute: ${formatNumber(data.todayOrders)}`}
+            title="Bestellungen Heute"
+            mainValue={formatNumber(data.todayOrders)}
+            secondaryValue={`Gesamt: ${formatNumber(data.totalOrders)}`}
             icon={FileText}
             iconColor="text-blue-600"
             iconBgColor="bg-blue-50"
