@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
@@ -14,6 +13,7 @@ import { ResendConfigsList } from '@/components/ResendConfigsList';
 import { InvoicePreview } from '@/components/InvoicePreview';
 import { DashboardStats } from '@/components/DashboardStats';
 import { Store, CreditCard, FileText, TrendingUp, Mail, Banknote, Eye } from 'lucide-react';
+import { ShopPerformanceTables } from '@/components/ShopPerformanceTables';
 
 const Dashboard = () => {
   const [activeTab, setActiveTab] = useState('overview');
@@ -63,6 +63,8 @@ const Dashboard = () => {
             </div>
 
             <DashboardStats />
+
+            <ShopPerformanceTables />
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               <Card className="bg-white shadow-sm border border-gray-200">

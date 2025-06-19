@@ -1,0 +1,456 @@
+
+import { useState, useEffect } from 'react';
+import { supabase } from '@/integrations/supabase/client';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { toast } from '@/hooks/use-toast';
+import { TrendingUp, TrendingDown, Edit, Store, Globe, Zap, Clock } from 'lucide-react';
+
+interface ShopPerformanceData {
+  shopId: string;
+  shopName: string;
+  companyName: string;
+  country: string;
+  language: string;
+  checkoutMode: string;
+  active: boolean;
+  todayOrders: number;
+  todayRevenue: number;
+  todayAvgOrder: number;
+  totalOrders: number;
+  totalRevenue: number;
+  totalAvgOrder: number;
+  revenuePercentage: number;
+  conversionRate: number;
+  last7DaysTrend: number;
+  bestDay: string | null;
+  bestDayRevenue: number;
+}
+
+export function ShopPerformanceTables() {
+  const [performanceData, setPerformanceData] = useState<ShopPerformanceData[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [todaySortField, setTodaySortField] = useState<string>('todayRevenue');
+  const [todaySortDirection, setTodaySortDirection] = useState<'asc' | 'desc'>('desc');
+  const [totalSortField, setTotalSortField] = useState<string>('totalRevenue');
+  const [totalSortDirection, setTotalSortDirection] = useState<'asc' | 'desc'>('desc');
+
+  useEffect(() => {
+    fetchShopPerformanceData();
+  }, []);
+
+  const fetchShopPerformanceData = async () => {
+    try {
+      const today = new Date().toISOString().split('T')[0];
+      const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+
+      // Fetch shops
+      const { data: shops, error: shopsError } = await supabase
+        .from('shops')
+        .select('*');
+
+      if (shopsError) throw shopsError;
+
+      // Fetch all orders
+      const { data: orders, error: ordersError } = await supabase
+        .from('orders')
+        .select('*');
+
+      if (ordersError) throw ordersError;
+
+      // Fetch order tokens for conversion rate
+      const { data: tokens, error: tokensError } = await supabase
+        .from('order_tokens')
+        .select('*');
+
+      if (tokensError) throw tokensError;
+
+      const totalRevenue = orders?.reduce((sum, order) => sum + Number(order.total_amount || 0), 0) || 0;
+
+      const performanceData: ShopPerformanceData[] = shops?.map(shop => {
+        const shopOrders = orders?.filter(order => order.shop_id === shop.id) || [];
+        const shopTokens = tokens?.filter(token => token.shop_id === shop.id) || [];
+        
+        // Today's data
+        const todayOrders = shopOrders.filter(order => 
+          order.created_at?.startsWith(today)
+        );
+        const todayRevenue = todayOrders.reduce((sum, order) => sum + Number(order.total_amount || 0), 0);
+        const todayAvgOrder = todayOrders.length > 0 ? todayRevenue / todayOrders.length : 0;
+
+        // Total data
+        const totalOrders = shopOrders.length;
+        const shopTotalRevenue = shopOrders.reduce((sum, order) => sum + Number(order.total_amount || 0), 0);
+        const totalAvgOrder = totalOrders > 0 ? shopTotalRevenue / totalOrders : 0;
+
+        // Revenue percentage
+        const revenuePercentage = totalRevenue > 0 ? (shopTotalRevenue / totalRevenue) * 100 : 0;
+
+        // Conversion rate (completed orders / tokens created)
+        const completedOrders = shopOrders.filter(order => 
+          order.status === 'confirmed' || order.status === 'paid'
+        ).length;
+        const conversionRate = shopTokens.length > 0 ? (completedOrders / shopTokens.length) * 100 : 0;
+
+        // Last 7 days trend
+        const last7DaysOrders = shopOrders.filter(order => 
+          order.created_at && order.created_at >= sevenDaysAgo
+        );
+        const last7DaysRevenue = last7DaysOrders.reduce((sum, order) => sum + Number(order.total_amount || 0), 0);
+        const previousWeekRevenue = shopTotalRevenue - last7DaysRevenue;
+        const last7DaysTrend = previousWeekRevenue > 0 ? ((last7DaysRevenue - previousWeekRevenue) / previousWeekRevenue) * 100 : 0;
+
+        // Best day
+        const dailyRevenue = shopOrders.reduce((acc, order) => {
+          const date = order.created_at?.split('T')[0];
+          if (date) {
+            acc[date] = (acc[date] || 0) + Number(order.total_amount || 0);
+          }
+          return acc;
+        }, {} as Record<string, number>);
+
+        const bestDay = Object.entries(dailyRevenue).reduce((best, [date, revenue]) => {
+          return revenue > best.revenue ? { date, revenue } : best;
+        }, { date: null as string | null, revenue: 0 });
+
+        return {
+          shopId: shop.id,
+          shopName: shop.name,
+          companyName: shop.company_name,
+          country: shop.country_code,
+          language: shop.language,
+          checkoutMode: shop.checkout_mode,
+          active: shop.active,
+          todayOrders: todayOrders.length,
+          todayRevenue,
+          todayAvgOrder,
+          totalOrders,
+          totalRevenue: shopTotalRevenue,
+          totalAvgOrder,
+          revenuePercentage,
+          conversionRate,
+          last7DaysTrend,
+          bestDay: bestDay.date,
+          bestDayRevenue: bestDay.revenue
+        };
+      }) || [];
+
+      setPerformanceData(performanceData);
+    } catch (error) {
+      console.error('Error fetching shop performance data:', error);
+      toast({
+        title: "Fehler",
+        description: "Shop-Performance-Daten konnten nicht geladen werden",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const formatCurrency = (amount: number) => {
+    return new Intl.NumberFormat('de-DE', {
+      style: 'currency',
+      currency: 'EUR'
+    }).format(amount);
+  };
+
+  const formatDate = (dateStr: string | null) => {
+    if (!dateStr) return '-';
+    return new Date(dateStr).toLocaleDateString('de-DE');
+  };
+
+  const sortData = (data: ShopPerformanceData[], field: string, direction: 'asc' | 'desc') => {
+    return [...data].sort((a, b) => {
+      const aValue = a[field as keyof ShopPerformanceData];
+      const bValue = b[field as keyof ShopPerformanceData];
+      
+      if (typeof aValue === 'number' && typeof bValue === 'number') {
+        return direction === 'asc' ? aValue - bValue : bValue - aValue;
+      }
+      
+      const aStr = String(aValue).toLowerCase();
+      const bStr = String(bValue).toLowerCase();
+      return direction === 'asc' ? aStr.localeCompare(bStr) : bStr.localeCompare(aStr);
+    });
+  };
+
+  const handleSort = (field: string, table: 'today' | 'total') => {
+    if (table === 'today') {
+      const newDirection = todaySortField === field && todaySortDirection === 'desc' ? 'asc' : 'desc';
+      setTodaySortField(field);
+      setTodaySortDirection(newDirection);
+    } else {
+      const newDirection = totalSortField === field && totalSortDirection === 'desc' ? 'asc' : 'desc';
+      setTotalSortField(field);
+      setTotalSortDirection(newDirection);
+    }
+  };
+
+  const getPerformanceColor = (value: number, type: 'revenue' | 'orders') => {
+    if (type === 'revenue') {
+      if (value >= 1000) return 'bg-green-100 text-green-800';
+      if (value >= 500) return 'bg-yellow-100 text-yellow-800';
+      return 'bg-gray-100 text-gray-800';
+    } else {
+      if (value >= 10) return 'bg-green-100 text-green-800';
+      if (value >= 5) return 'bg-yellow-100 text-yellow-800';
+      return 'bg-gray-100 text-gray-800';
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="space-y-6">
+        <div className="animate-pulse">
+          <div className="h-8 bg-gray-200 rounded w-1/3 mb-4"></div>
+          <div className="h-64 bg-gray-200 rounded"></div>
+        </div>
+      </div>
+    );
+  }
+
+  const todayData = sortData(performanceData, todaySortField, todaySortDirection);
+  const totalData = sortData(performanceData, totalSortField, totalSortDirection);
+
+  return (
+    <div className="space-y-8">
+      {/* Heute Performance */}
+      <Card className="bg-white shadow-sm border border-gray-200">
+        <CardHeader>
+          <CardTitle className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+            <Clock className="h-5 w-5 text-blue-600" />
+            Shop-Performance (Heute)
+          </CardTitle>
+          <CardDescription>
+            Tagesleistung Ihrer Shops mit Farbcodierung für Top-Performer
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="overflow-x-auto">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead 
+                    className="cursor-pointer hover:bg-gray-50 select-none"
+                    onClick={() => handleSort('shopName', 'today')}
+                  >
+                    Shop-Name {todaySortField === 'shopName' && (todaySortDirection === 'desc' ? '↓' : '↑')}
+                  </TableHead>
+                  <TableHead 
+                    className="cursor-pointer hover:bg-gray-50 select-none text-right"
+                    onClick={() => handleSort('todayOrders', 'today')}
+                  >
+                    Bestellungen {todaySortField === 'todayOrders' && (todaySortDirection === 'desc' ? '↓' : '↑')}
+                  </TableHead>
+                  <TableHead 
+                    className="cursor-pointer hover:bg-gray-50 select-none text-right"
+                    onClick={() => handleSort('todayRevenue', 'today')}
+                  >
+                    Umsatz {todaySortField === 'todayRevenue' && (todaySortDirection === 'desc' ? '↓' : '↑')}
+                  </TableHead>
+                  <TableHead 
+                    className="cursor-pointer hover:bg-gray-50 select-none text-right"
+                    onClick={() => handleSort('todayAvgOrder', 'today')}
+                  >
+                    Ø Bestellwert {todaySortField === 'todayAvgOrder' && (todaySortDirection === 'desc' ? '↓' : '↑')}
+                  </TableHead>
+                  <TableHead 
+                    className="cursor-pointer hover:bg-gray-50 select-none text-right"
+                    onClick={() => handleSort('conversionRate', 'today')}
+                  >
+                    Conversion Rate {todaySortField === 'conversionRate' && (todaySortDirection === 'desc' ? '↓' : '↑')}
+                  </TableHead>
+                  <TableHead className="text-center">Details</TableHead>
+                  <TableHead className="text-center">Aktionen</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {todayData.map((shop) => (
+                  <TableRow key={shop.shopId} className="hover:bg-gray-50">
+                    <TableCell>
+                      <div className="flex flex-col">
+                        <div className="font-medium text-gray-900">{shop.shopName}</div>
+                        <div className="text-sm text-gray-500">{shop.companyName}</div>
+                      </div>
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <Badge className={getPerformanceColor(shop.todayOrders, 'orders')}>
+                        {shop.todayOrders}
+                      </Badge>
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <Badge className={getPerformanceColor(shop.todayRevenue, 'revenue')}>
+                        {formatCurrency(shop.todayRevenue)}
+                      </Badge>
+                    </TableCell>
+                    <TableCell className="text-right">
+                      {formatCurrency(shop.todayAvgOrder)}
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <div className="flex items-center justify-end gap-1">
+                        {shop.conversionRate.toFixed(1)}%
+                        {shop.conversionRate >= 50 ? (
+                          <TrendingUp className="h-3 w-3 text-green-600" />
+                        ) : (
+                          <TrendingDown className="h-3 w-3 text-red-600" />
+                        )}
+                      </div>
+                    </TableCell>
+                    <TableCell className="text-center">
+                      <div className="flex flex-col gap-1">
+                        <div className="flex items-center justify-center gap-2">
+                          <Badge variant={shop.checkoutMode === 'instant' ? 'default' : 'secondary'} className="text-xs">
+                            {shop.checkoutMode === 'instant' ? (
+                              <><Zap className="h-3 w-3 mr-1" />Instant</>
+                            ) : (
+                              <><Clock className="h-3 w-3 mr-1" />Manual</>
+                            )}
+                          </Badge>
+                          <Badge variant={shop.active ? 'default' : 'destructive'} className="text-xs">
+                            {shop.active ? 'Aktiv' : 'Inaktiv'}
+                          </Badge>
+                        </div>
+                        <div className="flex items-center justify-center gap-1 text-xs text-gray-500">
+                          <Globe className="h-3 w-3" />
+                          {shop.country}/{shop.language.toUpperCase()}
+                        </div>
+                      </div>
+                    </TableCell>
+                    <TableCell className="text-center">
+                      <Button variant="outline" size="sm" className="h-8 w-8 p-0">
+                        <Edit className="h-3 w-3" />
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Gesamt Performance */}
+      <Card className="bg-white shadow-sm border border-gray-200">
+        <CardHeader>
+          <CardTitle className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+            <Store className="h-5 w-5 text-green-600" />
+            Shop-Performance (Gesamt)
+          </CardTitle>
+          <CardDescription>
+            Gesamtleistung Ihrer Shops mit Marktanteil und Trend-Analyse
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="overflow-x-auto">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead 
+                    className="cursor-pointer hover:bg-gray-50 select-none"
+                    onClick={() => handleSort('shopName', 'total')}
+                  >
+                    Shop-Name {totalSortField === 'shopName' && (totalSortDirection === 'desc' ? '↓' : '↑')}
+                  </TableHead>
+                  <TableHead 
+                    className="cursor-pointer hover:bg-gray-50 select-none text-right"
+                    onClick={() => handleSort('totalOrders', 'total')}
+                  >
+                    Total Bestellungen {totalSortField === 'totalOrders' && (totalSortDirection === 'desc' ? '↓' : '↑')}
+                  </TableHead>
+                  <TableHead 
+                    className="cursor-pointer hover:bg-gray-50 select-none text-right"
+                    onClick={() => handleSort('totalRevenue', 'total')}
+                  >
+                    Total Umsatz {totalSortField === 'totalRevenue' && (totalSortDirection === 'desc' ? '↓' : '↑')}
+                  </TableHead>
+                  <TableHead 
+                    className="cursor-pointer hover:bg-gray-50 select-none text-right"
+                    onClick={() => handleSort('totalAvgOrder', 'total')}
+                  >
+                    Ø Bestellwert {totalSortField === 'totalAvgOrder' && (totalSortDirection === 'desc' ? '↓' : '↑')}
+                  </TableHead>
+                  <TableHead 
+                    className="cursor-pointer hover:bg-gray-50 select-none text-right"
+                    onClick={() => handleSort('revenuePercentage', 'total')}
+                  >
+                    Marktanteil {totalSortField === 'revenuePercentage' && (totalSortDirection === 'desc' ? '↓' : '↑')}
+                  </TableHead>
+                  <TableHead className="text-center">Best Day</TableHead>
+                  <TableHead 
+                    className="cursor-pointer hover:bg-gray-50 select-none text-center"
+                    onClick={() => handleSort('last7DaysTrend', 'total')}
+                  >
+                    7-Tage Trend {totalSortField === 'last7DaysTrend' && (totalSortDirection === 'desc' ? '↓' : '↑')}
+                  </TableHead>
+                  <TableHead className="text-center">Aktionen</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {totalData.map((shop) => (
+                  <TableRow key={shop.shopId} className="hover:bg-gray-50">
+                    <TableCell>
+                      <div className="flex flex-col">
+                        <div className="font-medium text-gray-900">{shop.shopName}</div>
+                        <div className="text-sm text-gray-500">{shop.companyName}</div>
+                      </div>
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <Badge className={getPerformanceColor(shop.totalOrders, 'orders')}>
+                        {shop.totalOrders}
+                      </Badge>
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <Badge className={getPerformanceColor(shop.totalRevenue, 'revenue')}>
+                        {formatCurrency(shop.totalRevenue)}
+                      </Badge>
+                    </TableCell>
+                    <TableCell className="text-right">
+                      {formatCurrency(shop.totalAvgOrder)}
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <div className="flex flex-col items-end">
+                        <span className="font-medium">{shop.revenuePercentage.toFixed(1)}%</span>
+                        <div className="w-16 bg-gray-200 rounded-full h-1 mt-1">
+                          <div 
+                            className="bg-blue-600 h-1 rounded-full" 
+                            style={{ width: `${Math.min(shop.revenuePercentage, 100)}%` }}
+                          ></div>
+                        </div>
+                      </div>
+                    </TableCell>
+                    <TableCell className="text-center">
+                      <div className="flex flex-col text-sm">
+                        <span className="font-medium">{formatDate(shop.bestDay)}</span>
+                        <span className="text-gray-500">{formatCurrency(shop.bestDayRevenue)}</span>
+                      </div>
+                    </TableCell>
+                    <TableCell className="text-center">
+                      <div className="flex items-center justify-center gap-1">
+                        {shop.last7DaysTrend >= 0 ? (
+                          <TrendingUp className="h-4 w-4 text-green-600" />
+                        ) : (
+                          <TrendingDown className="h-4 w-4 text-red-600" />
+                        )}
+                        <span className={`text-sm font-medium ${shop.last7DaysTrend >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                          {shop.last7DaysTrend >= 0 ? '+' : ''}{shop.last7DaysTrend.toFixed(1)}%
+                        </span>
+                      </div>
+                    </TableCell>
+                    <TableCell className="text-center">
+                      <Button variant="outline" size="sm" className="h-8 w-8 p-0">
+                        <Edit className="h-3 w-3" />
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
