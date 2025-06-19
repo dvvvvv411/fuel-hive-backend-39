@@ -1,4 +1,3 @@
-
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { Resend } from "npm:resend@2.0.0";
@@ -28,7 +27,7 @@ const translateProduct = (product: string): string => {
 };
 
 const generateConfirmationEmailTemplate = (order: any) => {
-  const shopName = order.shops?.company_name || order.shops?.name || 'Heizöl-Service';
+  const shopName = order.shops?.name || order.shops?.company_name || 'Heizöl-Service';
   const accentColor = order.shops?.accent_color || '#2563eb';
   
   const subject = `Bestellbestätigung ${order.order_number} - Ihre ${translateProduct(order.product)}-Bestellung bei ${shopName}`;
@@ -58,7 +57,7 @@ const generateConfirmationEmailTemplate = (order: any) => {
               
               <!-- Header -->
               <tr>
-                <td style="padding: 50px 40px 30px 40px; text-align: center; background: linear-gradient(135deg, ${accentColor} 0%, ${accentColor}DD 100%); border-radius: 12px 12px 0 0;">
+                <td style="padding: 50px 40px 30px 40px; text-align: center; background: ${accentColor}; border-radius: 12px 12px 0 0;">
                   <h1 style="margin: 0; color: #ffffff; font-size: 32px; font-weight: 700; line-height: 1.2; text-shadow: 0 2px 4px rgba(0,0,0,0.1);">
                     ${shopName}
                   </h1>
@@ -151,18 +150,8 @@ const generateConfirmationEmailTemplate = (order: any) => {
                   </table>
 
                   <p style="margin: 0 0 16px 0; color: #374151; font-size: 16px; line-height: 1.6;">
-                    Bei Fragen kontaktieren Sie uns gerne:
+                    Bei Fragen kontaktieren Sie uns gerne unter ${order.shops?.company_email}.
                   </p>
-                  <div style="text-align: center; margin: 24px 0;">
-                    <a href="mailto:${order.shops?.company_email}" style="display: inline-block; padding: 12px 24px; background-color: ${accentColor}; color: #ffffff; text-decoration: none; border-radius: 8px; font-weight: 600; margin-right: 16px;">
-                      📧 E-Mail senden
-                    </a>
-                    ${order.shops?.support_phone ? `
-                    <a href="tel:${order.shops.support_phone}" style="display: inline-block; padding: 12px 24px; background-color: #10b981; color: #ffffff; text-decoration: none; border-radius: 8px; font-weight: 600;">
-                      📞 Anrufen
-                    </a>
-                    ` : ''}
-                  </div>
 
                   <p style="margin: 32px 0 0 0; color: #374151; font-size: 16px; line-height: 1.6; text-align: center;">
                     Mit freundlichen Grüßen<br>
@@ -197,10 +186,11 @@ const generateConfirmationEmailTemplate = (order: any) => {
 };
 
 const generateInvoiceEmailTemplate = (order: any, bankData: any) => {
-  const shopName = order.shops?.company_name || order.shops?.name || 'Heizöl-Service';
+  const shopName = order.shops?.name || order.shops?.company_name || 'Heizöl-Service';
   const accentColor = order.shops?.accent_color || '#2563eb';
+  const invoiceNumber = order.order_number; // Use 7-digit order number as invoice number
   
-  const subject = `Rechnung ${order.invoice_number} - Ihre ${translateProduct(order.product)}-Bestellung bei ${shopName}`;
+  const subject = `Rechnung ${invoiceNumber} - Ihre ${translateProduct(order.product)}-Bestellung bei ${shopName}`;
 
   const htmlContent = `
     <!DOCTYPE html>
@@ -227,7 +217,7 @@ const generateInvoiceEmailTemplate = (order: any, bankData: any) => {
               
               <!-- Header -->
               <tr>
-                <td style="padding: 50px 40px 30px 40px; text-align: center; background: linear-gradient(135deg, ${accentColor} 0%, ${accentColor}DD 100%); border-radius: 12px 12px 0 0;">
+                <td style="padding: 50px 40px 30px 40px; text-align: center; background: ${accentColor}; border-radius: 12px 12px 0 0;">
                   <h1 style="margin: 0; color: #ffffff; font-size: 32px; font-weight: 700; line-height: 1.2; text-shadow: 0 2px 4px rgba(0,0,0,0.1);">
                     ${shopName}
                   </h1>
@@ -250,6 +240,52 @@ const generateInvoiceEmailTemplate = (order: any, bankData: any) => {
                     anbei erhalten Sie die Rechnung für Ihre ${translateProduct(order.product)}-Bestellung. Die Rechnung finden Sie als PDF-Anhang in dieser E-Mail.
                   </p>
 
+                  <!-- Payment Information Box (moved above invoice details) -->
+                  ${bankData ? `
+                  <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%); border-radius: 12px; border: 2px solid #3b82f6; margin-bottom: 32px;">
+                    <tr>
+                      <td style="padding: 30px;">
+                        <h3 style="margin: 0 0 20px 0; color: #3b82f6; font-size: 20px; font-weight: 700; text-align: center;">
+                          💳 Zahlungsinformationen
+                        </h3>
+                        <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
+                          <tr>
+                            <td style="padding: 8px 0; color: #1e40af; font-size: 15px; font-weight: 600; width: 35%;">Rechnungsbetrag:</td>
+                            <td style="padding: 8px 0; color: #1e3a8a; font-size: 18px; font-weight: 700;">€${order.total_amount.toFixed(2)}</td>
+                          </tr>
+                          <tr>
+                            <td style="padding: 8px 0; color: #1e40af; font-size: 15px; font-weight: 600;">Empfänger:</td>
+                            <td style="padding: 8px 0; color: #1e3a8a; font-size: 15px; font-weight: 700;">${bankData.account_holder}</td>
+                          </tr>
+                          <tr>
+                            <td style="padding: 8px 0; color: #1e40af; font-size: 15px; font-weight: 600;">Bank:</td>
+                            <td style="padding: 8px 0; color: #1e3a8a; font-size: 15px; font-weight: 700;">${bankData.bank_name}</td>
+                          </tr>
+                          <tr>
+                            <td style="padding: 8px 0; color: #1e40af; font-size: 15px; font-weight: 600;">IBAN:</td>
+                            <td style="padding: 8px 0; color: #1e3a8a; font-size: 15px; font-weight: 700; font-family: 'Courier New', monospace;">${bankData.iban}</td>
+                          </tr>
+                          ${bankData.bic ? `
+                          <tr>
+                            <td style="padding: 8px 0; color: #1e40af; font-size: 15px; font-weight: 600;">BIC:</td>
+                            <td style="padding: 8px 0; color: #1e3a8a; font-size: 15px; font-weight: 700; font-family: 'Courier New', monospace;">${bankData.bic}</td>
+                          </tr>
+                          ` : ''}
+                          <tr>
+                            <td style="padding: 8px 0; color: #1e40af; font-size: 15px; font-weight: 600;">Verwendungszweck:</td>
+                            <td style="padding: 8px 0; color: #1e3a8a; font-size: 15px; font-weight: 700;">${invoiceNumber}</td>
+                          </tr>
+                        </table>
+                        <div style="margin-top: 16px; padding: 16px; background-color: rgba(59, 130, 246, 0.1); border-radius: 8px; border-left: 4px solid #3b82f6;">
+                          <p style="margin: 0; color: #1e40af; font-size: 14px; font-weight: 600;">
+                            💡 Bitte verwenden Sie unbedingt die Rechnungsnummer <strong>${invoiceNumber}</strong> als Verwendungszweck.
+                          </p>
+                        </div>
+                      </td>
+                    </tr>
+                  </table>
+                  ` : ''}
+
                   <!-- Invoice Details Box -->
                   <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="background: linear-gradient(145deg, #f8fafc 0%, #e2e8f0 100%); border-radius: 12px; border: 2px solid ${accentColor}; margin-bottom: 32px;">
                     <tr>
@@ -260,7 +296,7 @@ const generateInvoiceEmailTemplate = (order: any, bankData: any) => {
                         <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
                           <tr>
                             <td style="padding: 8px 0; color: #6b7280; font-size: 15px; font-weight: 600; width: 40%;">Rechnungsnummer:</td>
-                            <td style="padding: 8px 0; color: #111827; font-size: 15px; font-weight: 700;">${order.invoice_number}</td>
+                            <td style="padding: 8px 0; color: #111827; font-size: 15px; font-weight: 700;">${invoiceNumber}</td>
                           </tr>
                           <tr>
                             <td style="padding: 8px 0; color: #6b7280; font-size: 15px; font-weight: 600;">Bestellnummer:</td>
@@ -287,48 +323,6 @@ const generateInvoiceEmailTemplate = (order: any, bankData: any) => {
                     </tr>
                   </table>
 
-                  <!-- Bank Information Box -->
-                  ${bankData ? `
-                  <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%); border-radius: 12px; border: 2px solid #3b82f6; margin-bottom: 32px;">
-                    <tr>
-                      <td style="padding: 30px;">
-                        <h3 style="margin: 0 0 20px 0; color: #3b82f6; font-size: 20px; font-weight: 700; text-align: center;">
-                          💳 Zahlungsinformationen
-                        </h3>
-                        <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
-                          <tr>
-                            <td style="padding: 8px 0; color: #1e40af; font-size: 15px; font-weight: 600; width: 35%;">Empfänger:</td>
-                            <td style="padding: 8px 0; color: #1e3a8a; font-size: 15px; font-weight: 700;">${bankData.account_holder}</td>
-                          </tr>
-                          <tr>
-                            <td style="padding: 8px 0; color: #1e40af; font-size: 15px; font-weight: 600;">Bank:</td>
-                            <td style="padding: 8px 0; color: #1e3a8a; font-size: 15px; font-weight: 700;">${bankData.bank_name}</td>
-                          </tr>
-                          <tr>
-                            <td style="padding: 8px 0; color: #1e40af; font-size: 15px; font-weight: 600;">IBAN:</td>
-                            <td style="padding: 8px 0; color: #1e3a8a; font-size: 15px; font-weight: 700; font-family: 'Courier New', monospace;">${bankData.iban}</td>
-                          </tr>
-                          ${bankData.bic ? `
-                          <tr>
-                            <td style="padding: 8px 0; color: #1e40af; font-size: 15px; font-weight: 600;">BIC:</td>
-                            <td style="padding: 8px 0; color: #1e3a8a; font-size: 15px; font-weight: 700; font-family: 'Courier New', monospace;">${bankData.bic}</td>
-                          </tr>
-                          ` : ''}
-                          <tr>
-                            <td style="padding: 8px 0; color: #1e40af; font-size: 15px; font-weight: 600;">Verwendungszweck:</td>
-                            <td style="padding: 8px 0; color: #1e3a8a; font-size: 15px; font-weight: 700;">${order.invoice_number}</td>
-                          </tr>
-                        </table>
-                        <div style="margin-top: 16px; padding: 16px; background-color: rgba(59, 130, 246, 0.1); border-radius: 8px; border-left: 4px solid #3b82f6;">
-                          <p style="margin: 0; color: #1e40af; font-size: 14px; font-weight: 600;">
-                            💡 Bitte verwenden Sie unbedingt die Rechnungsnummer <strong>${order.invoice_number}</strong> als Verwendungszweck.
-                          </p>
-                        </div>
-                      </td>
-                    </tr>
-                  </table>
-                  ` : ''}
-
                   <!-- PDF Attachment Notice -->
                   <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%); border-radius: 12px; border: 2px solid #f59e0b; margin-bottom: 32px;">
                     <tr>
@@ -341,18 +335,8 @@ const generateInvoiceEmailTemplate = (order: any, bankData: any) => {
                   </table>
 
                   <p style="margin: 0 0 16px 0; color: #374151; font-size: 16px; line-height: 1.6;">
-                    Bei Fragen zu Ihrer Rechnung kontaktieren Sie uns gerne:
+                    Bei Fragen zu Ihrer Rechnung kontaktieren Sie uns gerne unter ${order.shops?.company_email}.
                   </p>
-                  <div style="text-align: center; margin: 24px 0;">
-                    <a href="mailto:${order.shops?.company_email}" style="display: inline-block; padding: 12px 24px; background-color: ${accentColor}; color: #ffffff; text-decoration: none; border-radius: 8px; font-weight: 600; margin-right: 16px;">
-                      📧 E-Mail senden
-                    </a>
-                    ${order.shops?.support_phone ? `
-                    <a href="tel:${order.shops.support_phone}" style="display: inline-block; padding: 12px 24px; background-color: #10b981; color: #ffffff; text-decoration: none; border-radius: 8px; font-weight: 600;">
-                      📞 Anrufen
-                    </a>
-                    ` : ''}
-                  </div>
 
                   <p style="margin: 32px 0 0 0; color: #374151; font-size: 16px; line-height: 1.6; text-align: center;">
                     Vielen Dank für Ihr Vertrauen!<br>
@@ -492,7 +476,7 @@ const handler = async (req: Request): Promise<Response> => {
     // Add PDF attachment for invoice emails
     if (include_invoice && order.invoice_pdf_url) {
       try {
-        console.log('Adding PDF attachment for invoice:', order.invoice_number);
+        console.log('Adding PDF attachment for invoice:', order.order_number);
         
         // Download PDF from Supabase Storage
         const fileName = order.invoice_pdf_url.split('/').pop() || '';
@@ -506,7 +490,7 @@ const handler = async (req: Request): Promise<Response> => {
           const base64 = btoa(String.fromCharCode(...new Uint8Array(arrayBuffer)));
 
           emailPayload.attachments = [{
-            filename: `Rechnung-${order.invoice_number || order.order_number}.pdf`,
+            filename: `Rechnung-${order.order_number}.pdf`,
             content: base64,
             content_type: 'application/pdf',
           }];
