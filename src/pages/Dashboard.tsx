@@ -71,6 +71,8 @@ const Dashboard = () => {
               <p className="text-gray-600 mt-2">Welcome to your heating oil admin dashboard</p>
             </div>
 
+            <DashboardStats />
+
             <ShopPerformanceTables />
 
             <RevenueCharts />
