@@ -5,9 +5,11 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { CreditCard, Plus, Building, Edit, Trash2, Store } from 'lucide-react';
+import { Progress } from '@/components/ui/progress';
+import { CreditCard, Plus, Building, Edit, Trash2, Store, Euro, TrendingUp } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import { BankAccountDialog } from './BankAccountDialog';
+import { formatCurrency, calculateDailyUsage, getDailyUsagePercentage } from '@/utils/bankingUtils';
 
 interface BankAccount {
   id: string;
@@ -20,6 +22,7 @@ interface BankAccount {
   country: string;
   active: boolean;
   use_anyname: boolean;
+  daily_limit: number | null;
   created_at: string;
 }
 
@@ -29,8 +32,13 @@ interface Shop {
   bank_account_id: string | null;
 }
 
+interface BankAccountWithUsage extends BankAccount {
+  dailyUsage: number;
+  usagePercentage: number;
+}
+
 export function BankAccountsList() {
-  const [bankAccounts, setBankAccounts] = useState<BankAccount[]>([]);
+  const [bankAccounts, setBankAccounts] = useState<BankAccountWithUsage[]>([]);
   const [shops, setShops] = useState<Shop[]>([]);
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -55,7 +63,21 @@ export function BankAccountsList() {
       if (bankAccountsResponse.error) throw bankAccountsResponse.error;
       if (shopsResponse.error) throw shopsResponse.error;
 
-      setBankAccounts(bankAccountsResponse.data || []);
+      const accounts = bankAccountsResponse.data || [];
+      const accountsWithUsage: BankAccountWithUsage[] = await Promise.all(
+        accounts.map(async (account) => {
+          const dailyUsage = await calculateDailyUsage(account.id);
+          const usagePercentage = getDailyUsagePercentage(dailyUsage, account.daily_limit || 0);
+          
+          return {
+            ...account,
+            dailyUsage,
+            usagePercentage,
+          };
+        })
+      );
+
+      setBankAccounts(accountsWithUsage);
       setShops(shopsResponse.data || []);
     } catch (error) {
       console.error('Error fetching data:', error);
@@ -188,7 +210,7 @@ export function BankAccountsList() {
           <CardHeader>
             <CardTitle>Bankkonten ({bankAccounts.length})</CardTitle>
             <CardDescription>
-              Übersicht aller konfigurierten Bankkonten
+              Übersicht aller konfigurierten Bankkonten mit Tageslimits und aktueller Nutzung
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -201,6 +223,7 @@ export function BankAccountsList() {
                   <TableHead>Währung</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead>Anyname</TableHead>
+                  <TableHead>Tageslimit</TableHead>
                   <TableHead>Verwendung</TableHead>
                   <TableHead>Aktionen</TableHead>
                 </TableRow>
@@ -245,6 +268,37 @@ export function BankAccountsList() {
                           </div>
                         ) : (
                           <span className="text-gray-500 text-sm">Kontoinhaber</span>
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        {account.daily_limit && account.daily_limit > 0 ? (
+                          <div className="flex items-center">
+                            <Euro className="h-4 w-4 mr-1 text-gray-500" />
+                            <span className="text-sm font-medium">
+                              {formatCurrency(account.daily_limit, account.currency)}
+                            </span>
+                          </div>
+                        ) : (
+                          <span className="text-gray-500 text-sm">Kein Limit</span>
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        {account.daily_limit && account.daily_limit > 0 ? (
+                          <div className="space-y-2">
+                            <div className="flex items-center justify-between text-sm">
+                              <span>{formatCurrency(account.dailyUsage, account.currency)}</span>
+                              <span className="text-gray-500">{account.usagePercentage.toFixed(1)}%</span>
+                            </div>
+                            <Progress 
+                              value={account.usagePercentage} 
+                              className="h-2"
+                            />
+                          </div>
+                        ) : (
+                          <div className="flex items-center text-gray-500">
+                            <TrendingUp className="h-4 w-4 mr-1" />
+                            <span className="text-sm">{formatCurrency(account.dailyUsage, account.currency)}</span>
+                          </div>
                         )}
                       </TableCell>
                       <TableCell>

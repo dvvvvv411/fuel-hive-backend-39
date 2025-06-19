@@ -20,6 +20,7 @@ interface BankAccount {
   country: string;
   active: boolean;
   use_anyname: boolean;
+  daily_limit: number | null;
 }
 
 interface BankAccountDialogProps {
@@ -51,6 +52,7 @@ export function BankAccountDialog({ open, onOpenChange, bankAccount, onSave }: B
     country: 'DE',
     active: true,
     use_anyname: false,
+    daily_limit: 0,
   });
   const [loading, setLoading] = useState(false);
 
@@ -66,6 +68,7 @@ export function BankAccountDialog({ open, onOpenChange, bankAccount, onSave }: B
         country: bankAccount.country,
         active: bankAccount.active,
         use_anyname: bankAccount.use_anyname,
+        daily_limit: bankAccount.daily_limit || 0,
       });
     } else {
       setFormData({
@@ -78,6 +81,7 @@ export function BankAccountDialog({ open, onOpenChange, bankAccount, onSave }: B
         country: 'DE',
         active: true,
         use_anyname: false,
+        daily_limit: 0,
       });
     }
   }, [bankAccount, open]);
@@ -221,6 +225,22 @@ export function BankAccountDialog({ open, onOpenChange, bankAccount, onSave }: B
                 </SelectContent>
               </Select>
             </div>
+          </div>
+
+          <div>
+            <Label htmlFor="daily_limit">Tageslimit ({formData.currency})</Label>
+            <Input
+              id="daily_limit"
+              type="number"
+              min="0"
+              step="0.01"
+              value={formData.daily_limit}
+              onChange={(e) => setFormData({ ...formData, daily_limit: parseFloat(e.target.value) || 0 })}
+              placeholder="0.00"
+            />
+            <p className="text-sm text-gray-500 mt-1">
+              Optionales Tageslimit für Informationszwecke
+            </p>
           </div>
 
           <div className="flex items-center space-x-2">

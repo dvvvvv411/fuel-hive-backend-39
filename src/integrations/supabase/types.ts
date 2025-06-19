@@ -19,6 +19,7 @@ export type Database = {
           country: string
           created_at: string
           currency: string
+          daily_limit: number | null
           iban: string
           id: string
           use_anyname: boolean
@@ -32,6 +33,7 @@ export type Database = {
           country: string
           created_at?: string
           currency?: string
+          daily_limit?: number | null
           iban: string
           id?: string
           use_anyname?: boolean
@@ -45,6 +47,7 @@ export type Database = {
           country?: string
           created_at?: string
           currency?: string
+          daily_limit?: number | null
           iban?: string
           id?: string
           use_anyname?: boolean
