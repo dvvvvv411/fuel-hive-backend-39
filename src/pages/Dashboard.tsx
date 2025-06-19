@@ -12,6 +12,7 @@ import { BankAccountsList } from '@/components/BankAccountsList';
 import { PaymentMethodsList } from '@/components/PaymentMethodsList';
 import { ResendConfigsList } from '@/components/ResendConfigsList';
 import { InvoicePreview } from '@/components/InvoicePreview';
+import { DashboardStats } from '@/components/DashboardStats';
 import { Store, CreditCard, FileText, TrendingUp, Mail, Banknote, Eye } from 'lucide-react';
 
 const Dashboard = () => {
