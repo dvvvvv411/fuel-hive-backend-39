@@ -1,8 +1,8 @@
+
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { Resend } from "npm:resend@2.0.0";
-import { getTranslations, detectLanguage, interpolateString } from './translations.ts';
-import { getProductTranslation } from '../generate-invoice/translations.ts';
+import { getTranslations, detectLanguage, interpolateString, getProductTranslation } from './translations.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
