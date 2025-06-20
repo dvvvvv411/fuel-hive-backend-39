@@ -59,24 +59,6 @@ export interface EmailTranslations {
   };
 }
 
-// Product translations mapping - duplicated here to avoid cross-function imports
-export const productTranslations: Record<string, Record<string, string>> = {
-  'standard': {
-    de: 'Standard Heizöl',
-    en: 'Standard Heating Oil',
-    fr: 'Fioul Standard',
-    es: 'Gasóleo Estándar',
-    it: 'Gasolio Standard'
-  },
-  'premium': {
-    de: 'Premium Heizöl',
-    en: 'Premium Heating Oil',
-    fr: 'Fioul Premium',
-    es: 'Gasóleo Premium',
-    it: 'Gasolio Premium'
-  }
-};
-
 const translations: { [key: string]: EmailTranslations } = {
   de: {
     confirmationSubject: "Bestellbestätigung {orderNumber} - Ihre {product}-Bestellung bei {shopName}",
@@ -525,9 +507,4 @@ export function interpolateString(template: string, variables: { [key: string]: 
   return template.replace(/\{(\w+)\}/g, (match, key) => {
     return variables[key] || match;
   });
-}
-
-export function getProductTranslation(product: string, language: string): string {
-  const productKey = product.toLowerCase();
-  return productTranslations[productKey]?.[language] || productTranslations[productKey]?.['de'] || product;
 }

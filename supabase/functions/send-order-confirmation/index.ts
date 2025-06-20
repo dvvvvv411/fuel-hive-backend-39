@@ -2,7 +2,7 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { Resend } from "npm:resend@2.0.0";
-import { getTranslations, detectLanguage, interpolateString, getProductTranslation } from './translations.ts';
+import { getTranslations, detectLanguage, interpolateString } from './translations.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -41,7 +41,7 @@ const generateConfirmationEmailTemplate = (order: any, language: string = 'de') 
   const t = getTranslations(language);
   const shopName = (order.shops?.name || order.shops?.company_name || 'Heizöl-Service').trim();
   const accentColor = order.shops?.accent_color || '#2563eb';
-  const translatedProduct = getProductTranslation(order.product, language);
+  const translatedProduct = t.products[order.product] || order.product;
   
   const subject = interpolateString(t.confirmationSubject, {
     orderNumber: order.order_number,
@@ -206,7 +206,7 @@ const generateInvoiceEmailTemplate = (order: any, bankData: any, language: strin
   const t = getTranslations(language);
   const shopName = (order.shops?.name || 'Heizöl-Service').trim();
   const accentColor = order.shops?.accent_color || '#2563eb';
-  const translatedProduct = getProductTranslation(order.product, language);
+  const translatedProduct = t.products[order.product] || order.product;
   
   // Use temp_order_number if available, otherwise use original order_number
   const invoiceNumber = order.temp_order_number || order.order_number;

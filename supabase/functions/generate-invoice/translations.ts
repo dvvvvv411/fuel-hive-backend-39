@@ -30,24 +30,6 @@ export interface InvoiceTranslations {
   currency: string;
 }
 
-// Product translations mapping
-export const productTranslations: Record<string, Record<string, string>> = {
-  'standard': {
-    de: 'Standard Heizöl',
-    en: 'Standard Heating Oil',
-    fr: 'Fioul Standard',
-    es: 'Gasóleo Estándar',
-    it: 'Gasolio Standard'
-  },
-  'premium': {
-    de: 'Premium Heizöl',
-    en: 'Premium Heating Oil',
-    fr: 'Fioul Premium',
-    es: 'Gasóleo Premium',
-    it: 'Gasolio Premium'
-  }
-};
-
 export const translations: Record<string, InvoiceTranslations> = {
   de: {
     invoice: 'Rechnung',
@@ -203,9 +185,4 @@ export const translations: Record<string, InvoiceTranslations> = {
 
 export function getInvoiceTranslations(language: string): InvoiceTranslations {
   return translations[language] || translations.de;
-}
-
-export function getProductTranslation(product: string, language: string): string {
-  const productKey = product.toLowerCase();
-  return productTranslations[productKey]?.[language] || productTranslations[productKey]?.['de'] || product;
 }
