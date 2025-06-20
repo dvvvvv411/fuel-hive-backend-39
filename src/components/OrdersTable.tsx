@@ -420,9 +420,6 @@ export function OrdersTable() {
         })
       );
 
-      // Refresh the orders to get updated bank account info
-      setTimeout(() => fetchOrders(), 1000);
-
       const successMessage = emailError 
         ? 'Rechnung wurde erfolgreich generiert (E-Mail-Versand fehlgeschlagen)'
         : 'Rechnung wurde erfolgreich generiert und per E-Mail versendet';
