@@ -342,25 +342,7 @@ export function OrdersTable() {
         console.log('Successfully associated temporary bank account with order');
       }
 
-      // Step 4: Process the manual order
-      if (orderData.processing_mode === 'manual') {
-        console.log('Processing manual order');
-        
-        const { error: processError } = await supabase.functions.invoke('process-manual-order', {
-          body: { 
-            order_id: orderId
-          }
-        });
-
-        if (processError) {
-          console.error('Error processing manual order:', processError);
-          // Don't throw here, just log the error and continue with invoice generation
-        } else {
-          console.log('Manual order processed successfully');
-        }
-      }
-
-      // Step 5: Generate the invoice with the associated bank account
+      // Step 4: Generate the invoice with the associated bank account
       console.log('Generating invoice');
       
       const { data: invoiceData, error: invoiceError } = await supabase.functions.invoke('generate-invoice', {
@@ -377,7 +359,7 @@ export function OrdersTable() {
 
       console.log('Invoice generation response:', invoiceData);
 
-      // Step 6: Send the email with the invoice PDF
+      // Step 5: Send the email with the invoice PDF
       console.log('Sending invoice email for order:', orderId);
       
       const { data: emailData, error: emailError } = await supabase.functions.invoke('send-order-confirmation', {
@@ -400,7 +382,7 @@ export function OrdersTable() {
         console.log('Invoice email sent successfully:', emailData);
       }
 
-      // Step 7: Update local state to reflect the changes
+      // Step 6: Update local state to reflect the changes
       setOrders(prevOrders => 
         prevOrders.map(order => {
           if (order.id === orderId) {
