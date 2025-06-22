@@ -1,3 +1,4 @@
+
 export interface InvoiceTranslations {
   invoice: string;
   invoiceNumber: string;
@@ -61,7 +62,6 @@ export interface InvoiceTranslations {
   selectPaymentMethod: string;
   required: string;
   name: string;
-  email: string;
   telephone: string;
   streetNumber: string;
   postalCode: string;
@@ -132,7 +132,6 @@ export const translations: Record<string, InvoiceTranslations> = {
     selectPaymentMethod: 'Zahlungsart wählen...',
     required: '*',
     name: 'Name',
-    email: 'E-Mail',
     telephone: 'Telefon',
     streetNumber: 'Straße und Hausnummer',
     postalCode: 'PLZ',
@@ -201,7 +200,6 @@ export const translations: Record<string, InvoiceTranslations> = {
     selectPaymentMethod: 'Select payment method...',
     required: '*',
     name: 'Name',
-    email: 'Email',
     telephone: 'Phone',
     streetNumber: 'Street and Number',
     postalCode: 'Postal Code',
@@ -270,7 +268,6 @@ export const translations: Record<string, InvoiceTranslations> = {
     selectPaymentMethod: 'Sélectionner le mode de paiement...',
     required: '*',
     name: 'Nom',
-    email: 'Email',
     telephone: 'Téléphone',
     streetNumber: 'Rue et numéro',
     postalCode: 'Code postal',
@@ -339,7 +336,6 @@ export const translations: Record<string, InvoiceTranslations> = {
     selectPaymentMethod: 'Seleccionar método de pago...',
     required: '*',
     name: 'Nombre',
-    email: 'Email',
     telephone: 'Teléfono',
     streetNumber: 'Calle y número',
     postalCode: 'Código postal',
@@ -408,7 +404,6 @@ export const translations: Record<string, InvoiceTranslations> = {
     selectPaymentMethod: 'Seleziona metodo di pagamento...',
     required: '*',
     name: 'Nome',
-    email: 'Email',
     telephone: 'Telefono',
     streetNumber: 'Via e numero',
     postalCode: 'Codice postale',
@@ -477,7 +472,6 @@ export const translations: Record<string, InvoiceTranslations> = {
     selectPaymentMethod: 'Selecteer betaalmethode...',
     required: '*',
     name: 'Naam',
-    email: 'Email',
     telephone: 'Telefoon',
     streetNumber: 'Straat en huisnummer',
     postalCode: 'Postcode',
@@ -546,7 +540,6 @@ export const translations: Record<string, InvoiceTranslations> = {
     selectPaymentMethod: 'Selecionar método de pagamento...',
     required: '*',
     name: 'Nome',
-    email: 'Email',
     telephone: 'Telefone',
     streetNumber: 'Rua e número',
     postalCode: 'Código postal',
@@ -615,7 +608,6 @@ export const translations: Record<string, InvoiceTranslations> = {
     selectPaymentMethod: 'Wybierz metodę płatności...',
     required: '*',
     name: 'Imię i nazwisko',
-    email: 'Email',
     telephone: 'Telefon',
     streetNumber: 'Ulica i numer',
     postalCode: 'Kod pocztowy',
@@ -684,7 +676,6 @@ export const translations: Record<string, InvoiceTranslations> = {
     selectPaymentMethod: 'Välj betalningsmetod...',
     required: '*',
     name: 'Namn',
-    email: 'Email',
     telephone: 'Telefon',
     streetNumber: 'Gata och nummer',
     postalCode: 'Postnummer',
@@ -753,7 +744,6 @@ export const translations: Record<string, InvoiceTranslations> = {
     selectPaymentMethod: 'Vælg betalingsmetode...',
     required: '*',
     name: 'Navn',
-    email: 'Email',
     telephone: 'Telefon',
     streetNumber: 'Gade og nummer',
     postalCode: 'Postnummer',
@@ -822,7 +812,6 @@ export const translations: Record<string, InvoiceTranslations> = {
     selectPaymentMethod: 'Velg betalingsmetode...',
     required: '*',
     name: 'Navn',
-    email: 'Email',
     telephone: 'Telefon',
     streetNumber: 'Gate og nummer',
     postalCode: 'Postnummer',
@@ -891,7 +880,6 @@ export const translations: Record<string, InvoiceTranslations> = {
     selectPaymentMethod: 'Valitse maksutapa...',
     required: '*',
     name: 'Nimi',
-    email: 'Sähköposti',
     telephone: 'Puhelin',
     streetNumber: 'Katu ja numero',
     postalCode: 'Postinumero',
