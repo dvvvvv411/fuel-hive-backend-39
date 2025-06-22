@@ -28,6 +28,13 @@ export interface InvoiceTranslations {
   deliveryFee: string;
   dueDays: string;
   currency: string;
+  paymentInfo: string;
+  recipient: string;
+  bank: string;
+  totalAmount: string;
+  vatLabel: string;
+  invoiceFilename: string;
+  products: Record<string, string>;
 }
 
 export const translations: Record<string, InvoiceTranslations> = {
@@ -59,7 +66,18 @@ export const translations: Record<string, InvoiceTranslations> = {
     pricePerLiter: 'Preis pro Liter',
     deliveryFee: 'Liefergebühr',
     dueDays: '14 Tage',
-    currency: '€'
+    currency: '€',
+    paymentInfo: 'Zahlungsinformationen',
+    recipient: 'Empfänger',
+    bank: 'Bank',
+    totalAmount: 'Gesamtbetrag',
+    vatLabel: 'USt-IdNr.',
+    invoiceFilename: 'Rechnung',
+    products: {
+      'heating_oil': 'Heizöl',
+      'diesel': 'Diesel',
+      'gasoline': 'Benzin'
+    }
   },
   en: {
     invoice: 'Invoice',
@@ -89,7 +107,18 @@ export const translations: Record<string, InvoiceTranslations> = {
     pricePerLiter: 'Price per Liter',
     deliveryFee: 'Delivery Fee',
     dueDays: '14 days',
-    currency: '€'
+    currency: '€',
+    paymentInfo: 'Payment Information',
+    recipient: 'Recipient',
+    bank: 'Bank',
+    totalAmount: 'Total Amount',
+    vatLabel: 'VAT Number',
+    invoiceFilename: 'Invoice',
+    products: {
+      'heating_oil': 'Heating Oil',
+      'diesel': 'Diesel',
+      'gasoline': 'Gasoline'
+    }
   },
   fr: {
     invoice: 'Facture',
@@ -119,7 +148,18 @@ export const translations: Record<string, InvoiceTranslations> = {
     pricePerLiter: 'Prix par litre',
     deliveryFee: 'Frais de livraison',
     dueDays: '14 jours',
-    currency: '€'
+    currency: '€',
+    paymentInfo: 'Informations de paiement',
+    recipient: 'Destinataire',
+    bank: 'Banque',
+    totalAmount: 'Montant total',
+    vatLabel: 'Numéro de TVA',
+    invoiceFilename: 'Facture',
+    products: {
+      'heating_oil': 'Fioul de chauffage',
+      'diesel': 'Diesel',
+      'gasoline': 'Essence'
+    }
   },
   es: {
     invoice: 'Factura',
@@ -149,7 +189,18 @@ export const translations: Record<string, InvoiceTranslations> = {
     pricePerLiter: 'Precio por litro',
     deliveryFee: 'Tarifa de entrega',
     dueDays: '14 días',
-    currency: '€'
+    currency: '€',
+    paymentInfo: 'Información de pago',
+    recipient: 'Destinatario',
+    bank: 'Banco',
+    totalAmount: 'Monto total',
+    vatLabel: 'Número de IVA',
+    invoiceFilename: 'Factura',
+    products: {
+      'heating_oil': 'Combustible para calefacción',
+      'diesel': 'Diesel',
+      'gasoline': 'Gasolina'
+    }
   },
   it: {
     invoice: 'Fattura',
@@ -179,10 +230,140 @@ export const translations: Record<string, InvoiceTranslations> = {
     pricePerLiter: 'Prezzo per litro',
     deliveryFee: 'Tassa di consegna',
     dueDays: '14 giorni',
-    currency: '€'
+    currency: '€',
+    paymentInfo: 'Informazioni di pagamento',
+    recipient: 'Destinatario',
+    bank: 'Banca',
+    totalAmount: 'Importo totale',
+    vatLabel: 'Partita IVA',
+    invoiceFilename: 'Fattura',
+    products: {
+      'heating_oil': 'Gasolio per riscaldamento',
+      'diesel': 'Diesel',
+      'gasoline': 'Benzina'
+    }
+  },
+  pl: {
+    invoice: 'Faktura',
+    invoiceNumber: 'Numer faktury',
+    invoiceDate: 'Data faktury',
+    dueDate: 'Termin płatności',
+    customerDetails: 'Dane klienta',
+    companyDetails: 'Dane firmy',
+    description: 'Opis',
+    quantity: 'Ilość',
+    unitPrice: 'Cena jednostkowa',
+    total: 'Razem',
+    subtotal: 'Suma częściowa',
+    vat: 'VAT',
+    grandTotal: 'Suma całkowita',
+    paymentDetails: 'Szczegóły płatności',
+    bankDetails: 'Dane bankowe',
+    accountHolder: 'Właściciel konta',
+    iban: 'IBAN',
+    bic: 'BIC',
+    paymentReference: 'Tytuł płatności',
+    thankYou: 'Dziękujemy za zamówienie!',
+    deliveryAddress: 'Adres dostawy',
+    billingAddress: 'Adres rozliczeniowy',
+    heatingOilDelivery: 'Dostawa oleju opałowego',
+    liters: 'Litry',
+    pricePerLiter: 'Cena za litr',
+    deliveryFee: 'Opłata za dostawę',
+    dueDays: '14 dni',
+    currency: '€',
+    paymentInfo: 'Informacje o płatności',
+    recipient: 'Odbiorca',
+    bank: 'Bank',
+    totalAmount: 'Kwota całkowita',
+    vatLabel: 'NIP',
+    invoiceFilename: 'Faktura',
+    products: {
+      'heating_oil': 'Olej opałowy',
+      'diesel': 'Diesel',
+      'gasoline': 'Benzyna'
+    }
+  },
+  nl: {
+    invoice: 'Factuur',
+    invoiceNumber: 'Factuurnummer',
+    invoiceDate: 'Factuurdatum',
+    dueDate: 'Vervaldatum',
+    customerDetails: 'Klantgegevens',
+    companyDetails: 'Bedrijfsgegevens',
+    description: 'Beschrijving',
+    quantity: 'Hoeveelheid',
+    unitPrice: 'Eenheidsprijs',
+    total: 'Totaal',
+    subtotal: 'Subtotaal',
+    vat: 'BTW',
+    grandTotal: 'Eindtotaal',
+    paymentDetails: 'Betalingsgegevens',
+    bankDetails: 'Bankgegevens',
+    accountHolder: 'Rekeninghouder',
+    iban: 'IBAN',
+    bic: 'BIC',
+    paymentReference: 'Betalingskenmerk',
+    thankYou: 'Dank u voor uw bestelling!',
+    deliveryAddress: 'Leveringsadres',
+    billingAddress: 'Factuuradres',
+    heatingOilDelivery: 'Stookolielevering',
+    liters: 'Liters',
+    pricePerLiter: 'Prijs per liter',
+    deliveryFee: 'Leveringskosten',
+    dueDays: '14 dagen',
+    currency: '€',
+    paymentInfo: 'Betalingsinformatie',
+    recipient: 'Ontvanger',
+    bank: 'Bank',
+    totalAmount: 'Totaalbedrag',
+    vatLabel: 'BTW-nummer',
+    invoiceFilename: 'Factuur',
+    products: {
+      'heating_oil': 'Stookolie',
+      'diesel': 'Diesel',
+      'gasoline': 'Benzine'
+    }
   }
 };
 
-export function getInvoiceTranslations(language: string): InvoiceTranslations {
+export function getTranslations(language: string): InvoiceTranslations {
   return translations[language] || translations.de;
+}
+
+export function detectLanguage(order: any): string {
+  console.log('Detecting language for order from shop country/language...');
+  
+  // Priority 1: Use shop's configured language
+  if (order.shops?.language) {
+    console.log('Using shop configured language:', order.shops.language);
+    return order.shops.language;
+  }
+  
+  // Priority 2: Use country code to determine language
+  if (order.shops?.country_code) {
+    const countryLanguageMap: Record<string, string> = {
+      'DE': 'de',
+      'AT': 'de', 
+      'CH': 'de',
+      'US': 'en',
+      'GB': 'en',
+      'CA': 'en',
+      'AU': 'en',
+      'FR': 'fr',
+      'BE': 'fr', // Belgium can be French or Dutch, defaulting to French
+      'ES': 'es',
+      'IT': 'it',
+      'PL': 'pl',
+      'NL': 'nl'
+    };
+    
+    const detectedLanguage = countryLanguageMap[order.shops.country_code] || 'de';
+    console.log(`Country code ${order.shops.country_code} mapped to language: ${detectedLanguage}`);
+    return detectedLanguage;
+  }
+  
+  // Fallback to German
+  console.log('No language detection criteria found, falling back to German');
+  return 'de';
 }
