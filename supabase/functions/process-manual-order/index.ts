@@ -10,6 +10,7 @@ const corsHeaders = {
 interface ProcessOrderRequest {
   order_id: string;
   temp_order_number?: string;
+  bank_account_id?: string;
 }
 
 const handler = async (req: Request): Promise<Response> => {
@@ -30,21 +31,31 @@ const handler = async (req: Request): Promise<Response> => {
   );
 
   try {
-    const { order_id, temp_order_number }: ProcessOrderRequest = await req.json();
-    console.log('Processing manual order:', order_id, 'with temp order number:', temp_order_number);
+    const { order_id, temp_order_number, bank_account_id }: ProcessOrderRequest = await req.json();
+    console.log('Processing manual order:', order_id, 'with temp order number:', temp_order_number, 'and bank account:', bank_account_id);
 
-    // Update the order with temporary order number if provided
+    // Update the order with temporary order number and selected bank account if provided
+    const updateData: any = {};
+    
     if (temp_order_number) {
+      updateData.temp_order_number = temp_order_number;
+    }
+    
+    if (bank_account_id) {
+      updateData.selected_bank_account_id = bank_account_id;
+    }
+
+    if (Object.keys(updateData).length > 0) {
       const { error: updateError } = await supabase
         .from('orders')
-        .update({ temp_order_number })
+        .update(updateData)
         .eq('id', order_id);
 
       if (updateError) {
-        console.error('Error updating order with temp order number:', updateError);
+        console.error('Error updating order:', updateError);
         // Don't fail the process, just log the error
       } else {
-        console.log('Updated order with temporary order number:', temp_order_number);
+        console.log('Updated order with:', updateData);
       }
     }
 

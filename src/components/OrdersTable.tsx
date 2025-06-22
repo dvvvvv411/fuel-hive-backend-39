@@ -54,6 +54,7 @@ interface Order {
   created_at: string;
   shop_id: string;
   hidden: boolean;
+  selected_bank_account_id: string | null;
   shops?: {
     name: string;
     bank_account_id: string | null;
@@ -68,6 +69,11 @@ interface Order {
     account_holder: string;
     iban: string;
   }[];
+  selected_bank_account?: {
+    account_name: string;
+    account_holder: string;
+    iban: string;
+  };
 }
 
 interface Shop {
@@ -135,6 +141,11 @@ export function OrdersTable() {
             )
           ),
           temp_bank_accounts:bank_accounts!used_for_order_id(
+            account_name,
+            account_holder,
+            iban
+          ),
+          selected_bank_account:bank_accounts!selected_bank_account_id(
             account_name,
             account_holder,
             iban
@@ -288,23 +299,31 @@ export function OrdersTable() {
         description: 'Die Rechnung wird erstellt und per E-Mail versendet',
       });
 
-      // Step 1: Update the order number directly if provided
+      // Step 1: Update the order with selected bank account and order number if provided
+      const updateData: any = {};
+      
       if (newOrderNumber && newOrderNumber.trim() !== '') {
-        console.log('Updating order number to:', newOrderNumber);
+        updateData.order_number = newOrderNumber.trim();
+      }
+      
+      if (bankAccountId) {
+        updateData.selected_bank_account_id = bankAccountId;
+      }
+
+      if (Object.keys(updateData).length > 0) {
+        console.log('Updating order with:', updateData);
         
         const { error: updateOrderError } = await supabase
           .from('orders')
-          .update({ 
-            order_number: newOrderNumber.trim()
-          })
+          .update(updateData)
           .eq('id', orderId);
 
         if (updateOrderError) {
-          console.error('Error updating order number:', updateOrderError);
+          console.error('Error updating order:', updateOrderError);
           throw updateOrderError;
         }
 
-        console.log('Order number updated successfully');
+        console.log('Order updated successfully');
       }
 
       // Step 2: Get the order data and check if it's a manual order
@@ -395,7 +414,8 @@ export function OrdersTable() {
               invoice_pdf_url: invoiceData.invoice_url,
               invoice_generation_date: invoiceData.generated_at || new Date().toISOString(),
               invoice_date: new Date().toISOString().split('T')[0],
-              order_number: newOrderNumber && newOrderNumber.trim() !== '' ? newOrderNumber.trim() : order.order_number
+              order_number: newOrderNumber && newOrderNumber.trim() !== '' ? newOrderNumber.trim() : order.order_number,
+              selected_bank_account_id: bankAccountId || order.selected_bank_account_id
             };
           }
           return order;
@@ -482,12 +502,17 @@ export function OrdersTable() {
   };
 
   const getBankAccountInfo = (order: Order) => {
-    // Check for temporary bank account first
+    // Check for selected bank account first (for manual orders with invoice generated)
+    if (order.selected_bank_account) {
+      return order.selected_bank_account.account_name;
+    }
+    
+    // Check for temporary bank account (for manual orders during processing)
     if (order.temp_bank_accounts && Array.isArray(order.temp_bank_accounts) && order.temp_bank_accounts.length > 0) {
       return order.temp_bank_accounts[0].account_name;
     }
     
-    // Check if shop has an assigned bank account
+    // Check if shop has an assigned bank account (for instant orders)
     if (order.shops?.bank_accounts) {
       const bankAccount = order.shops.bank_accounts;
       return bankAccount.account_name;

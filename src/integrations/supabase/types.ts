@@ -159,6 +159,7 @@ export type Database = {
           price_per_liter: number
           processing_mode: string | null
           product: string
+          selected_bank_account_id: string | null
           shop_id: string
           status: string
           temp_order_number: string | null
@@ -202,6 +203,7 @@ export type Database = {
           price_per_liter: number
           processing_mode?: string | null
           product: string
+          selected_bank_account_id?: string | null
           shop_id: string
           status?: string
           temp_order_number?: string | null
@@ -245,6 +247,7 @@ export type Database = {
           price_per_liter?: number
           processing_mode?: string | null
           product?: string
+          selected_bank_account_id?: string | null
           shop_id?: string
           status?: string
           temp_order_number?: string | null
@@ -257,6 +260,13 @@ export type Database = {
             columns: ["payment_method_id"]
             isOneToOne: false
             referencedRelation: "payment_methods"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "orders_selected_bank_account_id_fkey"
+            columns: ["selected_bank_account_id"]
+            isOneToOne: false
+            referencedRelation: "bank_accounts"
             referencedColumns: ["id"]
           },
           {
