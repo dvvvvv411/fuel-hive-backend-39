@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -310,6 +311,7 @@ export function OrdersTable() {
         updateData.selected_bank_account_id = bankAccountId;
       }
 
+      // CRITICAL FIX: Always update the order with the selected bank account ID
       if (Object.keys(updateData).length > 0) {
         console.log('Updating order with:', updateData);
         
@@ -319,11 +321,11 @@ export function OrdersTable() {
           .eq('id', orderId);
 
         if (updateOrderError) {
-          console.error('Error updating order:', updateOrderError);
+          console.error('Error updating order with selected bank account:', updateOrderError);
           throw updateOrderError;
         }
 
-        console.log('Order updated successfully');
+        console.log('Order updated successfully with selected bank account');
       }
 
       // Step 2: Get the order data and check if it's a manual order
@@ -401,7 +403,25 @@ export function OrdersTable() {
         console.log('Invoice email sent successfully:', emailData);
       }
 
-      // Step 6: Update local state to reflect the changes
+      // Step 6: Fetch the updated order data to get the selected bank account information
+      const { data: updatedOrder, error: fetchError } = await supabase
+        .from('orders')
+        .select(`
+          *,
+          selected_bank_account:bank_accounts!selected_bank_account_id(
+            account_name,
+            account_holder,
+            iban
+          )
+        `)
+        .eq('id', orderId)
+        .single();
+
+      if (fetchError) {
+        console.error('Error fetching updated order:', fetchError);
+      }
+
+      // Step 7: Update local state to reflect the changes
       setOrders(prevOrders => 
         prevOrders.map(order => {
           if (order.id === orderId) {
@@ -415,7 +435,9 @@ export function OrdersTable() {
               invoice_generation_date: invoiceData.generated_at || new Date().toISOString(),
               invoice_date: new Date().toISOString().split('T')[0],
               order_number: newOrderNumber && newOrderNumber.trim() !== '' ? newOrderNumber.trim() : order.order_number,
-              selected_bank_account_id: bankAccountId || order.selected_bank_account_id
+              selected_bank_account_id: bankAccountId || order.selected_bank_account_id,
+              // Update the selected bank account information if we have it
+              selected_bank_account: updatedOrder?.selected_bank_account || order.selected_bank_account
             };
           }
           return order;
