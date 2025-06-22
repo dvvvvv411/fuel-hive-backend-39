@@ -487,12 +487,7 @@ export function OrdersTable() {
       return order.temp_bank_accounts[0].account_name;
     }
     
-    // If processing_mode is 'manual' and no invoice has been generated yet
-    if (order.processing_mode === 'manual' && !order.invoice_number) {
-      return '';
-    }
-    
-    // For all other cases (manual with invoice, instant mode, or fallback)
+    // Check if shop has an assigned bank account
     if (order.shops?.bank_accounts) {
       const bankAccount = order.shops.bank_accounts;
       return bankAccount.account_name;
