@@ -125,6 +125,57 @@ const processShopLogo = async (logoUrl: string): Promise<{ format: string; base6
   }
 };
 
+// Helper function to calculate dynamic label width
+const calculateLabelWidth = (pdf: any, labels: string[], fontSize: number = 10): number => {
+  pdf.setFontSize(fontSize);
+  pdf.setFont('helvetica', 'bold');
+  
+  let maxWidth = 0;
+  labels.forEach(label => {
+    const width = pdf.getTextWidth(label + ':');
+    if (width > maxWidth) {
+      maxWidth = width;
+    }
+  });
+  
+  // Add some padding and ensure minimum/maximum widths
+  const paddedWidth = maxWidth + 3; // 3mm padding
+  const minWidth = 25; // Minimum 25mm
+  const maxWidth2 = 50; // Maximum 50mm to prevent excessive spacing
+  
+  return Math.max(minWidth, Math.min(maxWidth2, paddedWidth));
+};
+
+// Helper function to calculate column widths for footer
+const calculateFooterColumnWidths = (pdf: any, t: any, pageWidth: number, margin: number): number[] => {
+  const totalWidth = pageWidth - (2 * margin);
+  const baseColumnWidth = totalWidth / 4;
+  
+  // Calculate required widths for each column based on content
+  pdf.setFontSize(8);
+  pdf.setFont('helvetica', 'normal');
+  
+  const column1Width = Math.max(baseColumnWidth, pdf.getTextWidth(t.businessData) + 5);
+  const column2Width = Math.max(baseColumnWidth, pdf.getTextWidth(t.contact) + 5);
+  const column3Width = Math.max(baseColumnWidth, pdf.getTextWidth(t.bankInformation) + 5);
+  const column4Width = Math.max(baseColumnWidth, pdf.getTextWidth(t.businessData) + 5);
+  
+  // Ensure total doesn't exceed available space
+  const totalCalculated = column1Width + column2Width + column3Width + column4Width;
+  if (totalCalculated > totalWidth) {
+    // Scale down proportionally
+    const scale = totalWidth / totalCalculated;
+    return [
+      column1Width * scale,
+      column2Width * scale,
+      column3Width * scale,
+      column4Width * scale
+    ];
+  }
+  
+  return [column1Width, column2Width, column3Width, column4Width];
+};
+
 const generateResponsivePDF = async (order: any, bankData: any, language: string = 'de') => {
   console.log('Starting PDF generation matching InvoicePreview template with language:', language);
   
@@ -293,11 +344,10 @@ const generateResponsivePDF = async (order: any, bankData: any, language: string
   leftY += 4;
   pdf.text(`${order.delivery_postcode} ${order.delivery_city}`, leftColumnX, leftY);
 
-  // RIGHT COLUMN - Invoice details (reduced fields as in template)
+  // RIGHT COLUMN - Invoice details with dynamic label width
   let rightY = startY;
   pdf.setTextColor(0, 0, 0);
   pdf.setFontSize(10);
-  pdf.setFont('helvetica', 'normal');
 
   const invoiceDate = new Date(order.invoice_date || order.created_at);
   const formattedDate = invoiceDate.toLocaleDateString(
@@ -311,24 +361,32 @@ const generateResponsivePDF = async (order: any, bankData: any, language: string
 
   const orderNumberForInvoice = order.temp_order_number || order.order_number;
 
-  // Invoice details
+  // Calculate dynamic label width for invoice details
+  const invoiceLabels = [
+    t.invoiceDate,
+    t.orderNumber || 'Order Number',
+    t.orderDate || 'Order Date'
+  ];
+  const invoiceLabelWidth = calculateLabelWidth(pdf, invoiceLabels, 10);
+
+  // Invoice details with dynamic spacing
   pdf.setFont('helvetica', 'bold');
   pdf.text(`${t.invoiceDate}:`, rightColumnX, rightY);
   pdf.setFont('helvetica', 'normal');
-  pdf.text(formattedDate, rightColumnX + 32, rightY);
+  pdf.text(formattedDate, rightColumnX + invoiceLabelWidth, rightY);
   rightY += 5;
 
   pdf.setFont('helvetica', 'bold');
   pdf.text(`${t.orderNumber || 'Order Number'}:`, rightColumnX, rightY);
   pdf.setFont('helvetica', 'normal');
-  pdf.text(orderNumberForInvoice, rightColumnX + 32, rightY);
+  pdf.text(orderNumberForInvoice, rightColumnX + invoiceLabelWidth, rightY);
   rightY += 5;
 
   pdf.setFont('helvetica', 'bold');
   pdf.text(`${t.orderDate || 'Order Date'}:`, rightColumnX, rightY);
   pdf.setFont('helvetica', 'normal');
   const orderDate = new Date(order.created_at);
-  pdf.text(orderDate.toLocaleDateString(language === 'en' ? 'en-US' : 'de-DE'), rightColumnX + 32, rightY);
+  pdf.text(orderDate.toLocaleDateString(language === 'en' ? 'en-US' : 'de-DE'), rightColumnX + invoiceLabelWidth, rightY);
 
   currentY = Math.max(leftY, rightY) + 15; // Move below both columns
 
@@ -365,7 +423,8 @@ const generateResponsivePDF = async (order: any, bankData: any, language: string
   
   pdf.text(productName, margin + 3, currentY + 5);
   pdf.text(`${order.liters} ${t.liters}`, margin + 80, currentY + 5);
-  pdf.text(`${t.currency}${order.price_per_liter.toFixed(3)}`, margin + 115, currentY + 5);
+  // FIXED: Changed from .toFixed(3) to .toFixed(2) for proper currency formatting
+  pdf.text(`${t.currency}${order.price_per_liter.toFixed(2)}`, margin + 115, currentY + 5);
   pdf.text(`${t.currency}${(order.liters * order.price_per_liter).toFixed(2)}`, margin + 150, currentY + 5);
   
   currentY += 8;
@@ -426,7 +485,7 @@ const generateResponsivePDF = async (order: any, bankData: any, language: string
 
   currentY += 35; // Space after totals
 
-  // PAYMENT DETAILS CARD - matching template with fixed alignment
+  // PAYMENT DETAILS CARD - matching template with dynamic label width
   if (bankData) {
     // Card header
     pdf.setFillColor(accentRgb.r, accentRgb.g, accentRgb.b);
@@ -446,48 +505,57 @@ const generateResponsivePDF = async (order: any, bankData: any, language: string
     pdf.setFontSize(10);
     pdf.setFont('helvetica', 'normal');
     
+    // Calculate dynamic label width for payment details
+    const paymentLabels = [
+      t.accountHolder,
+      t.iban,
+      t.bic || 'BIC',
+      t.paymentReference
+    ];
+    const paymentLabelWidth = calculateLabelWidth(pdf, paymentLabels, 10);
+    
     let paymentY = cardContentY + 6;
-    const labelWidth = 25; // Fixed width for labels to ensure alignment
     
     pdf.setFont('helvetica', 'bold');
     pdf.text(`${t.accountHolder}:`, margin + 3, paymentY);
     pdf.setFont('helvetica', 'normal');
     const accountHolder = bankData.use_anyname ? order.shops?.company_name : bankData.account_holder;
-    pdf.text(accountHolder || '', margin + 3 + labelWidth, paymentY);
+    pdf.text(accountHolder || '', margin + 3 + paymentLabelWidth, paymentY);
     paymentY += 4;
     
     pdf.setFont('helvetica', 'bold');
     pdf.text(`${t.iban}:`, margin + 3, paymentY);
     pdf.setFont('helvetica', 'normal');
-    pdf.text(formatIBAN(bankData.iban || ''), margin + 3 + labelWidth, paymentY);
+    pdf.text(formatIBAN(bankData.iban || ''), margin + 3 + paymentLabelWidth, paymentY);
     paymentY += 4;
     
     if (bankData.bic) {
       pdf.setFont('helvetica', 'bold');
       pdf.text(`${t.bic}:`, margin + 3, paymentY);
       pdf.setFont('helvetica', 'normal');
-      pdf.text(bankData.bic, margin + 3 + labelWidth, paymentY);
+      pdf.text(bankData.bic, margin + 3 + paymentLabelWidth, paymentY);
       paymentY += 4;
     }
     
     pdf.setFont('helvetica', 'bold');
     pdf.text(`${t.paymentReference}:`, margin + 3, paymentY);
     pdf.setFont('helvetica', 'normal');
-    pdf.text(orderNumberForInvoice, margin + 3 + labelWidth, paymentY);
+    pdf.text(orderNumberForInvoice, margin + 3 + paymentLabelWidth, paymentY);
     
     currentY += 37; // Move past payment card
   }
 
   currentY += 15; // Extra space before footer
 
-  // MODERN 4-COLUMN FOOTER - matching template with proper translations
+  // MODERN 4-COLUMN FOOTER with dynamic column widths
   const footerStartY = Math.max(currentY, pageHeight - 40); // Ensure footer is near bottom
   
   // Footer background
   pdf.setFillColor(248, 248, 248);
   pdf.rect(0, footerStartY, pageWidth, pageHeight - footerStartY, 'F');
   
-  const colWidth = (pageWidth - (2 * margin)) / 4;
+  // Calculate dynamic column widths
+  const columnWidths = calculateFooterColumnWidths(pdf, t, pageWidth, margin);
   
   pdf.setTextColor(0, 0, 0);
   pdf.setFontSize(8);
@@ -506,51 +574,51 @@ const generateResponsivePDF = async (order: any, bankData: any, language: string
   // Column 2: Contact information
   footerY = footerStartY + 8;
   pdf.setFont('helvetica', 'bold');
-  pdf.text(t.contact, margin + colWidth, footerY);
+  pdf.text(t.contact, margin + columnWidths[0], footerY);
   pdf.setFont('helvetica', 'normal');
   footerY += 4;
   if (order.shops?.company_phone) {
-    pdf.text(order.shops.company_phone, margin + colWidth, footerY);
+    pdf.text(order.shops.company_phone, margin + columnWidths[0], footerY);
     footerY += 3;
   }
-  pdf.text(order.shops?.company_email || '', margin + colWidth, footerY);
+  pdf.text(order.shops?.company_email || '', margin + columnWidths[0], footerY);
   footerY += 3;
   if (order.shops?.company_website) {
-    pdf.text(order.shops.company_website, margin + colWidth, footerY);
+    pdf.text(order.shops.company_website, margin + columnWidths[0], footerY);
   }
   
   // Column 3: Bank information
   footerY = footerStartY + 8;
   pdf.setFont('helvetica', 'bold');
-  pdf.text(t.bankInformation, margin + (2 * colWidth), footerY);
+  pdf.text(t.bankInformation, margin + columnWidths[0] + columnWidths[1], footerY);
   if (bankData) {
     pdf.setFont('helvetica', 'normal');
     footerY += 4;
     const footerAccountHolder = bankData.use_anyname ? order.shops?.company_name : bankData.account_holder;
-    pdf.text(footerAccountHolder || '', margin + (2 * colWidth), footerY);
+    pdf.text(footerAccountHolder || '', margin + columnWidths[0] + columnWidths[1], footerY);
     footerY += 3;
-    pdf.text(formatIBAN(bankData.iban || ''), margin + (2 * colWidth), footerY);
+    pdf.text(formatIBAN(bankData.iban || ''), margin + columnWidths[0] + columnWidths[1], footerY);
     if (bankData.bic) {
       footerY += 3;
-      pdf.text(bankData.bic, margin + (2 * colWidth), footerY);
+      pdf.text(bankData.bic, margin + columnWidths[0] + columnWidths[1], footerY);
     }
   }
   
   // Column 4: Business owner and VAT ID
   footerY = footerStartY + 8;
   pdf.setFont('helvetica', 'bold');
-  pdf.text(t.businessData, margin + (3 * colWidth), footerY);
+  pdf.text(t.businessData, margin + columnWidths[0] + columnWidths[1] + columnWidths[2], footerY);
   pdf.setFont('helvetica', 'normal');
   footerY += 4;
   if (order.shops?.business_owner) {
-    pdf.text(order.shops.business_owner, margin + (3 * colWidth), footerY);
+    pdf.text(order.shops.business_owner, margin + columnWidths[0] + columnWidths[1] + columnWidths[2], footerY);
     footerY += 3;
   }
   if (order.shops?.vat_number) {
-    pdf.text(order.shops.vat_number, margin + (3 * colWidth), footerY);
+    pdf.text(order.shops.vat_number, margin + columnWidths[0] + columnWidths[1] + columnWidths[2], footerY);
   }
 
-  console.log('PDF generation completed, matching InvoicePreview template layout');
+  console.log('PDF generation completed, matching InvoicePreview template layout with dynamic text placement');
   
   const pdfBytes = pdf.output('arraybuffer');
   console.log('PDF conversion completed, size:', pdfBytes.byteLength, 'bytes');
