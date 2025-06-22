@@ -125,80 +125,12 @@ const processShopLogo = async (logoUrl: string): Promise<{ format: string; base6
   }
 };
 
-const calculateResponsiveLayout = (language: string) => {
-  console.log(`[LAYOUT] Calculating responsive layout for language: ${language}`);
-  
-  // Base measurements in mm
-  const pageWidth = 210; // A4 width
-  const pageHeight = 297; // A4 height
-  const margin = 20;
-  const contentWidth = pageWidth - (2 * margin);
-  const availableHeight = pageHeight - (2 * margin);
-
-  // Header section
-  const headerHeight = 40;
-  
-  // Invoice info section
-  const invoiceInfoHeight = 25;
-  
-  // Address section (side by side)
-  const addressSectionHeight = 35;
-  
-  // Table header
-  const tableHeaderHeight = 12;
-  
-  // Table rows (dynamic based on content)
-  const itemRowHeight = 8;
-  const numberOfItems = 1; // Usually one product line
-  const tableContentHeight = numberOfItems * itemRowHeight;
-  
-  // Summary section
-  const summaryHeight = 25;
-  
-  // Footer
-  const footerHeight = 15;
-  
-  // Calculate total required height
-  const requiredHeight = headerHeight + invoiceInfoHeight + addressSectionHeight + 
-                         tableHeaderHeight + tableContentHeight + summaryHeight + footerHeight + 40; // 40mm extra spacing
-  
-  console.log(`[LAYOUT] Required content height: ${requiredHeight}mm, Available: ${availableHeight}mm`);
-  
-  // Calculate scaling factor if needed
-  const scalingFactor = requiredHeight > availableHeight ? availableHeight / requiredHeight : 1.0;
-  console.log(`[LAYOUT] Scaling factor: ${scalingFactor.toFixed(3)}`);
-  
-  // Y positions for each section
-  let currentY = margin;
-  const positions = {
-    header: currentY,
-    invoiceInfo: (currentY += headerHeight * scalingFactor),
-    addresses: (currentY += invoiceInfoHeight * scalingFactor),
-    tableHeader: (currentY += addressSectionHeight * scalingFactor),
-    tableContent: (currentY += tableHeaderHeight * scalingFactor),
-    summary: (currentY += tableContentHeight * scalingFactor),
-    footer: (currentY += summaryHeight * scalingFactor)
-  };
-  
-  console.log(`[LAYOUT] Dynamic layout calculated with ${Object.keys(positions).length} positions`);
-  
-  return {
-    pageWidth,
-    pageHeight,
-    margin,
-    contentWidth,
-    scalingFactor,
-    positions
-  };
-};
-
 const generateResponsivePDF = async (order: any, bankData: any, language: string = 'de') => {
-  console.log('Starting responsive PDF generation with language:', language);
+  console.log('Starting PDF generation matching InvoicePreview template with language:', language);
   
   const t = getTranslations(language);
-  const layout = calculateResponsiveLayout(language);
   
-  // Initialize PDF with correct constructor
+  // Initialize PDF
   const pdf = new jsPDF({
     orientation: 'portrait',
     unit: 'mm',
@@ -208,64 +140,165 @@ const generateResponsivePDF = async (order: any, bankData: any, language: string
   // Set default font
   pdf.setFont('helvetica');
 
+  // Page dimensions
+  const pageWidth = 210;
+  const pageHeight = 297;
+  const margin = 20;
+  
+  // Get accent color from shop or default
+  const accentColor = order.shops?.accent_color || '#2563eb';
+  
+  // Convert hex color to RGB for jsPDF
+  const hexToRgb = (hex: string) => {
+    const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+    return result ? {
+      r: parseInt(result[1], 16),
+      g: parseInt(result[2], 16),
+      b: parseInt(result[3], 16)
+    } : { r: 37, g: 99, b: 235 }; // Default blue
+  };
+  
+  const accentRgb = hexToRgb(accentColor);
+
   // Process logo if available
   let logoData = null;
   if (order.shops?.logo_url) {
-    console.log(`[LOGO] Rendering responsive logo at (${layout.margin}, ${layout.positions.header})`);
+    console.log(`[LOGO] Processing logo for PDF`);
     logoData = await processShopLogo(order.shops.logo_url);
-    
-    if (logoData) {
-      console.log(`[LOGO] Original dimensions: ${logoData.width}x${logoData.height}`);
-      
-      // Calculate responsive logo size
-      const maxLogoWidth = 25 * layout.scalingFactor; // 25mm max width
-      const maxLogoHeight = 18 * layout.scalingFactor; // 18mm max height
-      
-      console.log(`[LOGO] Calculating proportions: original ${logoData.width}x${logoData.height}, max ${maxLogoWidth.toFixed(1)}x${maxLogoHeight.toFixed(1)}`);
-      
-      const widthRatio = maxLogoWidth / logoData.width;
-      const heightRatio = maxLogoHeight / logoData.height;
-      const ratio = Math.min(widthRatio, heightRatio);
-      
-      const logoWidth = logoData.width * ratio;
-      const logoHeight = logoData.height * ratio;
-      
-      // Center the logo vertically within the header space
-      const logoY = layout.positions.header + (maxLogoHeight - logoHeight) / 2;
-      
-      console.log(`[LOGO] Final proportions: ${logoWidth.toFixed(1)}x${logoHeight.toFixed(1)}mm with offsets (0.0, ${((maxLogoHeight - logoHeight) / 2).toFixed(1)})`);
-      console.log(`[LOGO] Rendering at (${layout.margin.toFixed(2)}, ${logoY.toFixed(2)}) size ${logoWidth.toFixed(2)}x${logoHeight.toFixed(2)}`);
-      
-      pdf.addImage(
-        `data:image/${logoData.format.toLowerCase()};base64,${logoData.base64}`,
-        logoData.format,
-        layout.margin,
-        logoY,
-        logoWidth,
-        logoHeight
-      );
-      
-      console.log(`[LOGO] Logo rendered successfully`);
-    }
   }
 
-  // Use temp_order_number if available, otherwise use original order_number
-  const orderNumberForInvoice = order.temp_order_number || order.order_number;
-  console.log('Using order number for invoice:', orderNumberForInvoice);
+  let currentY = margin;
 
-  // Header - Company name and title
-  pdf.setFontSize(20 * layout.scalingFactor);
+  // MODERN HEADER - matching InvoicePreview layout
+  // Logo section (left side)
+  if (logoData) {
+    console.log(`[LOGO] Adding logo to PDF`);
+    
+    // Calculate logo size (max 40mm width, 32mm height as in template)
+    const maxLogoWidth = 40;
+    const maxLogoHeight = 32;
+    
+    const widthRatio = maxLogoWidth / logoData.width;
+    const heightRatio = maxLogoHeight / logoData.height;
+    const ratio = Math.min(widthRatio, heightRatio);
+    
+    const logoWidth = logoData.width * ratio;
+    const logoHeight = logoData.height * ratio;
+    
+    pdf.addImage(
+      `data:image/${logoData.format.toLowerCase()};base64,${logoData.base64}`,
+      logoData.format,
+      margin,
+      currentY,
+      logoWidth,
+      logoHeight
+    );
+  }
+
+  // Company details (right side of header)
+  const companyStartX = margin + 46; // After logo space
+  pdf.setTextColor(accentRgb.r, accentRgb.g, accentRgb.b);
+  pdf.setFontSize(20);
   pdf.setFont('helvetica', 'bold');
-  pdf.text(order.shops?.company_name || order.shops?.name || 'Company', 
-           layout.pageWidth - layout.margin, layout.positions.header + 5, { align: 'right' });
+  pdf.text(order.shops?.company_name || 'Company', companyStartX, currentY + 8);
 
-  pdf.setFontSize(16 * layout.scalingFactor);
-  pdf.text(t.invoice, layout.pageWidth - layout.margin, layout.positions.header + 15, { align: 'right' });
-
-  // Invoice details
-  pdf.setFontSize(10 * layout.scalingFactor);
+  // Company address and details
+  pdf.setTextColor(128, 128, 128); // Gray color
+  pdf.setFontSize(9);
   pdf.setFont('helvetica', 'normal');
+  let detailY = currentY + 15;
   
+  pdf.text(order.shops?.company_address || '', companyStartX, detailY);
+  detailY += 4;
+  pdf.text(`${order.shops?.company_postcode || ''} ${order.shops?.company_city || ''}`, companyStartX, detailY);
+  detailY += 4;
+  
+  if (order.shops?.company_phone) {
+    pdf.text(`${t.phone || 'Phone'}: ${order.shops.company_phone}`, companyStartX, detailY);
+    detailY += 4;
+  }
+  
+  pdf.text(`${t.email || 'Email'}: ${order.shops?.company_email || ''}`, companyStartX, detailY);
+  detailY += 4;
+  
+  if (order.shops?.company_website) {
+    pdf.text(`${t.website || 'Website'}: ${order.shops.company_website}`, companyStartX, detailY);
+    detailY += 4;
+  }
+  
+  if (order.shops?.vat_number) {
+    pdf.text(`USt-IdNr: ${order.shops.vat_number}`, companyStartX, detailY);
+  }
+
+  currentY += 50; // Move down after header
+
+  // INVOICE TITLE - matching template
+  pdf.setTextColor(accentRgb.r, accentRgb.g, accentRgb.b);
+  pdf.setFontSize(24);
+  pdf.setFont('helvetica', 'bold');
+  pdf.text(t.invoice, margin, currentY);
+
+  currentY += 20; // Space after title
+
+  // TWO-COLUMN LAYOUT for addresses and invoice details
+  const leftColumnX = margin;
+  const rightColumnX = margin + 95; // Split page roughly in half
+  const startY = currentY;
+
+  // LEFT COLUMN - Addresses
+  let leftY = startY;
+  
+  // Check if we need separate billing address
+  const hasDifferentAddresses = order.billing_street && 
+    (order.billing_street !== order.delivery_street || 
+     order.billing_city !== order.delivery_city ||
+     order.billing_postcode !== order.delivery_postcode);
+
+  // Billing Address (if different)
+  if (hasDifferentAddresses) {
+    pdf.setTextColor(accentRgb.r, accentRgb.g, accentRgb.b);
+    pdf.setFontSize(11);
+    pdf.setFont('helvetica', 'bold');
+    pdf.text(t.billingAddress, leftColumnX, leftY);
+    leftY += 6;
+    
+    pdf.setTextColor(0, 0, 0);
+    pdf.setFontSize(10);
+    pdf.setFont('helvetica', 'normal');
+    const billingName = `${order.billing_first_name || order.delivery_first_name} ${order.billing_last_name || order.delivery_last_name}`;
+    pdf.text(billingName, leftColumnX, leftY);
+    leftY += 4;
+    pdf.text(order.billing_street || '', leftColumnX, leftY);
+    leftY += 4;
+    pdf.text(`${order.billing_postcode || ''} ${order.billing_city || ''}`, leftColumnX, leftY);
+    leftY += 8;
+  }
+  
+  // Delivery Address
+  pdf.setTextColor(accentRgb.r, accentRgb.g, accentRgb.b);
+  pdf.setFontSize(11);
+  pdf.setFont('helvetica', 'bold');
+  pdf.text(hasDifferentAddresses ? t.deliveryAddress : '', leftColumnX, leftY);
+  leftY += hasDifferentAddresses ? 6 : 0;
+  
+  pdf.setTextColor(0, 0, 0);
+  pdf.setFontSize(10);
+  pdf.setFont('helvetica', 'bold');
+  const customerName = order.customer_name || `${order.delivery_first_name} ${order.delivery_last_name}`;
+  pdf.text(customerName, leftColumnX, leftY);
+  leftY += 4;
+  
+  pdf.setFont('helvetica', 'normal');
+  pdf.text(order.delivery_street, leftColumnX, leftY);
+  leftY += 4;
+  pdf.text(`${order.delivery_postcode} ${order.delivery_city}`, leftColumnX, leftY);
+
+  // RIGHT COLUMN - Invoice details (reduced fields as in template)
+  let rightY = startY;
+  pdf.setTextColor(0, 0, 0);
+  pdf.setFontSize(10);
+  pdf.setFont('helvetica', 'normal');
+
   const invoiceDate = new Date(order.invoice_date || order.created_at);
   const formattedDate = invoiceDate.toLocaleDateString(
     language === 'de' ? 'de-DE' : 
@@ -275,85 +308,248 @@ const generateResponsivePDF = async (order: any, bankData: any, language: string
     language === 'es' ? 'es-ES' : 
     language === 'pl' ? 'pl-PL' : 'nl-NL'
   );
-  
-  pdf.text(`${t.invoiceNumber}: ${orderNumberForInvoice}`, layout.margin, layout.positions.invoiceInfo);
-  pdf.text(`${t.invoiceDate}: ${formattedDate}`, layout.margin, layout.positions.invoiceInfo + 5);
 
-  // Two-column address layout
-  const leftColumnX = layout.margin;
-  const rightColumnX = layout.margin + (layout.contentWidth / 2) + 10;
-  const columnWidth = (layout.contentWidth / 2) - 10;
+  const orderNumberForInvoice = order.temp_order_number || order.order_number;
 
-  // Billing address (left column)
+  // Invoice details
   pdf.setFont('helvetica', 'bold');
-  pdf.text(t.billingAddress, leftColumnX, layout.positions.addresses);
+  pdf.text(`${t.invoiceDate}:`, rightColumnX, rightY);
+  pdf.setFont('helvetica', 'normal');
+  pdf.text(formattedDate, rightColumnX + 32, rightY);
+  rightY += 5;
+
+  pdf.setFont('helvetica', 'bold');
+  pdf.text(`${t.orderNumber || 'Order Number'}:`, rightColumnX, rightY);
+  pdf.setFont('helvetica', 'normal');
+  pdf.text(orderNumberForInvoice, rightColumnX + 32, rightY);
+  rightY += 5;
+
+  pdf.setFont('helvetica', 'bold');
+  pdf.text(`${t.orderDate || 'Order Date'}:`, rightColumnX, rightY);
+  pdf.setFont('helvetica', 'normal');
+  const orderDate = new Date(order.created_at);
+  pdf.text(orderDate.toLocaleDateString(language === 'en' ? 'en-US' : 'de-DE'), rightColumnX + 32, rightY);
+
+  currentY = Math.max(leftY, rightY) + 15; // Move below both columns
+
+  // ITEMS TABLE with modern styling - matching template
+  const tableStartY = currentY;
+  const tableWidth = pageWidth - (2 * margin);
+  
+  // Table header with accent color background
+  pdf.setFillColor(accentRgb.r, accentRgb.g, accentRgb.b);
+  pdf.rect(margin, tableStartY, tableWidth, 12, 'F');
+  
+  // Table header text
+  pdf.setTextColor(255, 255, 255); // White text
+  pdf.setFontSize(10);
+  pdf.setFont('helvetica', 'normal');
+  pdf.text(t.description, margin + 3, tableStartY + 8);
+  pdf.text(t.quantity, margin + 80, tableStartY + 8);
+  pdf.text(t.unitPrice, margin + 115, tableStartY + 8);
+  pdf.text(t.total, margin + 150, tableStartY + 8);
+
+  // Table content with alternating row colors
+  currentY = tableStartY + 12;
+  
+  // Main product row (gray background as in template)
+  pdf.setFillColor(248, 248, 248); // Light gray
+  pdf.rect(margin, currentY, tableWidth, 8, 'F');
+  
+  pdf.setTextColor(0, 0, 0);
+  pdf.setFontSize(10);
   pdf.setFont('helvetica', 'normal');
   
-  let billingY = layout.positions.addresses + 5;
-  pdf.text(`${order.delivery_first_name} ${order.delivery_last_name}`, leftColumnX, billingY);
-  pdf.text(order.delivery_street, leftColumnX, billingY + 4);
-  pdf.text(`${order.delivery_postcode} ${order.delivery_city}`, leftColumnX, billingY + 8);
+  const translatedProduct = t.products[order.product] || order.product;
+  const productName = translatedProduct === 'heating_oil' ? t.heatingOilDelivery || 'Heating Oil Delivery' : translatedProduct;
+  
+  pdf.text(productName, margin + 3, currentY + 5);
+  pdf.text(`${order.liters} ${t.liters}`, margin + 80, currentY + 5);
+  pdf.text(`${t.currency}${order.price_per_liter.toFixed(3)}`, margin + 115, currentY + 5);
+  pdf.text(`${t.currency}${(order.liters * order.price_per_liter).toFixed(2)}`, margin + 150, currentY + 5);
+  
+  currentY += 8;
 
-  // Payment information (right column)
+  // Delivery fee if applicable (white background)
+  if (order.delivery_fee > 0) {
+    pdf.text(t.deliveryFee, margin + 3, currentY + 5);
+    pdf.text('1', margin + 80, currentY + 5);
+    pdf.text(`${t.currency}${order.delivery_fee.toFixed(2)}`, margin + 115, currentY + 5);
+    pdf.text(`${t.currency}${order.delivery_fee.toFixed(2)}`, margin + 150, currentY + 5);
+    currentY += 8;
+  }
+
+  currentY += 10; // Space after table
+
+  // TOTALS section - matching template design
+  const totalsStartX = margin + 106; // Align to right side
+  const totalsWidth = 64;
+  
+  // Background for totals
+  pdf.setFillColor(248, 248, 248);
+  pdf.rect(totalsStartX, currentY, totalsWidth, 24, 'F');
+  
+  // Add border
+  pdf.setDrawColor(200, 200, 200);
+  pdf.rect(totalsStartX, currentY, totalsWidth, 24);
+  
+  // Calculate totals
+  const vatRate = order.shops?.vat_rate || 19;
+  const totalAmount = order.total_amount;
+  const totalWithoutVat = totalAmount / (1 + vatRate / 100);
+  const vatAmount = totalAmount - totalWithoutVat;
+  
+  // Totals text
+  pdf.setTextColor(0, 0, 0);
+  pdf.setFontSize(10);
+  pdf.setFont('helvetica', 'normal');
+  
+  let totalsY = currentY + 5;
+  pdf.text(`${t.subtotal}:`, totalsStartX + 3, totalsY);
+  pdf.text(`${t.currency}${totalWithoutVat.toFixed(2)}`, totalsStartX + totalsWidth - 3, totalsY, { align: 'right' });
+  totalsY += 4;
+  
+  pdf.text(`${t.vat} (${vatRate}%):`, totalsStartX + 3, totalsY);
+  pdf.text(`${t.currency}${vatAmount.toFixed(2)}`, totalsStartX + totalsWidth - 3, totalsY, { align: 'right' });
+  totalsY += 5;
+  
+  // Add separator line
+  pdf.setDrawColor(200, 200, 200);
+  pdf.line(totalsStartX + 3, totalsY - 1, totalsStartX + totalsWidth - 3, totalsY - 1);
+  
+  // Grand total
+  pdf.setTextColor(accentRgb.r, accentRgb.g, accentRgb.b);
+  pdf.setFontSize(12);
+  pdf.setFont('helvetica', 'bold');
+  pdf.text(`${t.grandTotal || t.totalAmount}:`, totalsStartX + 3, totalsY + 3);
+  pdf.text(`${t.currency}${totalAmount.toFixed(2)}`, totalsStartX + totalsWidth - 3, totalsY + 3, { align: 'right' });
+
+  currentY += 35; // Space after totals
+
+  // PAYMENT DETAILS CARD - matching template
   if (bankData) {
+    // Card header
+    pdf.setFillColor(accentRgb.r, accentRgb.g, accentRgb.b);
+    pdf.rect(margin, currentY, tableWidth, 12, 'F');
+    
+    pdf.setTextColor(255, 255, 255);
+    pdf.setFontSize(12);
     pdf.setFont('helvetica', 'bold');
-    pdf.text(t.paymentInfo, rightColumnX, layout.positions.addresses);
+    pdf.text(t.paymentDetails, margin + 3, currentY + 8);
+    
+    // Card content
+    const cardContentY = currentY + 12;
+    pdf.setFillColor(248, 248, 248);
+    pdf.rect(margin, cardContentY, tableWidth, 24, 'F');
+    
+    pdf.setTextColor(0, 0, 0);
+    pdf.setFontSize(10);
     pdf.setFont('helvetica', 'normal');
     
-    let paymentY = layout.positions.addresses + 5;
-    pdf.text(`${t.recipient}: ${bankData.account_holder || order.shops?.company_name || 'N/A'}`, rightColumnX, paymentY);
-    pdf.text(`${t.bank}: ${bankData.bank_name || 'N/A'}`, rightColumnX, paymentY + 4);
-    pdf.text(`IBAN: ${formatIBAN(bankData.iban || '')}`, rightColumnX, paymentY + 8);
+    let paymentY = cardContentY + 6;
+    
+    pdf.setFont('helvetica', 'bold');
+    pdf.text(`${t.accountHolder}:`, margin + 3, paymentY);
+    pdf.setFont('helvetica', 'normal');
+    const accountHolder = bankData.use_anyname ? order.shops?.company_name : bankData.account_holder;
+    pdf.text(accountHolder || '', margin + 32, paymentY);
+    paymentY += 4;
+    
+    pdf.setFont('helvetica', 'bold');
+    pdf.text(`${t.iban}:`, margin + 3, paymentY);
+    pdf.setFont('helvetica', 'normal');
+    pdf.text(formatIBAN(bankData.iban || ''), margin + 32, paymentY);
+    paymentY += 4;
+    
     if (bankData.bic) {
-      pdf.text(`BIC: ${bankData.bic}`, rightColumnX, paymentY + 12);
+      pdf.setFont('helvetica', 'bold');
+      pdf.text(`${t.bic}:`, margin + 3, paymentY);
+      pdf.setFont('helvetica', 'normal');
+      pdf.text(bankData.bic, margin + 32, paymentY);
+      paymentY += 4;
+    }
+    
+    pdf.setFont('helvetica', 'bold');
+    pdf.text(`${t.paymentReference}:`, margin + 3, paymentY);
+    pdf.setFont('helvetica', 'normal');
+    pdf.text(orderNumberForInvoice, margin + 32, paymentY);
+    
+    currentY += 37; // Move past payment card
+  }
+
+  currentY += 15; // Extra space before footer
+
+  // MODERN 4-COLUMN FOOTER - matching template
+  const footerStartY = Math.max(currentY, pageHeight - 40); // Ensure footer is near bottom
+  
+  // Footer background
+  pdf.setFillColor(248, 248, 248);
+  pdf.rect(0, footerStartY, pageWidth, pageHeight - footerStartY, 'F');
+  
+  const colWidth = (pageWidth - (2 * margin)) / 4;
+  
+  pdf.setTextColor(0, 0, 0);
+  pdf.setFontSize(8);
+  
+  let footerY = footerStartY + 8;
+  
+  // Column 1: Company name and address
+  pdf.setFont('helvetica', 'bold');
+  pdf.text(order.shops?.company_name || '', margin, footerY);
+  pdf.setFont('helvetica', 'normal');
+  footerY += 4;
+  pdf.text(order.shops?.company_address || '', margin, footerY);
+  footerY += 3;
+  pdf.text(`${order.shops?.company_postcode || ''} ${order.shops?.company_city || ''}`, margin, footerY);
+  
+  // Column 2: Contact information
+  footerY = footerStartY + 8;
+  pdf.setFont('helvetica', 'bold');
+  pdf.text('Kontakt', margin + colWidth, footerY);
+  pdf.setFont('helvetica', 'normal');
+  footerY += 4;
+  if (order.shops?.company_phone) {
+    pdf.text(order.shops.company_phone, margin + colWidth, footerY);
+    footerY += 3;
+  }
+  pdf.text(order.shops?.company_email || '', margin + colWidth, footerY);
+  footerY += 3;
+  if (order.shops?.company_website) {
+    pdf.text(order.shops.company_website, margin + colWidth, footerY);
+  }
+  
+  // Column 3: Bank information
+  footerY = footerStartY + 8;
+  pdf.setFont('helvetica', 'bold');
+  pdf.text('Bankinformationen', margin + (2 * colWidth), footerY);
+  if (bankData) {
+    pdf.setFont('helvetica', 'normal');
+    footerY += 4;
+    const footerAccountHolder = bankData.use_anyname ? order.shops?.company_name : bankData.account_holder;
+    pdf.text(footerAccountHolder || '', margin + (2 * colWidth), footerY);
+    footerY += 3;
+    pdf.text(formatIBAN(bankData.iban || ''), margin + (2 * colWidth), footerY);
+    if (bankData.bic) {
+      footerY += 3;
+      pdf.text(bankData.bic, margin + (2 * colWidth), footerY);
     }
   }
-
-  // Table header
+  
+  // Column 4: Business owner and VAT ID
+  footerY = footerStartY + 8;
   pdf.setFont('helvetica', 'bold');
-  pdf.setFillColor(240, 240, 240);
-  pdf.rect(layout.margin, layout.positions.tableHeader, layout.contentWidth, 8, 'F');
-  
-  pdf.text(t.description, layout.margin + 2, layout.positions.tableHeader + 5);
-  pdf.text(t.quantity, layout.margin + 80, layout.positions.tableHeader + 5);
-  pdf.text(t.unitPrice, layout.margin + 110, layout.positions.tableHeader + 5);
-  pdf.text(t.total, layout.margin + 150, layout.positions.tableHeader + 5);
-
-  // Table content
+  pdf.text('Geschäftsdaten', margin + (3 * colWidth), footerY);
   pdf.setFont('helvetica', 'normal');
-  const translatedProduct = t.products[order.product] || order.product;
-  
-  let tableY = layout.positions.tableContent + 5;
-  pdf.text(translatedProduct, layout.margin + 2, tableY);
-  pdf.text(`${order.liters} ${t.liters}`, layout.margin + 80, tableY);
-  pdf.text(`€${order.price_per_liter.toFixed(2)}`, layout.margin + 110, tableY);
-  pdf.text(`€${(order.liters * order.price_per_liter).toFixed(2)}`, layout.margin + 150, tableY);
-
-  // Delivery fee if applicable
-  if (order.delivery_fee > 0) {
-    tableY += 6;
-    pdf.text(t.deliveryFee, layout.margin + 2, tableY);
-    pdf.text('1', layout.margin + 80, tableY);
-    pdf.text(`€${order.delivery_fee.toFixed(2)}`, layout.margin + 110, tableY);
-    pdf.text(`€${order.delivery_fee.toFixed(2)}`, layout.margin + 150, tableY);
+  footerY += 4;
+  if (order.shops?.business_owner) {
+    pdf.text(order.shops.business_owner, margin + (3 * colWidth), footerY);
+    footerY += 3;
   }
-
-  // Summary
-  pdf.setFont('helvetica', 'bold');
-  pdf.text(`${t.totalAmount}: €${order.total_amount.toFixed(2)}`, layout.margin + 150, layout.positions.summary + 5);
-
-  // Footer
-  pdf.setFontSize(8 * layout.scalingFactor);
-  pdf.setFont('helvetica', 'normal');
-  
-  let footerText = `${order.shops?.company_name} • ${order.shops?.company_address} • ${order.shops?.company_postcode} ${order.shops?.company_city}`;
   if (order.shops?.vat_number) {
-    footerText += ` • ${t.vatLabel} ${order.shops.vat_number}`;
+    pdf.text(order.shops.vat_number, margin + (3 * colWidth), footerY);
   }
-  
-  pdf.text(footerText, layout.pageWidth / 2, layout.positions.footer, { align: 'center' });
 
-  console.log('Responsive PDF content created with two-column address layout, converting to bytes...');
+  console.log('PDF generation completed, matching InvoicePreview template layout');
   
   const pdfBytes = pdf.output('arraybuffer');
   console.log('PDF conversion completed, size:', pdfBytes.byteLength, 'bytes');
@@ -399,7 +595,12 @@ const handler = async (req: Request): Promise<Response> => {
           logo_url,
           country_code,
           language,
-          bank_account_id
+          bank_account_id,
+          accent_color,
+          company_phone,
+          company_website,
+          business_owner,
+          vat_rate
         )
       `)
       .eq('id', order_id)
@@ -506,11 +707,11 @@ const handler = async (req: Request): Promise<Response> => {
     const orderNumberForFilename = order.temp_order_number || order.order_number;
     const t = getTranslations(finalLanguage);
     const filename = `${t.invoiceFilename}_${orderNumberForFilename}_${finalLanguage}.pdf`;
-    console.log('Generating responsive PDF with filename:', filename);
+    console.log('Generating PDF with filename:', filename);
 
     // Generate PDF
     const pdfBuffer = await generateResponsivePDF(order, bankData, finalLanguage);
-    console.log('Responsive PDF generated successfully, size:', pdfBuffer.byteLength, 'bytes');
+    console.log('PDF generated successfully, size:', pdfBuffer.byteLength, 'bytes');
 
     // Upload to Supabase Storage
     const { data: uploadData, error: uploadError } = await supabase.storage
