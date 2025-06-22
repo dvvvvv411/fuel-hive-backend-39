@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -60,6 +59,7 @@ export function ShopDialog({ open, onOpenChange, onSuccess, shop }: ShopDialogPr
         .from('bank_accounts')
         .select('*')
         .eq('active', true)
+        .eq('is_temporary', false) // Only show permanent bank accounts
         .order('account_name');
 
       if (error) throw error;
@@ -472,7 +472,7 @@ export function ShopDialog({ open, onOpenChange, onSuccess, shop }: ShopDialogPr
             <div className="space-y-2">
               <Label htmlFor="resend_config_id">Resend-Konfiguration</Label>
               <Select 
-                value={formData.resend_config_id || undefined} 
+                value={formData.resend_config_id || ''} 
                 onValueChange={(value) => handleInputChange('resend_config_id', value || null)}
               >
                 <SelectTrigger>
@@ -504,7 +504,7 @@ export function ShopDialog({ open, onOpenChange, onSuccess, shop }: ShopDialogPr
               <div className="space-y-2">
                 <Label htmlFor="bank_account_id">Bankkonto für Sofort-Checkout</Label>
                 <Select 
-                  value={formData.bank_account_id || undefined} 
+                  value={formData.bank_account_id || ''} 
                   onValueChange={(value) => handleInputChange('bank_account_id', value || null)}
                 >
                   <SelectTrigger>
@@ -520,7 +520,7 @@ export function ShopDialog({ open, onOpenChange, onSuccess, shop }: ShopDialogPr
                 </Select>
                 {bankAccounts.length === 0 && (
                   <p className="text-sm text-gray-500">
-                    Keine aktiven Bankkonten gefunden. Bitte erstellen Sie zuerst ein Bankkonto.
+                    Keine aktiven permanenten Bankkonten gefunden. Bitte erstellen Sie zuerst ein Bankkonto.
                   </p>
                 )}
                 <p className="text-sm text-gray-600">
