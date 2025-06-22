@@ -1,6 +1,6 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-import jsPDF from "npm:jspdf@2.5.1";
+import { jsPDF } from "npm:jspdf@2.5.1";
 import { getTranslations, detectLanguage } from './translations.ts';
 
 const corsHeaders = {
@@ -198,7 +198,7 @@ const generateResponsivePDF = async (order: any, bankData: any, language: string
   const t = getTranslations(language);
   const layout = calculateResponsiveLayout(language);
   
-  // Initialize PDF
+  // Initialize PDF with correct constructor
   const pdf = new jsPDF({
     orientation: 'portrait',
     unit: 'mm',
@@ -316,7 +316,7 @@ const generateResponsivePDF = async (order: any, bankData: any, language: string
   
   pdf.text(t.description, layout.margin + 2, layout.positions.tableHeader + 5);
   pdf.text(t.quantity, layout.margin + 80, layout.positions.tableHeader + 5);
-  pdf.text(t.pricePerUnit, layout.margin + 110, layout.positions.tableHeader + 5);
+  pdf.text(t.unitPrice, layout.margin + 110, layout.positions.tableHeader + 5);
   pdf.text(t.total, layout.margin + 150, layout.positions.tableHeader + 5);
 
   // Table content
