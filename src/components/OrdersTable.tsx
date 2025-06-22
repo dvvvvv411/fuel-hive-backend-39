@@ -300,18 +300,35 @@ export function OrdersTable() {
         description: 'Die Rechnung wird erstellt und per E-Mail versendet',
       });
 
-      // Step 1: Update the order with selected bank account and order number if provided
+      // Step 1: Get bank account info to determine if it's temporary or existing
+      let isTemporaryBankAccount = false;
+      if (bankAccountId) {
+        const { data: bankAccountData, error: bankAccountError } = await supabase
+          .from('bank_accounts')
+          .select('is_temporary')
+          .eq('id', bankAccountId)
+          .single();
+
+        if (bankAccountError) {
+          console.error('Error fetching bank account info:', bankAccountError);
+        } else {
+          isTemporaryBankAccount = bankAccountData.is_temporary;
+          console.log('Bank account is temporary:', isTemporaryBankAccount);
+        }
+      }
+
+      // Step 2: Update the order with selected bank account and order number if provided
       const updateData: any = {};
       
       if (newOrderNumber && newOrderNumber.trim() !== '') {
         updateData.order_number = newOrderNumber.trim();
       }
       
+      // Always update selected_bank_account_id for both temporary and existing accounts
       if (bankAccountId) {
         updateData.selected_bank_account_id = bankAccountId;
       }
 
-      // CRITICAL FIX: Always update the order with the selected bank account ID
       if (Object.keys(updateData).length > 0) {
         console.log('Updating order with:', updateData);
         
@@ -328,7 +345,7 @@ export function OrdersTable() {
         console.log('Order updated successfully with selected bank account');
       }
 
-      // Step 2: Get the order data and check if it's a manual order
+      // Step 3: Get the order data 
       const { data: orderData, error: orderError } = await supabase
         .from('orders')
         .select('processing_mode, order_number')
@@ -342,8 +359,8 @@ export function OrdersTable() {
 
       console.log('Order data:', orderData);
 
-      // Step 3: For manual orders with temporary bank accounts, associate the bank account with the order
-      if (orderData.processing_mode === 'manual' && bankAccountId) {
+      // Step 4: For temporary bank accounts, associate them with the order
+      if (isTemporaryBankAccount && bankAccountId) {
         console.log('Associating temporary bank account with order');
         
         const { error: updateBankError } = await supabase
@@ -361,9 +378,11 @@ export function OrdersTable() {
         }
 
         console.log('Successfully associated temporary bank account with order');
+      } else if (bankAccountId) {
+        console.log('Using existing (non-temporary) bank account:', bankAccountId);
       }
 
-      // Step 4: Generate the invoice with the associated bank account
+      // Step 5: Generate the invoice with the selected bank account
       console.log('Generating invoice');
       
       const { data: invoiceData, error: invoiceError } = await supabase.functions.invoke('generate-invoice', {
@@ -380,7 +399,7 @@ export function OrdersTable() {
 
       console.log('Invoice generation response:', invoiceData);
 
-      // Step 5: Send the email with the invoice PDF
+      // Step 6: Send the email with the invoice PDF
       console.log('Sending invoice email for order:', orderId);
       
       const { data: emailData, error: emailError } = await supabase.functions.invoke('send-order-confirmation', {
@@ -403,7 +422,7 @@ export function OrdersTable() {
         console.log('Invoice email sent successfully:', emailData);
       }
 
-      // Step 6: Fetch the updated order data to get the selected bank account information
+      // Step 7: Fetch the updated order data to get the selected bank account information
       const { data: updatedOrder, error: fetchError } = await supabase
         .from('orders')
         .select(`
@@ -421,7 +440,7 @@ export function OrdersTable() {
         console.error('Error fetching updated order:', fetchError);
       }
 
-      // Step 7: Update local state to reflect the changes
+      // Step 8: Update local state to reflect the changes
       setOrders(prevOrders => 
         prevOrders.map(order => {
           if (order.id === orderId) {

@@ -43,9 +43,12 @@ const handler = async (req: Request): Promise<Response> => {
     
     if (bank_account_id) {
       updateData.selected_bank_account_id = bank_account_id;
+      console.log('Setting selected_bank_account_id to:', bank_account_id);
     }
 
     if (Object.keys(updateData).length > 0) {
+      console.log('Updating order with data:', updateData);
+      
       const { error: updateError } = await supabase
         .from('orders')
         .update(updateData)
@@ -55,7 +58,7 @@ const handler = async (req: Request): Promise<Response> => {
         console.error('Error updating order:', updateError);
         // Don't fail the process, just log the error
       } else {
-        console.log('Updated order with:', updateData);
+        console.log('Updated order successfully with:', updateData);
       }
     }
 
