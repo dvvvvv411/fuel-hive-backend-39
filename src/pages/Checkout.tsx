@@ -10,6 +10,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 import { Separator } from '@/components/ui/separator';
 import { CreditCard, Banknote, CheckCircle } from 'lucide-react';
+import { getInvoiceTranslations } from '@/utils/invoiceTranslations';
 
 interface ShopConfig {
   shop: {
@@ -20,6 +21,7 @@ interface ShopConfig {
     currency: string;
     logo_url?: string;
     accent_color?: string;
+    language?: string;
   };
   payment_methods: Array<{
     id: string;
@@ -235,6 +237,10 @@ const Checkout = () => {
     );
   }
 
+  // Get translations based on shop language
+  const language = shopConfig?.shop?.language || 'de';
+  const translations = getInvoiceTranslations(language);
+
   return (
     <div className="min-h-screen bg-gray-50 py-8">
       <div className="container mx-auto px-4 max-w-4xl">
@@ -405,7 +411,7 @@ const Checkout = () => {
                   {submitting ? (
                     <div className="flex items-center space-x-2">
                       <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-                      <span>Bestellung wird aufgegeben...</span>
+                      <span>{translations.orderProcessing}</span>
                     </div>
                   ) : (
                     <div className="flex items-center space-x-2">

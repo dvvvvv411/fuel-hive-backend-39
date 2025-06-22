@@ -1,4 +1,3 @@
-
 export interface InvoiceTranslations {
   invoice: string;
   invoiceNumber: string;
@@ -34,6 +33,7 @@ export interface InvoiceTranslations {
   email: string;
   website: string;
   paymentTerm: string;
+  orderProcessing: string;
 }
 
 export const translations: Record<string, InvoiceTranslations> = {
@@ -71,7 +71,8 @@ export const translations: Record<string, InvoiceTranslations> = {
     phone: 'Telefon',
     email: 'E-Mail',
     website: 'Website',
-    paymentTerm: 'Zahlungsziel'
+    paymentTerm: 'Zahlungsziel',
+    orderProcessing: 'Bestellung wird aufgegeben...'
   },
   en: {
     invoice: 'Invoice',
@@ -107,7 +108,8 @@ export const translations: Record<string, InvoiceTranslations> = {
     phone: 'Phone',
     email: 'Email',
     website: 'Website',
-    paymentTerm: 'Payment Term'
+    paymentTerm: 'Payment Term',
+    orderProcessing: 'Placing order...'
   },
   fr: {
     invoice: 'Facture',
@@ -143,7 +145,8 @@ export const translations: Record<string, InvoiceTranslations> = {
     phone: 'Téléphone',
     email: 'Email',
     website: 'Site web',
-    paymentTerm: 'Délai de paiement'
+    paymentTerm: 'Délai de paiement',
+    orderProcessing: 'Commande en cours...'
   },
   es: {
     invoice: 'Factura',
@@ -179,7 +182,8 @@ export const translations: Record<string, InvoiceTranslations> = {
     phone: 'Teléfono',
     email: 'Email',
     website: 'Sitio web',
-    paymentTerm: 'Plazo de pago'
+    paymentTerm: 'Plazo de pago',
+    orderProcessing: 'Procesando pedido...'
   },
   it: {
     invoice: 'Fattura',
@@ -215,7 +219,8 @@ export const translations: Record<string, InvoiceTranslations> = {
     phone: 'Telefono',
     email: 'Email',
     website: 'Sito web',
-    paymentTerm: 'Termine di pagamento'
+    paymentTerm: 'Termine di pagamento',
+    orderProcessing: 'Elaborazione ordine...'
   },
   nl: {
     invoice: 'Factuur',
@@ -251,7 +256,8 @@ export const translations: Record<string, InvoiceTranslations> = {
     phone: 'Telefoon',
     email: 'Email',
     website: 'Website',
-    paymentTerm: 'Betalingstermijn'
+    paymentTerm: 'Betalingstermijn',
+    orderProcessing: 'Bestelling wordt verwerkt...'
   },
   pt: {
     invoice: 'Fatura',
@@ -287,7 +293,8 @@ export const translations: Record<string, InvoiceTranslations> = {
     phone: 'Telefone',
     email: 'Email',
     website: 'Website',
-    paymentTerm: 'Prazo de pagamento'
+    paymentTerm: 'Prazo de pagamento',
+    orderProcessing: 'Processando pedido...'
   },
   pl: {
     invoice: 'Faktura',
@@ -323,7 +330,8 @@ export const translations: Record<string, InvoiceTranslations> = {
     phone: 'Telefon',
     email: 'Email',
     website: 'Strona internetowa',
-    paymentTerm: 'Termin płatności'
+    paymentTerm: 'Termin płatności',
+    orderProcessing: 'Przetwarzanie zamówienia...'
   },
   sv: {
     invoice: 'Faktura',
@@ -359,7 +367,8 @@ export const translations: Record<string, InvoiceTranslations> = {
     phone: 'Telefon',
     email: 'Email',
     website: 'Webbplats',
-    paymentTerm: 'Betalningsvillkor'
+    paymentTerm: 'Betalningsvillkor',
+    orderProcessing: 'Bearbetar beställning...'
   },
   da: {
     invoice: 'Faktura',
@@ -395,7 +404,8 @@ export const translations: Record<string, InvoiceTranslations> = {
     phone: 'Telefon',
     email: 'Email',
     website: 'Hjemmeside',
-    paymentTerm: 'Betalingsbetingelser'
+    paymentTerm: 'Betalingsbetingelser',
+    orderProcessing: 'Behandler ordre...'
   },
   no: {
     invoice: 'Faktura',
@@ -431,7 +441,8 @@ export const translations: Record<string, InvoiceTranslations> = {
     phone: 'Telefon',
     email: 'Email',
     website: 'Nettside',
-    paymentTerm: 'Betalingsbetingelser'
+    paymentTerm: 'Betalingsbetingelser',
+    orderProcessing: 'Behandler ordre...'
   },
   fi: {
     invoice: 'Lasku',
@@ -467,7 +478,8 @@ export const translations: Record<string, InvoiceTranslations> = {
     phone: 'Puhelin',
     email: 'Sähköposti',
     website: 'Verkkosivu',
-    paymentTerm: 'Maksuehdot'
+    paymentTerm: 'Maksuehdot',
+    orderProcessing: 'Käsitellään tilausta...'
   }
 };
 
