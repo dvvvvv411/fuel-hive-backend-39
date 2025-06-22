@@ -426,7 +426,7 @@ const generateResponsivePDF = async (order: any, bankData: any, language: string
 
   currentY += 35; // Space after totals
 
-  // PAYMENT DETAILS CARD - matching template
+  // PAYMENT DETAILS CARD - matching template with fixed alignment
   if (bankData) {
     // Card header
     pdf.setFillColor(accentRgb.r, accentRgb.g, accentRgb.b);
@@ -447,39 +447,40 @@ const generateResponsivePDF = async (order: any, bankData: any, language: string
     pdf.setFont('helvetica', 'normal');
     
     let paymentY = cardContentY + 6;
+    const labelWidth = 25; // Fixed width for labels to ensure alignment
     
     pdf.setFont('helvetica', 'bold');
     pdf.text(`${t.accountHolder}:`, margin + 3, paymentY);
     pdf.setFont('helvetica', 'normal');
     const accountHolder = bankData.use_anyname ? order.shops?.company_name : bankData.account_holder;
-    pdf.text(accountHolder || '', margin + 32, paymentY);
+    pdf.text(accountHolder || '', margin + 3 + labelWidth, paymentY);
     paymentY += 4;
     
     pdf.setFont('helvetica', 'bold');
     pdf.text(`${t.iban}:`, margin + 3, paymentY);
     pdf.setFont('helvetica', 'normal');
-    pdf.text(formatIBAN(bankData.iban || ''), margin + 32, paymentY);
+    pdf.text(formatIBAN(bankData.iban || ''), margin + 3 + labelWidth, paymentY);
     paymentY += 4;
     
     if (bankData.bic) {
       pdf.setFont('helvetica', 'bold');
       pdf.text(`${t.bic}:`, margin + 3, paymentY);
       pdf.setFont('helvetica', 'normal');
-      pdf.text(bankData.bic, margin + 32, paymentY);
+      pdf.text(bankData.bic, margin + 3 + labelWidth, paymentY);
       paymentY += 4;
     }
     
     pdf.setFont('helvetica', 'bold');
     pdf.text(`${t.paymentReference}:`, margin + 3, paymentY);
     pdf.setFont('helvetica', 'normal');
-    pdf.text(orderNumberForInvoice, margin + 32, paymentY);
+    pdf.text(orderNumberForInvoice, margin + 3 + labelWidth, paymentY);
     
     currentY += 37; // Move past payment card
   }
 
   currentY += 15; // Extra space before footer
 
-  // MODERN 4-COLUMN FOOTER - matching template
+  // MODERN 4-COLUMN FOOTER - matching template with proper translations
   const footerStartY = Math.max(currentY, pageHeight - 40); // Ensure footer is near bottom
   
   // Footer background
@@ -505,7 +506,7 @@ const generateResponsivePDF = async (order: any, bankData: any, language: string
   // Column 2: Contact information
   footerY = footerStartY + 8;
   pdf.setFont('helvetica', 'bold');
-  pdf.text('Kontakt', margin + colWidth, footerY);
+  pdf.text(t.contact, margin + colWidth, footerY);
   pdf.setFont('helvetica', 'normal');
   footerY += 4;
   if (order.shops?.company_phone) {
@@ -521,7 +522,7 @@ const generateResponsivePDF = async (order: any, bankData: any, language: string
   // Column 3: Bank information
   footerY = footerStartY + 8;
   pdf.setFont('helvetica', 'bold');
-  pdf.text('Bankinformationen', margin + (2 * colWidth), footerY);
+  pdf.text(t.bankInformation, margin + (2 * colWidth), footerY);
   if (bankData) {
     pdf.setFont('helvetica', 'normal');
     footerY += 4;
@@ -538,7 +539,7 @@ const generateResponsivePDF = async (order: any, bankData: any, language: string
   // Column 4: Business owner and VAT ID
   footerY = footerStartY + 8;
   pdf.setFont('helvetica', 'bold');
-  pdf.text('Geschäftsdaten', margin + (3 * colWidth), footerY);
+  pdf.text(t.businessData, margin + (3 * colWidth), footerY);
   pdf.setFont('helvetica', 'normal');
   footerY += 4;
   if (order.shops?.business_owner) {

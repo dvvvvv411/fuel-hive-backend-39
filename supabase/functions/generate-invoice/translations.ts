@@ -34,6 +34,15 @@ export interface InvoiceTranslations {
   totalAmount: string;
   vatLabel: string;
   invoiceFilename: string;
+  orderNumber?: string;
+  orderDate?: string;
+  phone?: string;
+  email?: string;
+  website?: string;
+  // Footer translations
+  contact: string;
+  bankInformation: string;
+  businessData: string;
   products: Record<string, string>;
 }
 
@@ -43,6 +52,8 @@ export const translations: Record<string, InvoiceTranslations> = {
     invoiceNumber: 'Rechnungsnummer',
     invoiceDate: 'Rechnungsdatum',
     dueDate: 'Fälligkeitsdatum',
+    orderNumber: 'Bestellnummer',
+    orderDate: 'Bestelldatum',
     customerDetails: 'Kundendetails',
     companyDetails: 'Firmendetails',
     description: 'Beschreibung',
@@ -73,8 +84,16 @@ export const translations: Record<string, InvoiceTranslations> = {
     totalAmount: 'Gesamtbetrag',
     vatLabel: 'USt-IdNr.',
     invoiceFilename: 'Rechnung',
+    phone: 'Telefon',
+    email: 'E-Mail',
+    website: 'Website',
+    contact: 'Kontakt',
+    bankInformation: 'Bankinformationen',
+    businessData: 'Geschäftsdaten',
     products: {
       'heating_oil': 'Heizöl',
+      'premium_heizoel': 'Premium Heizöl',
+      'standard_heizoel': 'Standard Heizöl',
       'diesel': 'Diesel',
       'gasoline': 'Benzin'
     }
@@ -84,6 +103,8 @@ export const translations: Record<string, InvoiceTranslations> = {
     invoiceNumber: 'Invoice Number',
     invoiceDate: 'Invoice Date',
     dueDate: 'Due Date',
+    orderNumber: 'Order Number',
+    orderDate: 'Order Date',
     customerDetails: 'Customer Details',
     companyDetails: 'Company Details',
     description: 'Description',
@@ -114,8 +135,16 @@ export const translations: Record<string, InvoiceTranslations> = {
     totalAmount: 'Total Amount',
     vatLabel: 'VAT Number',
     invoiceFilename: 'Invoice',
+    phone: 'Phone',
+    email: 'Email',
+    website: 'Website',
+    contact: 'Contact',
+    bankInformation: 'Bank Information',
+    businessData: 'Business Data',
     products: {
       'heating_oil': 'Heating Oil',
+      'premium_heizoel': 'Premium Heating Oil',
+      'standard_heizoel': 'Standard Heating Oil',
       'diesel': 'Diesel',
       'gasoline': 'Gasoline'
     }
@@ -125,6 +154,8 @@ export const translations: Record<string, InvoiceTranslations> = {
     invoiceNumber: 'Numéro de facture',
     invoiceDate: 'Date de facture',
     dueDate: 'Date d\'échéance',
+    orderNumber: 'Numéro de commande',
+    orderDate: 'Date de commande',
     customerDetails: 'Détails du client',
     companyDetails: 'Détails de l\'entreprise',
     description: 'Description',
@@ -155,8 +186,16 @@ export const translations: Record<string, InvoiceTranslations> = {
     totalAmount: 'Montant total',
     vatLabel: 'Numéro de TVA',
     invoiceFilename: 'Facture',
+    phone: 'Téléphone',
+    email: 'Email',
+    website: 'Site web',
+    contact: 'Contact',
+    bankInformation: 'Informations bancaires',
+    businessData: 'Données d\'entreprise',
     products: {
       'heating_oil': 'Fioul de chauffage',
+      'premium_heizoel': 'Fioul premium',
+      'standard_heizoel': 'Fioul standard',
       'diesel': 'Diesel',
       'gasoline': 'Essence'
     }
@@ -166,6 +205,8 @@ export const translations: Record<string, InvoiceTranslations> = {
     invoiceNumber: 'Número de factura',
     invoiceDate: 'Fecha de factura',
     dueDate: 'Fecha de vencimiento',
+    orderNumber: 'Número de pedido',
+    orderDate: 'Fecha de pedido',
     customerDetails: 'Detalles del cliente',
     companyDetails: 'Detalles de la empresa',
     description: 'Descripción',
@@ -196,8 +237,16 @@ export const translations: Record<string, InvoiceTranslations> = {
     totalAmount: 'Monto total',
     vatLabel: 'Número de IVA',
     invoiceFilename: 'Factura',
+    phone: 'Teléfono',
+    email: 'Email',
+    website: 'Sitio web',
+    contact: 'Contacto',
+    bankInformation: 'Información bancaria',
+    businessData: 'Datos empresariales',
     products: {
       'heating_oil': 'Combustible para calefacción',
+      'premium_heizoel': 'Combustible premium',
+      'standard_heizoel': 'Combustible estándar',
       'diesel': 'Diesel',
       'gasoline': 'Gasolina'
     }
@@ -207,6 +256,8 @@ export const translations: Record<string, InvoiceTranslations> = {
     invoiceNumber: 'Numero fattura',
     invoiceDate: 'Data fattura',
     dueDate: 'Data di scadenza',
+    orderNumber: 'Numero ordine',
+    orderDate: 'Data ordine',
     customerDetails: 'Dettagli cliente',
     companyDetails: 'Dettagli azienda',
     description: 'Descrizione',
@@ -237,8 +288,16 @@ export const translations: Record<string, InvoiceTranslations> = {
     totalAmount: 'Importo totale',
     vatLabel: 'Partita IVA',
     invoiceFilename: 'Fattura',
+    phone: 'Telefono',
+    email: 'Email',
+    website: 'Sito web',
+    contact: 'Contatto',
+    bankInformation: 'Informazioni bancarie',
+    businessData: 'Dati aziendali',
     products: {
       'heating_oil': 'Gasolio per riscaldamento',
+      'premium_heizoel': 'Gasolio premium',
+      'standard_heizoel': 'Gasolio standard',
       'diesel': 'Diesel',
       'gasoline': 'Benzina'
     }
@@ -248,6 +307,8 @@ export const translations: Record<string, InvoiceTranslations> = {
     invoiceNumber: 'Numer faktury',
     invoiceDate: 'Data faktury',
     dueDate: 'Termin płatności',
+    orderNumber: 'Numer zamówienia',
+    orderDate: 'Data zamówienia',
     customerDetails: 'Dane klienta',
     companyDetails: 'Dane firmy',
     description: 'Opis',
@@ -278,8 +339,16 @@ export const translations: Record<string, InvoiceTranslations> = {
     totalAmount: 'Kwota całkowita',
     vatLabel: 'NIP',
     invoiceFilename: 'Faktura',
+    phone: 'Telefon',
+    email: 'Email',
+    website: 'Strona internetowa',
+    contact: 'Kontakt',
+    bankInformation: 'Informacje bankowe',
+    businessData: 'Dane biznesowe',
     products: {
       'heating_oil': 'Olej opałowy',
+      'premium_heizoel': 'Olej opałowy premium',
+      'standard_heizoel': 'Olej opałowy standardowy',
       'diesel': 'Diesel',
       'gasoline': 'Benzyna'
     }
@@ -289,6 +358,8 @@ export const translations: Record<string, InvoiceTranslations> = {
     invoiceNumber: 'Factuurnummer',
     invoiceDate: 'Factuurdatum',
     dueDate: 'Vervaldatum',
+    orderNumber: 'Bestelnummer',
+    orderDate: 'Besteldatum',
     customerDetails: 'Klantgegevens',
     companyDetails: 'Bedrijfsgegevens',
     description: 'Beschrijving',
@@ -319,8 +390,16 @@ export const translations: Record<string, InvoiceTranslations> = {
     totalAmount: 'Totaalbedrag',
     vatLabel: 'BTW-nummer',
     invoiceFilename: 'Factuur',
+    phone: 'Telefoon',
+    email: 'Email',
+    website: 'Website',
+    contact: 'Contact',
+    bankInformation: 'Bankinformatie',
+    businessData: 'Bedrijfsgegevens',
     products: {
       'heating_oil': 'Stookolie',
+      'premium_heizoel': 'Premium stookolie',
+      'standard_heizoel': 'Standaard stookolie',
       'diesel': 'Diesel',
       'gasoline': 'Benzine'
     }
