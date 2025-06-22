@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -85,8 +86,10 @@ const Checkout = () => {
       fetchTokenData();
     } else {
       setLoading(false);
+      const language = 'de'; // fallback language
+      const t = getInvoiceTranslations(language);
       toast({
-        title: 'Fehler',
+        title: t.errorTitle,
         description: 'Kein gültiger Token gefunden',
         variant: 'destructive',
       });
@@ -135,9 +138,11 @@ const Checkout = () => {
 
     } catch (error) {
       console.error('Error fetching data:', error);
+      const language = 'de'; // fallback language
+      const t = getInvoiceTranslations(language);
       toast({
-        title: 'Fehler',
-        description: 'Fehler beim Laden der Bestelldaten',
+        title: t.errorTitle,
+        description: t.errorLoadingOrder,
         variant: 'destructive',
       });
     } finally {
@@ -148,10 +153,14 @@ const Checkout = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
+    // Get translations based on shop language
+    const language = shopConfig?.shop?.language || 'de';
+    const t = getInvoiceTranslations(language);
+    
     if (!formData.terms_accepted) {
       toast({
-        title: 'AGB nicht akzeptiert',
-        description: 'Bitte akzeptieren Sie die Allgemeinen Geschäftsbedingungen',
+        title: t.termsNotAccepted,
+        description: t.termsNotAcceptedDescription,
         variant: 'destructive',
       });
       return;
@@ -180,10 +189,10 @@ const Checkout = () => {
         throw new Error(response.error.message);
       }
 
-      // Show success message
+      // Show success message with proper translation
       toast({
-        title: 'Bestellung erfolgreich!',
-        description: `Ihre Bestellung ${response.data.order_number} wurde erfolgreich aufgegeben.`,
+        title: t.orderSuccessTitle,
+        description: `${t.orderNumber} ${response.data.order_number} ${t.orderSuccessDescription}`,
       });
 
       // Reset form
@@ -201,8 +210,8 @@ const Checkout = () => {
     } catch (error) {
       console.error('Error creating order:', error);
       toast({
-        title: 'Fehler',
-        description: 'Fehler beim Aufgeben der Bestellung',
+        title: t.errorTitle,
+        description: t.errorCreatingOrder,
         variant: 'destructive',
       });
     } finally {
@@ -223,13 +232,17 @@ const Checkout = () => {
   }
 
   if (!tokenData || !shopConfig) {
+    // Get translations for error message
+    const language = 'de'; // fallback language
+    const t = getInvoiceTranslations(language);
+    
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <Card className="w-full max-w-md">
           <CardContent className="pt-6">
             <div className="text-center">
-              <h2 className="text-xl font-semibold mb-2">Bestellung nicht gefunden</h2>
-              <p className="text-gray-600">Der angegebene Token ist ungültig oder abgelaufen.</p>
+              <h2 className="text-xl font-semibold mb-2">{t.orderNotFound}</h2>
+              <p className="text-gray-600">{t.orderNotFoundDescription}</p>
             </div>
           </CardContent>
         </Card>
@@ -239,7 +252,7 @@ const Checkout = () => {
 
   // Get translations based on shop language
   const language = shopConfig?.shop?.language || 'de';
-  const translations = getInvoiceTranslations(language);
+  const t = getInvoiceTranslations(language);
 
   return (
     <div className="min-h-screen bg-gray-50 py-8">
@@ -254,36 +267,36 @@ const Checkout = () => {
             />
           )}
           <h1 className="text-3xl font-bold text-gray-900">{shopConfig.shop.company_name}</h1>
-          <p className="text-gray-600 mt-2">Bestellung abschließen</p>
+          <p className="text-gray-600 mt-2">{t.checkoutTitle}</p>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
           {/* Order Summary */}
           <Card>
             <CardHeader>
-              <CardTitle>Bestellübersicht</CardTitle>
+              <CardTitle>{t.orderSummary}</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="flex justify-between">
                 <span className="font-medium">{tokenData.product}</span>
-                <span>{tokenData.liters} Liter</span>
+                <span>{tokenData.liters} {t.liters}</span>
               </div>
               <div className="flex justify-between">
-                <span>Preis pro Liter</span>
+                <span>{t.pricePerLiter}</span>
                 <span>{tokenData.price_per_liter.toFixed(2)} {tokenData.shop.currency}</span>
               </div>
               <div className="flex justify-between">
-                <span>Liefergebühr</span>
+                <span>{t.deliveryFee}</span>
                 <span>{tokenData.delivery_fee.toFixed(2)} {tokenData.shop.currency}</span>
               </div>
               <Separator />
               <div className="flex justify-between font-bold text-lg">
-                <span>Gesamtbetrag</span>
+                <span>{t.totalAmount}</span>
                 <span>{tokenData.total_amount.toFixed(2)} {tokenData.shop.currency}</span>
               </div>
               {tokenData.vat_amount > 0 && (
                 <p className="text-sm text-gray-600">
-                  inkl. {tokenData.vat_rate}% MwSt. ({tokenData.vat_amount.toFixed(2)} {tokenData.shop.currency})
+                  {t.incVat} {tokenData.vat_rate}% {t.vat} ({tokenData.vat_amount.toFixed(2)} {tokenData.shop.currency})
                 </p>
               )}
             </CardContent>
@@ -292,12 +305,12 @@ const Checkout = () => {
           {/* Order Form */}
           <Card>
             <CardHeader>
-              <CardTitle>Bestelldaten</CardTitle>
+              <CardTitle>{t.orderData}</CardTitle>
             </CardHeader>
             <CardContent>
               <form onSubmit={handleSubmit} className="space-y-4">
                 <div className="space-y-2">
-                  <Label htmlFor="customer_name">Name *</Label>
+                  <Label htmlFor="customer_name">{t.name} {t.required}</Label>
                   <Input
                     id="customer_name"
                     value={formData.customer_name}
@@ -308,7 +321,7 @@ const Checkout = () => {
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="customer_email">E-Mail *</Label>
+                  <Label htmlFor="customer_email">{t.email} {t.required}</Label>
                   <Input
                     id="customer_email"
                     type="email"
@@ -320,7 +333,7 @@ const Checkout = () => {
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="customer_phone">Telefon</Label>
+                  <Label htmlFor="customer_phone">{t.telephone}</Label>
                   <Input
                     id="customer_phone"
                     value={formData.customer_phone}
@@ -331,10 +344,10 @@ const Checkout = () => {
 
                 <Separator />
 
-                <h3 className="text-lg font-semibold">Lieferadresse</h3>
+                <h3 className="text-lg font-semibold">{t.deliveryAddressTitle}</h3>
 
                 <div className="space-y-2">
-                  <Label htmlFor="delivery_street">Straße und Hausnummer *</Label>
+                  <Label htmlFor="delivery_street">{t.streetNumber} {t.required}</Label>
                   <Input
                     id="delivery_street"
                     value={formData.delivery_street}
@@ -346,7 +359,7 @@ const Checkout = () => {
 
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label htmlFor="delivery_postal_code">PLZ *</Label>
+                    <Label htmlFor="delivery_postal_code">{t.postalCode} {t.required}</Label>
                     <Input
                       id="delivery_postal_code"
                       value={formData.delivery_postal_code}
@@ -356,7 +369,7 @@ const Checkout = () => {
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="delivery_city">Stadt *</Label>
+                    <Label htmlFor="delivery_city">{t.city} {t.required}</Label>
                     <Input
                       id="delivery_city"
                       value={formData.delivery_city}
@@ -370,13 +383,13 @@ const Checkout = () => {
                 <Separator />
 
                 <div className="space-y-2">
-                  <Label htmlFor="payment_method_id">Zahlungsart *</Label>
+                  <Label htmlFor="payment_method_id">{t.paymentMethod} {t.required}</Label>
                   <Select 
                     value={formData.payment_method_id} 
                     onValueChange={(value) => handleInputChange('payment_method_id', value)}
                   >
                     <SelectTrigger>
-                      <SelectValue placeholder="Zahlungsart wählen..." />
+                      <SelectValue placeholder={t.selectPaymentMethod} />
                     </SelectTrigger>
                     <SelectContent>
                       {shopConfig.payment_methods.map((method) => (
@@ -398,7 +411,7 @@ const Checkout = () => {
                     onCheckedChange={(checked) => handleInputChange('terms_accepted', checked as boolean)}
                   />
                   <Label htmlFor="terms" className="text-sm">
-                    Ich akzeptiere die Allgemeinen Geschäftsbedingungen *
+                    {t.acceptTerms} {t.required}
                   </Label>
                 </div>
 
@@ -411,12 +424,12 @@ const Checkout = () => {
                   {submitting ? (
                     <div className="flex items-center space-x-2">
                       <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-                      <span>{translations.orderProcessing}</span>
+                      <span>{t.orderProcessing}</span>
                     </div>
                   ) : (
                     <div className="flex items-center space-x-2">
                       <CheckCircle className="h-4 w-4" />
-                      <span>Bestellung aufgeben</span>
+                      <span>{t.submitOrder}</span>
                     </div>
                   )}
                 </Button>
@@ -431,21 +444,21 @@ const Checkout = () => {
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Banknote className="h-5 w-5" />
-                Bankverbindung für Überweisung
+                {t.bankTransferInfo}
               </CardTitle>
             </CardHeader>
             <CardContent>
               <div className="bg-blue-50 border border-blue-200 rounded-lg p-6">
                 <p className="text-blue-800 font-medium mb-4">
-                  Bitte überweisen Sie den Betrag an folgende Bankverbindung:
+                  {t.bankTransferDescription}
                 </p>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
-                    <p className="text-sm font-medium text-gray-700">Empfänger</p>
+                    <p className="text-sm font-medium text-gray-700">{t.recipient}</p>
                     <p className="text-gray-900">{bankData.bank_data.account_holder}</p>
                   </div>
                   <div>
-                    <p className="text-sm font-medium text-gray-700">Bank</p>
+                    <p className="text-sm font-medium text-gray-700">{t.bank}</p>
                     <p className="text-gray-900">{bankData.bank_data.bank_name}</p>
                   </div>
                   <div>
@@ -457,14 +470,14 @@ const Checkout = () => {
                     <p className="text-gray-900 font-mono">{bankData.bank_data.bic}</p>
                   </div>
                   <div className="md:col-span-2">
-                    <p className="text-sm font-medium text-gray-700">Betrag</p>
+                    <p className="text-sm font-medium text-gray-700">{t.amount}</p>
                     <p className="text-xl font-bold text-gray-900">
                       {tokenData.total_amount.toFixed(2)} {bankData.bank_data.currency}
                     </p>
                   </div>
                 </div>
                 <p className="text-sm text-blue-700 mt-4">
-                  Nach Ihrer Bestellung erhalten Sie eine Rechnung mit der Bestellnummer als Verwendungszweck.
+                  {t.bankTransferNote}
                 </p>
               </div>
             </CardContent>
