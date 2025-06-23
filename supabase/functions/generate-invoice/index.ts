@@ -1,3 +1,4 @@
+
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { jsPDF } from "npm:jspdf@2.5.1";
@@ -11,6 +12,7 @@ const corsHeaders = {
 interface GenerateInvoiceRequest {
   order_id: string;
   language?: string;
+  force_bank_assignment?: boolean; // New parameter to explicitly request bank assignment
 }
 
 const formatIBAN = (iban: string): string => {
@@ -644,9 +646,10 @@ const handler = async (req: Request): Promise<Response> => {
   );
 
   try {
-    const { order_id, language }: GenerateInvoiceRequest = await req.json();
+    const { order_id, language, force_bank_assignment }: GenerateInvoiceRequest = await req.json();
     console.log('Starting invoice generation for order:', order_id);
     console.log('Requested language:', language);
+    console.log('Force bank assignment:', force_bank_assignment);
 
     // Get order with shop details
     const { data: order, error: orderError } = await supabase
@@ -669,7 +672,8 @@ const handler = async (req: Request): Promise<Response> => {
           company_phone,
           company_website,
           business_owner,
-          vat_rate
+          vat_rate,
+          checkout_mode
         )
       `)
       .eq('id', order_id)
@@ -684,92 +688,100 @@ const handler = async (req: Request): Promise<Response> => {
     }
 
     console.log('Order fetched successfully:', order.order_number);
+    console.log('Order processing mode:', order.processing_mode);
+    console.log('Shop checkout mode:', order.shops?.checkout_mode);
 
     // Detect language for the invoice
     const finalLanguage = language || detectLanguage(order);
     console.log('Final language for PDF:', finalLanguage);
 
-    // PRIORITY ORDER FOR BANK ACCOUNT SELECTION:
-    // 1. selected_bank_account_id from the order (highest priority)
-    // 2. Temporary bank account associated with this order
-    // 3. Shop's default bank account (fallback)
-    
+    // UPDATED BANK ACCOUNT SELECTION LOGIC:
+    // Only assign bank accounts automatically for instant orders or when explicitly forced
     let bankData = null;
-    console.log('Looking for bank account in priority order...');
+    const isInstantOrder = order.processing_mode === 'instant';
+    const shouldAssignBank = isInstantOrder || force_bank_assignment;
     
-    // Priority 1: Check for selected_bank_account_id in the order
-    if (order.selected_bank_account_id) {
-      console.log('Found selected_bank_account_id in order:', order.selected_bank_account_id);
-      
-      const { data: selectedBank, error: selectedBankError } = await supabase
-        .from('bank_accounts')
-        .select('account_holder, bank_name, iban, bic, use_anyname, account_name')
-        .eq('id', order.selected_bank_account_id)
-        .eq('active', true)
-        .single();
-
-      if (!selectedBankError && selectedBank) {
-        console.log('Using selected bank account from order:', selectedBank.account_name);
-        bankData = {
-          ...selectedBank,
-          account_holder: selectedBank.use_anyname ? order.shops.company_name : selectedBank.account_holder
-        };
-      } else {
-        console.warn('Selected bank account not found or inactive:', selectedBankError);
-      }
-    }
+    console.log('Should assign bank account:', shouldAssignBank, '(instant:', isInstantOrder, ', forced:', force_bank_assignment, ')');
     
-    // Priority 2: If no selected bank account, check for temporary bank account
-    if (!bankData) {
-      console.log('No selected bank account, checking for temporary bank account...');
+    if (shouldAssignBank) {
+      console.log('Looking for bank account in priority order...');
       
-      const { data: tempBankAccount, error: tempBankError } = await supabase
-        .from('bank_accounts')
-        .select('account_holder, bank_name, iban, bic, use_anyname, account_name')
-        .eq('is_temporary', true)
-        .eq('used_for_order_id', order_id)
-        .eq('active', true)
-        .maybeSingle();
+      // Priority 1: Check for selected_bank_account_id in the order
+      if (order.selected_bank_account_id) {
+        console.log('Found selected_bank_account_id in order:', order.selected_bank_account_id);
+        
+        const { data: selectedBank, error: selectedBankError } = await supabase
+          .from('bank_accounts')
+          .select('account_holder, bank_name, iban, bic, use_anyname, account_name')
+          .eq('id', order.selected_bank_account_id)
+          .eq('active', true)
+          .single();
 
-      if (tempBankAccount && !tempBankError) {
-        console.log('Using temporary bank account:', tempBankAccount.account_name);
-        bankData = {
-          ...tempBankAccount,
-          account_holder: tempBankAccount.use_anyname ? order.shops.company_name : tempBankAccount.account_holder
-        };
-      } else if (tempBankError) {
-        console.warn('Error fetching temporary bank account:', tempBankError);
-      } else {
-        console.log('No temporary bank account found for this order');
+        if (!selectedBankError && selectedBank) {
+          console.log('Using selected bank account from order:', selectedBank.account_name);
+          bankData = {
+            ...selectedBank,
+            account_holder: selectedBank.use_anyname ? order.shops.company_name : selectedBank.account_holder
+          };
+        } else {
+          console.warn('Selected bank account not found or inactive:', selectedBankError);
+        }
       }
-    }
-    
-    // Priority 3: Fallback to shop's default bank account
-    if (!bankData && order.shops?.bank_account_id) {
-      console.log('Using shop default bank account as fallback:', order.shops.bank_account_id);
       
-      const { data: defaultBank, error: bankError } = await supabase
-        .from('bank_accounts')
-        .select('account_holder, bank_name, iban, bic, use_anyname, account_name')
-        .eq('id', order.shops.bank_account_id)
-        .eq('active', true)
-        .single();
+      // Priority 2: If no selected bank account, check for temporary bank account
+      if (!bankData) {
+        console.log('No selected bank account, checking for temporary bank account...');
+        
+        const { data: tempBankAccount, error: tempBankError } = await supabase
+          .from('bank_accounts')
+          .select('account_holder, bank_name, iban, bic, use_anyname, account_name')
+          .eq('is_temporary', true)
+          .eq('used_for_order_id', order_id)
+          .eq('active', true)
+          .maybeSingle();
 
-      if (!bankError && defaultBank) {
-        console.log('Using shop default bank account:', defaultBank.account_name);
-        bankData = {
-          ...defaultBank,
-          account_holder: defaultBank.use_anyname ? order.shops.company_name : defaultBank.account_holder
-        };
-      } else {
-        console.warn('Could not fetch shop default bank data:', bankError);
+        if (tempBankAccount && !tempBankError) {
+          console.log('Using temporary bank account:', tempBankAccount.account_name);
+          bankData = {
+            ...tempBankAccount,
+            account_holder: tempBankAccount.use_anyname ? order.shops.company_name : tempBankAccount.account_holder
+          };
+        } else if (tempBankError) {
+          console.warn('Error fetching temporary bank account:', tempBankError);
+        } else {
+          console.log('No temporary bank account found for this order');
+        }
       }
-    }
+      
+      // Priority 3: Fallback to shop's default bank account
+      if (!bankData && order.shops?.bank_account_id) {
+        console.log('Using shop default bank account as fallback:', order.shops.bank_account_id);
+        
+        const { data: defaultBank, error: bankError } = await supabase
+          .from('bank_accounts')
+          .select('account_holder, bank_name, iban, bic, use_anyname, account_name')
+          .eq('id', order.shops.bank_account_id)
+          .eq('active', true)
+          .single();
 
-    if (!bankData) {
-      console.warn('No bank account found - invoice will be generated without payment information');
+        if (!bankError && defaultBank) {
+          console.log('Using shop default bank account:', defaultBank.account_name);
+          bankData = {
+            ...defaultBank,
+            account_holder: defaultBank.use_anyname ? order.shops.company_name : defaultBank.account_holder
+          };
+        } else {
+          console.warn('Could not fetch shop default bank data:', bankError);
+        }
+      }
+
+      if (!bankData) {
+        console.warn('No bank account found for', isInstantOrder ? 'instant order' : 'forced assignment');
+      } else {
+        console.log('Bank account selected for invoice:', bankData.account_name);
+      }
     } else {
-      console.log('Bank account selected for invoice:', bankData.account_name);
+      console.log('Skipping bank account assignment for manual order (not forced)');
     }
 
     // Generate filename based on language and order number
@@ -805,14 +817,32 @@ const handler = async (req: Request): Promise<Response> => {
     console.log('PDF public URL:', publicUrl);
 
     // Update order with invoice details
+    const updateData: any = {
+      invoice_pdf_url: publicUrl,
+      invoice_pdf_generated: true,
+      invoice_generation_date: new Date().toISOString(),
+      invoice_date: order.invoice_date || new Date().toISOString().split('T')[0]
+    };
+
+    // Only update selected_bank_account_id if we have bank data and it was assigned
+    if (bankData && shouldAssignBank && !order.selected_bank_account_id) {
+      // Find the bank account ID that matches our bank data
+      const { data: bankAccount, error: bankAccountError } = await supabase
+        .from('bank_accounts')
+        .select('id')
+        .eq('iban', bankData.iban)
+        .eq('active', true)
+        .single();
+
+      if (!bankAccountError && bankAccount) {
+        updateData.selected_bank_account_id = bankAccount.id;
+        console.log('Updated order with selected bank account ID:', bankAccount.id);
+      }
+    }
+
     const { error: updateError } = await supabase
       .from('orders')
-      .update({
-        invoice_pdf_url: publicUrl,
-        invoice_pdf_generated: true,
-        invoice_generation_date: new Date().toISOString(),
-        invoice_date: order.invoice_date || new Date().toISOString().split('T')[0]
-      })
+      .update(updateData)
       .eq('id', order_id);
 
     if (updateError) {
@@ -828,6 +858,7 @@ const handler = async (req: Request): Promise<Response> => {
       filename: filename,
       language: finalLanguage,
       bank_account_used: bankData?.account_name || 'none',
+      bank_account_assigned: shouldAssignBank,
       order_number: orderNumberForFilename,
       generated_at: new Date().toISOString()
     }), {
