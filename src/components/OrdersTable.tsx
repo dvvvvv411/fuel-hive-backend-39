@@ -543,20 +543,19 @@ export function OrdersTable() {
   };
 
   const getBankAccountInfo = (order: Order) => {
-    // Check for selected bank account first (for manual orders with invoice generated)
+    // Only show bank account info if an invoice has been generated
+    if (!order.invoice_pdf_generated) {
+      return '';
+    }
+
+    // Check for selected bank account first (for orders with invoice generated)
     if (order.selected_bank_account) {
       return order.selected_bank_account.account_name;
     }
     
-    // Check for temporary bank account (for manual orders during processing)
+    // Fallback to temporary bank account if no selected account but invoice was generated
     if (order.temp_bank_accounts && Array.isArray(order.temp_bank_accounts) && order.temp_bank_accounts.length > 0) {
       return order.temp_bank_accounts[0].account_name;
-    }
-    
-    // Check if shop has an assigned bank account (for instant orders)
-    if (order.shops?.bank_accounts) {
-      const bankAccount = order.shops.bank_accounts;
-      return bankAccount.account_name;
     }
     
     return '';
@@ -793,6 +792,7 @@ export function OrdersTable() {
                     const { dateStr, timeStr } = formatDateTime(order.created_at);
                     const hasAddressDifference = checkAddressDifference(order);
                     const phoneNumber = order.customer_phone || order.delivery_phone;
+                    const bankAccountInfo = getBankAccountInfo(order);
                     
                     return (
                       <TableRow key={order.id}>
@@ -851,7 +851,9 @@ export function OrdersTable() {
                         <TableCell>€{order.total_amount.toFixed(2)}</TableCell>
                         <TableCell>
                           <div className="text-sm">
-                            {getBankAccountInfo(order)}
+                            {bankAccountInfo || (
+                              <span className="text-gray-400 text-xs">-</span>
+                            )}
                           </div>
                         </TableCell>
                         <TableCell>{order.shops?.name}</TableCell>

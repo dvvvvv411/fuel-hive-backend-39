@@ -49,22 +49,25 @@ export function BankAccountPerformance() {
 
       if (shopsError) throw shopsError;
 
-      // Fetch all orders
+      // Fetch only orders that have a selected bank account assigned
       const { data: orders, error: ordersError } = await supabase
         .from('orders')
-        .select('*');
+        .select('*')
+        .not('selected_bank_account_id', 'is', null);
 
       if (ordersError) throw ordersError;
 
       const totalRevenue = orders?.reduce((sum, order) => sum + Number(order.total_amount || 0), 0) || 0;
 
       const bankAccountStats: BankAccountStats[] = bankAccounts?.map(account => {
-        // Find shops using this bank account
+        // Find shops using this bank account as their default
         const assignedShops = shops?.filter(shop => shop.bank_account_id === account.id) || [];
         const shopIds = assignedShops.map(shop => shop.id);
         
-        // Find orders from these shops
-        const accountOrders = orders?.filter(order => shopIds.includes(order.shop_id)) || [];
+        // Find orders that have this bank account selected (either from shop assignment or manual selection)
+        const accountOrders = orders?.filter(order => 
+          order.selected_bank_account_id === account.id
+        ) || [];
         
         // Today's data
         const todayOrders = accountOrders.filter(order => 
@@ -177,7 +180,7 @@ export function BankAccountPerformance() {
           Bankkonto-Performance
         </CardTitle>
         <CardDescription>
-          Umsatzverteilung und Performance-Analyse aller Bankkonten
+          Umsatzverteilung und Performance-Analyse aller Bankkonten (nur Bestellungen mit zugewiesenen Bankkonten)
         </CardDescription>
         
         {/* Summary Stats */}
