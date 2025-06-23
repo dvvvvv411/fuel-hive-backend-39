@@ -300,51 +300,36 @@ export function OrdersTable() {
         description: 'Die Rechnung wird erstellt und per E-Mail versendet',
       });
 
-      // Step 1: Validate bank account assignment for the order
-      const { data: orderData, error: orderError } = await supabase
-        .from('orders')
-        .select('processing_mode, order_number, shop_id, shops(checkout_mode)')
-        .eq('id', orderId)
-        .single();
-
-      if (orderError) {
-        console.error('Error fetching order data:', orderError);
-        throw orderError;
-      }
-
-      console.log('Order data:', orderData);
-      console.log('Order processing mode:', orderData.processing_mode);
-      console.log('Shop checkout mode:', orderData.shops?.checkout_mode);
-
-      // Step 2: Validate bank account assignment
+      // Step 1: Get bank account info to determine if it's temporary or existing
+      let isTemporaryBankAccount = false;
       if (bankAccountId) {
-        // Verify the bank account exists and is active
         const { data: bankAccountData, error: bankAccountError } = await supabase
           .from('bank_accounts')
-          .select('is_temporary, account_name, active')
+          .select('is_temporary')
           .eq('id', bankAccountId)
           .single();
 
-        if (bankAccountError || !bankAccountData) {
+        if (bankAccountError) {
           console.error('Error fetching bank account info:', bankAccountError);
-          throw new Error('Selected bank account not found');
+        } else {
+          isTemporaryBankAccount = bankAccountData.is_temporary;
+          console.log('Bank account is temporary:', isTemporaryBankAccount);
         }
+      }
 
-        if (!bankAccountData.active) {
-          throw new Error('Selected bank account is not active');
-        }
+      // Step 2: Update the order with selected bank account and order number if provided
+      const updateData: any = {};
+      
+      if (newOrderNumber && newOrderNumber.trim() !== '') {
+        updateData.order_number = newOrderNumber.trim();
+      }
+      
+      // Always update selected_bank_account_id for both temporary and existing accounts
+      if (bankAccountId) {
+        updateData.selected_bank_account_id = bankAccountId;
+      }
 
-        console.log('Bank account validated:', bankAccountData.account_name, 'is_temporary:', bankAccountData.is_temporary);
-
-        // Step 3: Update the order with selected bank account and order number if provided
-        const updateData: any = {
-          selected_bank_account_id: bankAccountId
-        };
-        
-        if (newOrderNumber && newOrderNumber.trim() !== '') {
-          updateData.order_number = newOrderNumber.trim();
-        }
-
+      if (Object.keys(updateData).length > 0) {
         console.log('Updating order with:', updateData);
         
         const { error: updateOrderError } = await supabase
@@ -358,51 +343,52 @@ export function OrdersTable() {
         }
 
         console.log('Order updated successfully with selected bank account');
-
-        // Step 4: For temporary bank accounts, associate them with the order
-        if (bankAccountData.is_temporary) {
-          console.log('Associating temporary bank account with order');
-          
-          const { error: updateBankError } = await supabase
-            .from('bank_accounts')
-            .update({ 
-              used_for_order_id: orderId,
-              temp_order_number: newOrderNumber?.trim() || orderData.order_number
-            })
-            .eq('id', bankAccountId);
-
-          if (updateBankError) {
-            console.error('Error updating temporary bank account:', updateBankError);
-            throw updateBankError;
-          }
-
-          console.log('Successfully associated temporary bank account with order');
-        }
-      } else {
-        // Step 3: If no bank account provided, just update order number if needed
-        if (newOrderNumber && newOrderNumber.trim() !== '') {
-          console.log('Updating order number only');
-          
-          const { error: updateOrderError } = await supabase
-            .from('orders')
-            .update({ order_number: newOrderNumber.trim() })
-            .eq('id', orderId);
-
-          if (updateOrderError) {
-            console.error('Error updating order number:', updateOrderError);
-            throw updateOrderError;
-          }
-
-          console.log('Order number updated successfully');
-        }
       }
 
-      // Step 5: Generate the invoice (bank account will be automatically included if assigned)
+      // Step 3: Get the order data 
+      const { data: orderData, error: orderError } = await supabase
+        .from('orders')
+        .select('processing_mode, order_number')
+        .eq('id', orderId)
+        .single();
+
+      if (orderError) {
+        console.error('Error fetching order data:', orderError);
+        throw orderError;
+      }
+
+      console.log('Order data:', orderData);
+
+      // Step 4: For temporary bank accounts, associate them with the order
+      if (isTemporaryBankAccount && bankAccountId) {
+        console.log('Associating temporary bank account with order');
+        
+        const { error: updateBankError } = await supabase
+          .from('bank_accounts')
+          .update({ 
+            used_for_order_id: orderId,
+            temp_order_number: orderData.order_number
+          })
+          .eq('id', bankAccountId)
+          .eq('is_temporary', true);
+
+        if (updateBankError) {
+          console.error('Error updating temporary bank account:', updateBankError);
+          throw updateBankError;
+        }
+
+        console.log('Successfully associated temporary bank account with order');
+      } else if (bankAccountId) {
+        console.log('Using existing (non-temporary) bank account:', bankAccountId);
+      }
+
+      // Step 5: Generate the invoice with the selected bank account
       console.log('Generating invoice');
       
       const { data: invoiceData, error: invoiceError } = await supabase.functions.invoke('generate-invoice', {
         body: { 
-          order_id: orderId
+          order_id: orderId,
+          bank_account_id: bankAccountId 
         }
       });
 
@@ -567,13 +553,12 @@ export function OrdersTable() {
       return order.temp_bank_accounts[0].account_name;
     }
     
-    // Only show shop's default bank account for instant orders
-    if (order.processing_mode === 'instant' && order.shops?.bank_accounts) {
+    // Check if shop has an assigned bank account (for instant orders)
+    if (order.shops?.bank_accounts) {
       const bankAccount = order.shops.bank_accounts;
       return bankAccount.account_name;
     }
     
-    // For manual orders without assigned bank account, return empty string
     return '';
   };
 

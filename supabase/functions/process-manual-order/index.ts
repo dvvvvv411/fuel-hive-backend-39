@@ -41,13 +41,9 @@ const handler = async (req: Request): Promise<Response> => {
       updateData.temp_order_number = temp_order_number;
     }
     
-    // IMPORTANT: Only set selected_bank_account_id if explicitly provided
-    // Do NOT automatically assign any bank account for manual orders
     if (bank_account_id) {
       updateData.selected_bank_account_id = bank_account_id;
       console.log('Setting selected_bank_account_id to:', bank_account_id);
-    } else {
-      console.log('No bank account provided - manual order will remain without assigned bank account');
     }
 
     if (Object.keys(updateData).length > 0) {
@@ -64,8 +60,6 @@ const handler = async (req: Request): Promise<Response> => {
       } else {
         console.log('Updated order successfully with:', updateData);
       }
-    } else {
-      console.log('No updates needed for manual order');
     }
 
     // Get order details
@@ -79,7 +73,6 @@ const handler = async (req: Request): Promise<Response> => {
           company_name,
           company_email,
           resend_config_id,
-          checkout_mode,
           resend_configs (
             resend_api_key,
             from_email,
@@ -99,13 +92,6 @@ const handler = async (req: Request): Promise<Response> => {
     }
 
     console.log('Found manual order:', order.order_number);
-    console.log('Order processing mode:', order.processing_mode);
-    console.log('Shop checkout mode:', order.shops?.checkout_mode);
-
-    // Verify this is actually a manual order
-    if (order.processing_mode === 'instant') {
-      console.warn('Warning: Processing instant order with manual flow - this may indicate a configuration issue');
-    }
 
     // Send confirmation email (without invoice)
     if (order.shops?.resend_configs?.resend_api_key) {
@@ -136,12 +122,9 @@ const handler = async (req: Request): Promise<Response> => {
       order_number: order.order_number,
       temp_order_number: temp_order_number || order.order_number,
       processing_mode: 'manual',
-      bank_account_assigned: !!bank_account_id,
       email_sent: !!order.shops?.resend_configs?.resend_api_key,
       processed_at: new Date().toISOString(),
-      message: bank_account_id 
-        ? 'Order received with selected bank account and confirmation sent. Manual processing required.'
-        : 'Order received and confirmation sent. Bank account selection and manual processing required.'
+      message: 'Order received and confirmation sent. Manual processing required.'
     }), {
       status: 200,
       headers: { 'Content-Type': 'application/json', ...corsHeaders },
