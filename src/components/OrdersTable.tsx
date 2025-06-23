@@ -567,12 +567,13 @@ export function OrdersTable() {
       return order.temp_bank_accounts[0].account_name;
     }
     
-    // Check if shop has an assigned bank account (for instant orders)
-    if (order.shops?.bank_accounts) {
+    // Only show shop's default bank account for instant orders
+    if (order.processing_mode === 'instant' && order.shops?.bank_accounts) {
       const bankAccount = order.shops.bank_accounts;
       return bankAccount.account_name;
     }
     
+    // For manual orders without assigned bank account, return empty string
     return '';
   };
 
