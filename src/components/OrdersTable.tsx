@@ -1,18 +1,43 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Select, SelectContent, SelectItem, SelectTrigger } from '@/components/ui/select';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Pagination, PaginationContent, PaginationItem, PaginationLink, PaginationNext, PaginationPrevious } from '@/components/ui/pagination';
-import { Search, RefreshCw, FileText, Eye, DollarSign, Check, EyeOff, Copy } from 'lucide-react';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Label } from '@/components/ui/label';
 import { toast } from '@/hooks/use-toast';
+import { 
+  Eye, 
+  Edit, 
+  Search, 
+  FileText, 
+  Download, 
+  Mail, 
+  CheckCircle, 
+  XCircle, 
+  Clock, 
+  AlertCircle, 
+  Package,
+  CreditCard,
+  User,
+  MapPin,
+  Phone,
+  Calendar,
+  Euro,
+  Hash,
+  Filter,
+  SortAsc,
+  SortDesc,
+  RefreshCw,
+  ExternalLink,
+  Trash2
+} from 'lucide-react';
 import { OrderDetailsDialog } from './OrderDetailsDialog';
 import { BankAccountSelectionDialog } from './BankAccountSelectionDialog';
-import { Checkbox } from '@/components/ui/checkbox';
-import { DropdownMenu, DropdownMenuContent, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { PDFViewerDialog } from './PDFViewerDialog';
 
 interface Order {
   id: string;
@@ -542,7 +567,7 @@ export function OrdersTable() {
   };
 
   const getBankAccountInfo = (order: Order) => {
-    // Only show bank account info if an invoice has been generated
+    // If no invoice is generated, don't show bank account info
     if (!order.invoice_pdf_generated) {
       return '';
     }
@@ -557,7 +582,7 @@ export function OrdersTable() {
       return order.temp_bank_accounts[0].account_name;
     }
     
-    // Fallback 2: Check if shop has an assigned bank account (for older orders)
+    // Fallback 2: Check if shop has an assigned bank account (for older orders that were migrated)
     if (order.shops?.bank_accounts) {
       const bankAccount = order.shops.bank_accounts;
       return bankAccount.account_name;
