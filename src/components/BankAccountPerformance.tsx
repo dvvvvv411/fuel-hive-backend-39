@@ -49,11 +49,13 @@ export function BankAccountPerformance() {
 
       if (shopsError) throw shopsError;
 
-      // Fetch only orders that have a selected bank account assigned
+      // Fetch orders with invoice generated or selected bank account assigned
+      // This covers both new orders (with selected_bank_account_id) and older orders (with invoice_pdf_generated)
       const { data: orders, error: ordersError } = await supabase
         .from('orders')
         .select('*')
-        .not('selected_bank_account_id', 'is', null);
+        .or('selected_bank_account_id.not.is.null,and(invoice_pdf_generated.eq.true,shop_id.in.(' + 
+            (shops?.filter(s => s.bank_account_id).map(s => s.id).join(',') || '') + '))');
 
       if (ordersError) throw ordersError;
 
@@ -64,9 +66,10 @@ export function BankAccountPerformance() {
         const assignedShops = shops?.filter(shop => shop.bank_account_id === account.id) || [];
         const shopIds = assignedShops.map(shop => shop.id);
         
-        // Find orders that have this bank account selected (either from shop assignment or manual selection)
+        // Find orders that have this bank account selected OR are from assigned shops with invoices
         const accountOrders = orders?.filter(order => 
-          order.selected_bank_account_id === account.id
+          order.selected_bank_account_id === account.id ||
+          (shopIds.includes(order.shop_id) && order.invoice_pdf_generated && !order.selected_bank_account_id)
         ) || [];
         
         // Today's data

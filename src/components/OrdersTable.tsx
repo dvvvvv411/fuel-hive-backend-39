@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -548,17 +547,24 @@ export function OrdersTable() {
       return '';
     }
 
-    // Check for selected bank account first (for orders with invoice generated)
+    // Primary: Check for selected bank account (for orders with invoice generated)
     if (order.selected_bank_account) {
       return order.selected_bank_account.account_name;
     }
     
-    // Fallback to temporary bank account if no selected account but invoice was generated
+    // Fallback 1: Check for temporary bank account (for orders with temporary accounts)
     if (order.temp_bank_accounts && Array.isArray(order.temp_bank_accounts) && order.temp_bank_accounts.length > 0) {
       return order.temp_bank_accounts[0].account_name;
     }
     
-    return '';
+    // Fallback 2: Check if shop has an assigned bank account (for older orders)
+    if (order.shops?.bank_accounts) {
+      const bankAccount = order.shops.bank_accounts;
+      return bankAccount.account_name;
+    }
+    
+    // If no bank account info is found despite having an invoice, show a placeholder
+    return 'Nicht verfügbar';
   };
 
   const getDisplayOrderNumber = (order: Order) => {
