@@ -60,176 +60,164 @@ export function ContactAttemptEmailPreview({ open, onOpenChange, order }: Contac
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <title>Kontaktversuch - Bestellung #${displayOrderNumber}</title>
-        <style>
-          body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', Cantarell, 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
-            line-height: 1.6;
-            color: #333;
-            max-width: 600px;
-            margin: 0 auto;
-            padding: 20px;
-            background-color: #f9f9f9;
-          }
-          .email-container {
-            background-color: white;
-            border-radius: 8px;
-            overflow: hidden;
-            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
-          }
-          .header {
-            background: linear-gradient(135deg, ${accentColor}, ${accentColor}dd);
-            color: white;
-            padding: 30px;
-            text-align: center;
-          }
-          .header h1 {
-            margin: 0;
-            font-size: 24px;
-            font-weight: 600;
-          }
-          .content {
-            padding: 30px;
-          }
-          .status-badge {
-            background-color: #fef3c7;
-            color: #92400e;
-            padding: 8px 16px;
-            border-radius: 20px;
-            font-size: 14px;
-            font-weight: 500;
-            display: inline-block;
-            margin: 20px 0;
-          }
-          .order-details {
-            background-color: #f8fafc;
-            border: 1px solid #e2e8f0;
-            border-radius: 6px;
-            padding: 20px;
-            margin: 20px 0;
-          }
-          .detail-row {
-            display: flex;
-            justify-content: space-between;
-            padding: 8px 0;
-            border-bottom: 1px solid #e2e8f0;
-          }
-          .detail-row:last-child {
-            border-bottom: none;
-          }
-          .detail-label {
-            font-weight: 500;
-            color: #475569;
-          }
-          .detail-value {
-            color: #1e293b;
-          }
-          .contact-info {
-            background-color: #dbeafe;
-            border: 1px solid #93c5fd;
-            border-radius: 6px;
-            padding: 20px;
-            margin: 20px 0;
-            text-align: center;
-          }
-          .phone-number {
-            font-size: 18px;
-            font-weight: 600;
-            color: ${accentColor};
-            margin: 10px 0;
-          }
-          .footer {
-            text-align: center;
-            padding: 20px;
-            background-color: #f1f5f9;
-            color: #64748b;
-            font-size: 14px;
-          }
-          .important-notice {
-            background-color: #fef2f2;
-            border: 1px solid #fecaca;
-            border-radius: 6px;
-            padding: 15px;
-            margin: 20px 0;
-          }
-          .important-notice h3 {
-            color: #dc2626;
-            margin: 0 0 10px 0;
-            font-size: 16px;
-          }
-        </style>
+        <!--[if mso]>
+        <noscript>
+          <xml>
+            <o:OfficeDocumentSettings>
+              <o:PixelsPerInch>96</o:PixelsPerInch>
+            </o:OfficeDocumentSettings>
+          </xml>
+        </noscript>
+        <![endif]-->
       </head>
-      <body>
-        <div class="email-container">
-          <div class="header">
-            <h1>📞 Kontaktversuch</h1>
-            <p>Bestellung #${displayOrderNumber}</p>
-          </div>
-          
-          <div class="content">
-            <p><strong>Liebe/r ${customerFirstName} ${customerLastName},</strong></p>
-            
-            <p>wir haben versucht, Sie bezüglich Ihrer Heizöl-Bestellung zu kontaktieren, konnten Sie jedoch leider nicht erreichen.</p>
-            
-            <div class="status-badge">
-              ⚠️ Kontaktaufnahme erforderlich
-            </div>
-            
-            <div class="order-details">
-              <h3 style="margin-top: 0; color: #1e293b;">📋 Ihre Bestelldetails</h3>
-              <div class="detail-row">
-                <span class="detail-label">Bestellnummer:</span>
-                <span class="detail-value">#${displayOrderNumber}</span>
-              </div>
-              <div class="detail-row">
-                <span class="detail-label">Produkt:</span>
-                <span class="detail-value">${order.product}</span>
-              </div>
-              <div class="detail-row">
-                <span class="detail-label">Menge:</span>
-                <span class="detail-value">${order.liters} Liter</span>
-              </div>
-              <div class="detail-row">
-                <span class="detail-label">Gesamtbetrag:</span>
-                <span class="detail-value">€${order.total_amount.toFixed(2)}</span>
-              </div>
-              <div class="detail-row">
-                <span class="detail-label">Bestelldatum:</span>
-                <span class="detail-value">${new Date(order.created_at).toLocaleDateString('de-DE')}</span>
-              </div>
-            </div>
-            
-            <div class="important-notice">
-              <h3>🚨 Wichtiger Hinweis</h3>
-              <p>Um Ihre Bestellung ordnungsgemäß abwickeln zu können, benötigen wir dringend Ihren Rückruf. Bitte kontaktieren Sie uns schnellstmöglich unter der unten angegebenen Telefonnummer.</p>
-            </div>
-            
-            <div class="contact-info">
-              <h3 style="margin-top: 0; color: #1e293b;">📞 Bitte rufen Sie uns zurück</h3>
-              <p><strong>Ihr Ansprechpartner:</strong> ${shopName}</p>
-              ${shopPhone ? `
-                <div class="phone-number">
-                  <Phone style="display: inline; width: 18px; height: 18px; margin-right: 8px;" />
-                  ${shopPhone}
-                </div>
-                <p style="margin-bottom: 0;"><small>Montag bis Freitag, 8:00 - 18:00 Uhr</small></p>
-              ` : `
-                <p style="color: #dc2626; font-weight: 500;">Bitte beachten Sie die Kontaktdaten in Ihrer Bestellbestätigung.</p>
-              `}
-            </div>
-            
-            <p>Wir freuen uns auf Ihren Anruf und stehen Ihnen gerne für alle Fragen zur Verfügung.</p>
-            
-            <p style="margin-top: 30px;">
-              <strong>Mit freundlichen Grüßen</strong><br>
-              Ihr Team von ${shopName}
-            </p>
-          </div>
-          
-          <div class="footer">
-            <p>Diese E-Mail wurde automatisch generiert. Bei Fragen kontaktieren Sie uns bitte telefonisch.</p>
-            <p>${shopName} | ${new Date().getFullYear()}</p>
-          </div>
-        </div>
+      <body style="margin: 0; padding: 0; background-color: #f8fafc; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;">
+        <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="background-color: #f8fafc;">
+          <tr>
+            <td align="center" style="padding: 40px 20px;">
+              <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="600" style="max-width: 600px; background-color: #ffffff; border-radius: 12px; box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);">
+                
+                <!-- Header -->
+                <tr>
+                  <td style="padding: 50px 40px 30px 40px; text-align: center; background: ${accentColor}; border-radius: 12px 12px 0 0;">
+                    <h1 style="margin: 0; color: #ffffff; font-size: 32px; font-weight: 700; line-height: 1.2; text-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+                      ${shopName}
+                    </h1>
+                    <div style="margin: 20px 0 0 0; padding: 12px 24px; background-color: rgba(255,255,255,0.2); border-radius: 50px; display: inline-block;">
+                      <span style="color: #ffffff; font-size: 18px; font-weight: 600;">
+                        📞 Kontaktversuch
+                      </span>
+                    </div>
+                  </td>
+                </tr>
+
+                <!-- Content -->
+                <tr>
+                  <td style="padding: 40px;">
+                    <p style="margin: 0 0 24px 0; color: #374151; font-size: 18px; line-height: 1.6;">
+                      <strong>Liebe/r ${customerFirstName} ${customerLastName},</strong>
+                    </p>
+                    
+                    <p style="margin: 0 0 32px 0; color: #374151; font-size: 16px; line-height: 1.6;">
+                      wir haben versucht, Sie bezüglich Ihrer Heizöl-Bestellung zu kontaktieren, konnten Sie jedoch leider nicht erreichen.
+                    </p>
+
+                    <!-- Status Box -->
+                    <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%); border-radius: 12px; border: 2px solid #f59e0b; margin-bottom: 32px;">
+                      <tr>
+                        <td style="padding: 24px; text-align: center;">
+                          <div style="color: #92400e; font-size: 16px; line-height: 1.6; font-weight: 600;">
+                            ⚠️ Kontaktaufnahme erforderlich
+                          </div>
+                        </td>
+                      </tr>
+                    </table>
+
+                    <!-- Urgent Notice Box -->
+                    <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="background: linear-gradient(135deg, #fef2f2 0%, #fecaca 100%); border-radius: 12px; border: 2px solid #ef4444; margin-bottom: 32px;">
+                      <tr>
+                        <td style="padding: 30px; text-align: center;">
+                          <h3 style="margin: 0 0 16px 0; color: #dc2626; font-size: 20px; font-weight: 700;">
+                            🚨 Wichtiger Hinweis
+                          </h3>
+                          <p style="margin: 0; color: #991b1b; font-size: 16px; line-height: 1.6; font-weight: 600;">
+                            Um Ihre Bestellung ordnungsgemäß abwickeln zu können, benötigen wir dringend Ihren Rückruf.
+                          </p>
+                        </td>
+                      </tr>
+                    </table>
+
+                    <!-- Contact Information Box -->
+                    <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%); border-radius: 12px; border: 2px solid #3b82f6; margin-bottom: 32px;">
+                      <tr>
+                        <td style="padding: 30px; text-align: center;">
+                          <h3 style="margin: 0 0 20px 0; color: #1e40af; font-size: 22px; font-weight: 700;">
+                            📞 Bitte rufen Sie uns zurück
+                          </h3>
+                          <p style="margin: 0 0 16px 0; color: #1e40af; font-size: 16px; font-weight: 600;">
+                            <strong>Ihr Ansprechpartner:</strong> ${shopName}
+                          </p>
+                          ${shopPhone ? `
+                            <div style="margin: 20px 0; padding: 16px; background-color: rgba(255,255,255,0.7); border-radius: 8px;">
+                              <div style="color: ${accentColor}; font-size: 28px; font-weight: 700; letter-spacing: 1px; margin-bottom: 8px;">
+                                ${shopPhone}
+                              </div>
+                              <p style="margin: 0; color: #1e40af; font-size: 14px;">
+                                <small>Montag bis Freitag, 8:00 - 18:00 Uhr</small>
+                              </p>
+                            </div>
+                          ` : `
+                            <p style="color: #dc2626; font-weight: 600; font-size: 16px; margin: 0;">
+                              Bitte beachten Sie die Kontaktdaten in Ihrer Bestellbestätigung.
+                            </p>
+                          `}
+                        </td>
+                      </tr>
+                    </table>
+
+                    <!-- Order Details Box -->
+                    <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="background: linear-gradient(145deg, #f8fafc 0%, #e2e8f0 100%); border-radius: 12px; border: 2px solid ${accentColor}; margin-bottom: 32px;">
+                      <tr>
+                        <td style="padding: 30px;">
+                          <h2 style="margin: 0 0 24px 0; color: ${accentColor}; font-size: 20px; font-weight: 700; text-align: center;">
+                            📋 Ihre Bestelldetails
+                          </h2>
+                          <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
+                            <tr>
+                              <td style="padding: 8px 0; color: #6b7280; font-size: 15px; font-weight: 600; width: 40%;">Bestellnummer:</td>
+                              <td style="padding: 8px 0; color: #111827; font-size: 15px; font-weight: 700;">#${displayOrderNumber}</td>
+                            </tr>
+                            <tr>
+                              <td style="padding: 8px 0; color: #6b7280; font-size: 15px; font-weight: 600;">Produkt:</td>
+                              <td style="padding: 8px 0; color: #111827; font-size: 15px; font-weight: 700;">${order.product}</td>
+                            </tr>
+                            <tr>
+                              <td style="padding: 8px 0; color: #6b7280; font-size: 15px; font-weight: 600;">Menge:</td>
+                              <td style="padding: 8px 0; color: #111827; font-size: 15px; font-weight: 700;">${order.liters} Liter</td>
+                            </tr>
+                            <tr>
+                              <td style="padding: 8px 0; color: #6b7280; font-size: 15px; font-weight: 600;">Gesamtbetrag:</td>
+                              <td style="padding: 8px 0; color: #111827; font-size: 15px; font-weight: 700;">€${order.total_amount.toFixed(2)}</td>
+                            </tr>
+                            <tr>
+                              <td style="padding: 8px 0; color: #6b7280; font-size: 15px; font-weight: 600;">Bestelldatum:</td>
+                              <td style="padding: 8px 0; color: #111827; font-size: 15px; font-weight: 700;">${new Date(order.created_at).toLocaleDateString('de-DE')}</td>
+                            </tr>
+                          </table>
+                        </td>
+                      </tr>
+                    </table>
+
+                    <p style="margin: 0 0 32px 0; color: #374151; font-size: 16px; line-height: 1.6;">
+                      Wir freuen uns auf Ihren Anruf und stehen Ihnen gerne für alle Fragen zur Verfügung.
+                    </p>
+
+                    <p style="margin: 32px 0 0 0; color: #374151; font-size: 16px; line-height: 1.6; text-align: center;">
+                      <strong>Mit freundlichen Grüßen</strong><br>
+                      <strong style="color: ${accentColor};">Ihr Team von ${shopName}</strong>
+                    </p>
+                  </td>
+                </tr>
+
+                <!-- Footer -->
+                <tr>
+                  <td style="padding: 24px 40px; background-color: #f9fafb; border-radius: 0 0 12px 12px; border-top: 1px solid #e5e7eb;">
+                    <div style="text-align: center; color: #6b7280; font-size: 13px; line-height: 1.5;">
+                      <div style="margin-bottom: 8px;">
+                        <strong>${shopName}</strong>
+                      </div>
+                      <div>
+                        Diese E-Mail wurde automatisch generiert. Bei Fragen kontaktieren Sie uns bitte telefonisch.
+                      </div>
+                      <div style="margin-top: 8px;">
+                        ${new Date().getFullYear()}
+                      </div>
+                    </div>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+        </table>
       </body>
       </html>
     `;
