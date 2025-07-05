@@ -7,10 +7,11 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Pagination, PaginationContent, PaginationItem, PaginationLink, PaginationNext, PaginationPrevious } from '@/components/ui/pagination';
-import { Search, RefreshCw, FileText, Eye, DollarSign, Check, EyeOff, Copy } from 'lucide-react';
+import { Search, RefreshCw, FileText, Eye, DollarSign, Check, EyeOff, Copy, Mail } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import { OrderDetailsDialog } from './OrderDetailsDialog';
 import { BankAccountSelectionDialog } from './BankAccountSelectionDialog';
+import { ContactAttemptEmailPreview } from './ContactAttemptEmailPreview';
 import { Checkbox } from '@/components/ui/checkbox';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 
@@ -57,6 +58,11 @@ interface Order {
   selected_bank_account_id: string | null;
   shops?: {
     name: string;
+    company_name: string;
+    company_phone: string | null;
+    support_phone: string | null;
+    language: string;
+    accent_color: string | null;
     bank_account_id: string | null;
     bank_accounts?: {
       account_name: string;
@@ -89,6 +95,8 @@ export function OrdersTable() {
   const [showDetailsDialog, setShowDetailsDialog] = useState(false);
   const [showBankAccountDialog, setShowBankAccountDialog] = useState(false);
   const [selectedOrderForInvoice, setSelectedOrderForInvoice] = useState<Order | null>(null);
+  const [showEmailPreviewDialog, setShowEmailPreviewDialog] = useState(false);
+  const [selectedOrderForEmail, setSelectedOrderForEmail] = useState<Order | null>(null);
   
   // Filter states - changed to arrays for multi-select
   const [searchTerm, setSearchTerm] = useState('');
@@ -133,6 +141,11 @@ export function OrdersTable() {
           *,
           shops!inner(
             name,
+            company_name,
+            company_phone,
+            support_phone,
+            language,
+            accent_color,
             bank_account_id,
             bank_accounts(
               account_name,
@@ -628,15 +641,42 @@ export function OrdersTable() {
 
   const copyPhoneToClipboard = async (phone: string) => {
     try {
-      await navigator.clipboard.writeText(phone);
-      toast({
-        title: 'Kopiert',
-        description: 'Telefonnummer wurde in die Zwischenablage kopiert',
-      });
+      // Primary method: Modern Clipboard API
+      if (navigator.clipboard && window.isSecureContext) {
+        await navigator.clipboard.writeText(phone);
+        toast({
+          title: 'Kopiert',
+          description: 'Telefonnummer wurde in die Zwischenablage kopiert',
+        });
+        return;
+      }
+      
+      // Fallback method: document.execCommand with temporary textarea
+      const textArea = document.createElement('textarea');
+      textArea.value = phone;
+      textArea.style.position = 'fixed';
+      textArea.style.left = '-999999px';
+      textArea.style.top = '-999999px';
+      document.body.appendChild(textArea);
+      textArea.focus();
+      textArea.select();
+      
+      const successful = document.execCommand('copy');
+      document.body.removeChild(textArea);
+      
+      if (successful) {
+        toast({
+          title: 'Kopiert',
+          description: 'Telefonnummer wurde in die Zwischenablage kopiert',
+        });
+      } else {
+        throw new Error('execCommand failed');
+      }
     } catch (error) {
+      console.error('Clipboard copy failed:', error);
       toast({
         title: 'Fehler',
-        description: 'Fehler beim Kopieren in die Zwischenablage',
+        description: 'Telefonnummer konnte nicht kopiert werden. Bitte manuell kopieren.',
         variant: 'destructive',
       });
     }
@@ -897,13 +937,28 @@ export function OrdersTable() {
                             </Button>
                             
                             {order.status === 'pending' && !showHidden && (
-                              <Button
-                                size="sm"
-                                onClick={() => handleInvoiceClick(order)}
-                              >
-                                <FileText className="h-4 w-4 mr-1" />
-                                Rechnung
-                              </Button>
+                              <>
+                                <Button
+                                  size="sm"
+                                  onClick={() => handleInvoiceClick(order)}
+                                >
+                                  <FileText className="h-4 w-4 mr-1" />
+                                  Rechnung
+                                </Button>
+                                
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => {
+                                    setSelectedOrderForEmail(order);
+                                    setShowEmailPreviewDialog(true);
+                                  }}
+                                  className="text-blue-600 hover:text-blue-700"
+                                  title="Kontaktversuch E-Mail Vorschau"
+                                >
+                                  <Mail className="h-4 w-4" />
+                                </Button>
+                              </>
                             )}
 
                             {order.status === 'invoice_sent' && !showHidden && (
@@ -1029,6 +1084,13 @@ export function OrdersTable() {
           orderNumber={selectedOrderForInvoice.order_number}
         />
       )}
+
+      {/* Contact Attempt Email Preview Dialog */}
+      <ContactAttemptEmailPreview
+        open={showEmailPreviewDialog}
+        onOpenChange={setShowEmailPreviewDialog}
+        order={selectedOrderForEmail}
+      />
     </div>
   );
 }
