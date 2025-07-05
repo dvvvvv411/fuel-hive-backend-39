@@ -4,6 +4,8 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { Mail, Phone } from 'lucide-react';
+import { supabase } from '@/integrations/supabase/client';
+import { useToast } from '@/hooks/use-toast';
 
 interface Order {
   id: string;
@@ -35,6 +37,7 @@ interface ContactAttemptEmailPreviewProps {
 
 export function ContactAttemptEmailPreview({ open, onOpenChange, order }: ContactAttemptEmailPreviewProps) {
   const [loading, setLoading] = useState(false);
+  const { toast } = useToast();
 
   if (!order) return null;
 
@@ -235,13 +238,33 @@ export function ContactAttemptEmailPreview({ open, onOpenChange, order }: Contac
   };
 
   const handleSendEmail = async () => {
-    // This is just a preview component - actual email sending would be implemented separately
-    // For now, just show a message that this is a preview
     setLoading(true);
-    setTimeout(() => {
-      setLoading(false);
+    
+    try {
+      const { data, error } = await supabase.functions.invoke('send-contact-attempt-email', {
+        body: { orderId: order.id }
+      });
+
+      if (error) {
+        throw error;
+      }
+
+      toast({
+        title: "E-Mail gesendet",
+        description: `Kontaktversuch-E-Mail wurde erfolgreich an ${order.customer_email} gesendet.`,
+      });
+
       onOpenChange(false);
-    }, 1000);
+    } catch (error: any) {
+      console.error('Error sending contact attempt email:', error);
+      toast({
+        title: "Fehler beim Senden",
+        description: error.message || "Die E-Mail konnte nicht gesendet werden.",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
   };
 
   const { subject, htmlContent } = getContactAttemptTemplate();
@@ -297,7 +320,7 @@ export function ContactAttemptEmailPreview({ open, onOpenChange, order }: Contac
                 className="bg-blue-600 hover:bg-blue-700"
               >
                 <Mail className="h-4 w-4 mr-2" />
-                {loading ? 'Vorschau...' : 'E-Mail Preview'}
+                {loading ? 'Sende...' : 'Email senden'}
               </Button>
             </div>
           </div>
