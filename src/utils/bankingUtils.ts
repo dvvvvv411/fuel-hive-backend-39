@@ -10,17 +10,15 @@ export const formatCurrency = (amount: number, currency: string = 'EUR'): string
 
 export const calculateDailyUsage = async (bankAccountId: string): Promise<number> => {
   const today = new Date();
-  const startOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate());
-  const endOfDay = new Date(startOfDay);
-  endOfDay.setDate(endOfDay.getDate() + 1);
+  const todayString = today.toISOString().split('T')[0]; // Get YYYY-MM-DD format
 
   try {
     const { data, error } = await supabase
       .from('orders')
-      .select('total_amount, shops!inner(bank_account_id)')
-      .eq('shops.bank_account_id', bankAccountId)
-      .gte('created_at', startOfDay.toISOString())
-      .lt('created_at', endOfDay.toISOString())
+      .select('total_amount')
+      .eq('selected_bank_account_id', bankAccountId)
+      .eq('invoice_date', todayString)
+      .eq('invoice_pdf_generated', true)
       .in('status', ['confirmed', 'invoice_sent', 'paid']);
 
     if (error) {
@@ -28,7 +26,7 @@ export const calculateDailyUsage = async (bankAccountId: string): Promise<number
       return 0;
     }
 
-    return data?.reduce((sum, order) => sum + (order.total_amount || 0), 0) || 0;
+    return data?.reduce((sum, order) => sum + Number(order.total_amount || 0), 0) || 0;
   } catch (error) {
     console.error('Error calculating daily usage:', error);
     return 0;

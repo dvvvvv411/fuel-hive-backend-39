@@ -73,9 +73,9 @@ export function BankAccountDetailsDialog({ open, onOpenChange, bankAccount }: Ba
           status,
           created_at,
           delivery_city,
-          shops!inner(name, bank_account_id)
+          shops(name)
         `)
-        .eq('shops.bank_account_id', bankAccount.id)
+        .eq('selected_bank_account_id', bankAccount.id)
         .order('created_at', { ascending: false })
         .limit(50);
 
