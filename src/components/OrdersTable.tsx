@@ -814,7 +814,9 @@ export function OrdersTable() {
                   <TableHead>Gesamtpreis</TableHead>
                   <TableHead>Bankkonto</TableHead>
                   <TableHead>Shop</TableHead>
-                  <TableHead>Zahlung</TableHead>
+                  <TableHead>
+                    {selectedStatuses.length === 1 && selectedStatuses[0] === 'invoice_sent' ? 'RG-Datum' : 'Zahlung'}
+                  </TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead>Aktionen</TableHead>
                 </TableRow>
@@ -903,7 +905,16 @@ export function OrdersTable() {
                           </div>
                         </TableCell>
                         <TableCell>{order.shops?.name}</TableCell>
-                        <TableCell>{order.payment_method}</TableCell>
+                        <TableCell>
+                          {selectedStatuses.length === 1 && selectedStatuses[0] === 'invoice_sent' && order.invoice_generation_date ? (
+                            <div className="text-sm">
+                              <div>{formatDateTime(order.invoice_generation_date).dateStr}</div>
+                              <div className="text-gray-500">{formatDateTime(order.invoice_generation_date).timeStr}</div>
+                            </div>
+                          ) : (
+                            order.payment_method
+                          )}
+                        </TableCell>
                         <TableCell>
                           <Select
                             value={order.status}
