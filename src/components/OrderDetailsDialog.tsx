@@ -60,6 +60,7 @@ interface Order {
   invoice_pdf_url: string | null;
   invoice_sent: boolean;
   invoice_date: string | null;
+  invoice_generation_date?: string | null;
   created_at: string;
   shops?: {
     name: string;
@@ -605,11 +606,14 @@ export function OrderDetailsDialog({ order, open, onOpenChange, onOrderUpdate }:
                       {new Date(order.created_at).toLocaleString('de-DE')}
                     </span>
                   </div>
-                  {order.invoice_date && (
+                  {(order.invoice_generation_date || order.invoice_date) && (
                     <div className="flex justify-between">
                       <span className="text-gray-500">Rechnung erstellt:</span>
                       <span className="font-medium">
-                        {new Date(order.invoice_date).toLocaleString('de-DE')}
+                        {order.invoice_generation_date 
+                          ? new Date(order.invoice_generation_date).toLocaleString('de-DE')
+                          : new Date(order.invoice_date!).toLocaleDateString('de-DE')
+                        }
                       </span>
                     </div>
                   )}
