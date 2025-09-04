@@ -1,0 +1,1 @@
+DELETE FROM orders WHERE order_number = '7509634';
