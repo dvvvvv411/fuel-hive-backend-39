@@ -15,6 +15,8 @@ import { Building, CreditCard, TrendingUp, AlertTriangle } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import { formatCurrency, calculateDailyUsage, getDailyUsagePercentage } from '@/utils/bankingUtils';
 import { TemporaryBankAccountForm } from './TemporaryBankAccountForm';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Textarea } from '@/components/ui/textarea';
 
 interface BankAccount {
   id: string;
@@ -33,10 +35,16 @@ interface BankAccountWithUsage extends BankAccount {
   usagePercentage: number;
 }
 
+interface DepositOptions {
+  depositEnabled: boolean;
+  depositNote?: string;
+  depositPercentage?: number;
+}
+
 interface BankAccountSelectionDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onBankAccountSelected: (bankAccountId: string, newOrderNumber?: string) => void;
+  onBankAccountSelected: (bankAccountId: string, newOrderNumber?: string, options?: DepositOptions) => void;
   orderNumber: string;
 }
 
@@ -50,11 +58,17 @@ export function BankAccountSelectionDialog({
   const [selectedBankAccount, setSelectedBankAccount] = useState<string>('');
   const [loading, setLoading] = useState(true);
   const [creatingTempAccount, setCreatingTempAccount] = useState(false);
+  const [depositEnabled, setDepositEnabled] = useState(false);
+  const [depositNote, setDepositNote] = useState('Es wird eine Anzahlung in Höhe von X % des Rechnungsbetrags fällig; der Restbetrag ist nach Lieferung zu begleichen.');
+  const [depositError, setDepositError] = useState<string>('');
 
   useEffect(() => {
     if (open) {
       fetchBankAccounts();
       setSelectedBankAccount('');
+      setDepositEnabled(false);
+      setDepositNote('Es wird eine Anzahlung in Höhe von X % des Rechnungsbetrags fällig; der Restbetrag ist nach Lieferung zu begleichen.');
+      setDepositError('');
     }
   }, [open]);
 
@@ -131,8 +145,12 @@ export function BankAccountSelectionDialog({
 
       console.log('Created temporary bank account:', newBankAccount);
 
+      // Parse deposit options
+      const depositOptions = parseDepositOptions();
+      if (depositEnabled && !depositOptions) return; // Error was already set in parseDepositOptions
+
       // Use the temporary bank account for invoice generation
-      onBankAccountSelected(newBankAccount.id, bankAccountData.new_order_number);
+      onBankAccountSelected(newBankAccount.id, bankAccountData.new_order_number, depositOptions || undefined);
       onOpenChange(false);
 
       toast({
@@ -152,6 +170,46 @@ export function BankAccountSelectionDialog({
     }
   };
 
+  const parseDepositOptions = (): DepositOptions | null => {
+    if (!depositEnabled) {
+      return { depositEnabled: false };
+    }
+
+    // Parse percentage from deposit note
+    const percentageRegex = /(\d+(?:[,.]\d+)?)\s*%/;
+    const match = depositNote.match(percentageRegex);
+    
+    if (!match) {
+      setDepositError('Bitte geben Sie einen gültigen Prozentsatz im Text an (z.B. "30 %")');
+      toast({
+        title: 'Fehler',
+        description: 'Kein gültiger Prozentsatz im Anzahlungstext gefunden',
+        variant: 'destructive',
+      });
+      return null;
+    }
+
+    const percentageStr = match[1].replace(',', '.');
+    const percentage = parseFloat(percentageStr);
+    
+    if (isNaN(percentage) || percentage <= 0 || percentage >= 100) {
+      setDepositError('Prozentsatz muss zwischen 0 und 100 liegen');
+      toast({
+        title: 'Fehler',
+        description: 'Prozentsatz muss zwischen 0 und 100 liegen',
+        variant: 'destructive',
+      });
+      return null;
+    }
+
+    setDepositError('');
+    return {
+      depositEnabled: true,
+      depositNote,
+      depositPercentage: percentage
+    };
+  };
+
   const handleConfirm = () => {
     if (!selectedBankAccount) {
       toast({
@@ -162,7 +220,11 @@ export function BankAccountSelectionDialog({
       return;
     }
 
-    onBankAccountSelected(selectedBankAccount);
+    // Parse deposit options
+    const depositOptions = parseDepositOptions();
+    if (depositEnabled && !depositOptions) return; // Error was already set in parseDepositOptions
+
+    onBankAccountSelected(selectedBankAccount, undefined, depositOptions || undefined);
     onOpenChange(false);
     setSelectedBankAccount('');
   };
@@ -279,6 +341,44 @@ export function BankAccountSelectionDialog({
               )}
             </div>
           )}
+
+          {/* Deposit Option */}
+          <div className="border-t pt-6">
+            <div className="flex items-center space-x-2 mb-4">
+              <Checkbox
+                id="deposit-enabled"
+                checked={depositEnabled}
+                onCheckedChange={(checked) => setDepositEnabled(checked as boolean)}
+              />
+              <Label htmlFor="deposit-enabled" className="text-sm font-medium">
+                Anzahlung aktivieren
+              </Label>
+            </div>
+
+            {depositEnabled && (
+              <div className="space-y-2">
+                <Label htmlFor="deposit-note" className="text-sm font-medium">
+                  Anzahlungstext für Rechnung:
+                </Label>
+                <Textarea
+                  id="deposit-note"
+                  value={depositNote}
+                  onChange={(e) => {
+                    setDepositNote(e.target.value);
+                    setDepositError('');
+                  }}
+                  className={`min-h-20 ${depositError ? 'border-red-500' : ''}`}
+                  placeholder="Es wird eine Anzahlung in Höhe von X % des Rechnungsbetrags fällig; der Restbetrag ist nach Lieferung zu begleichen."
+                />
+                {depositError && (
+                  <p className="text-sm text-red-600">{depositError}</p>
+                )}
+                <p className="text-xs text-gray-500">
+                  Hinweis: Der Prozentsatz wird automatisch aus dem Text erkannt (z.B. "30 %" oder "25,5 %")
+                </p>
+              </div>
+            )}
+          </div>
         </div>
 
         <div className="flex justify-end gap-2 mt-6">

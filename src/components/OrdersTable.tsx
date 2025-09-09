@@ -303,7 +303,12 @@ export function OrdersTable() {
     await updateOrderStatus(orderId, 'confirmed');
   };
 
-  const generateInvoice = async (orderId: string, bankAccountId?: string, newOrderNumber?: string) => {
+  const generateInvoice = async (
+    orderId: string, 
+    bankAccountId?: string, 
+    newOrderNumber?: string,
+    depositOptions?: { depositEnabled: boolean; depositNote?: string; depositPercentage?: number }
+  ) => {
     try {
       console.log('Starting invoice generation for order:', orderId, 'with bank account:', bankAccountId, 'and new order number:', newOrderNumber);
       
@@ -400,7 +405,9 @@ export function OrdersTable() {
       const { data: invoiceData, error: invoiceError } = await supabase.functions.invoke('generate-invoice', {
         body: { 
           order_id: orderId,
-          bank_account_id: bankAccountId 
+          bank_account_id: bankAccountId,
+          deposit_note: depositOptions?.depositEnabled ? depositOptions.depositNote : undefined,
+          deposit_percentage: depositOptions?.depositEnabled ? depositOptions.depositPercentage : undefined
         }
       });
 
@@ -418,7 +425,8 @@ export function OrdersTable() {
         body: { 
           order_id: orderId,
           include_invoice: true,
-          email_type: 'instant_confirmation'
+          email_type: 'instant_confirmation',
+          deposit_percentage: depositOptions?.depositEnabled ? depositOptions.depositPercentage : undefined
         }
       });
 
@@ -499,9 +507,13 @@ export function OrdersTable() {
     setShowBankAccountDialog(true);
   };
 
-  const handleBankAccountSelected = (bankAccountId: string, newOrderNumber?: string) => {
+  const handleBankAccountSelected = (
+    bankAccountId: string, 
+    newOrderNumber?: string,
+    options?: { depositEnabled: boolean; depositNote?: string; depositPercentage?: number }
+  ) => {
     if (selectedOrderForInvoice) {
-      generateInvoice(selectedOrderForInvoice.id, bankAccountId, newOrderNumber);
+      generateInvoice(selectedOrderForInvoice.id, bankAccountId, newOrderNumber, options);
       setSelectedOrderForInvoice(null);
     }
   };

@@ -12,6 +12,7 @@ interface EmailRequest {
   order_id: string;
   include_invoice: boolean;
   email_type: 'instant_confirmation' | 'manual_confirmation';
+  deposit_percentage?: number;
 }
 
 const formatIBAN = (iban: string): string => {
@@ -201,7 +202,7 @@ const generateConfirmationEmailTemplate = (order: any, language: string = 'de') 
   return { subject, htmlContent };
 };
 
-const generateInvoiceEmailTemplate = (order: any, bankData: any, language: string = 'de') => {
+const generateInvoiceEmailTemplate = (order: any, bankData: any, language: string = 'de', depositPercentage?: number) => {
   const t = getTranslations(language);
   const shopName = (order.shops?.name || 'Heizöl-Service').trim();
   const accentColor = order.shops?.accent_color || '#2563eb';
@@ -282,11 +283,13 @@ const generateInvoiceEmailTemplate = (order: any, bankData: any, language: strin
                         <h3 style="margin: 0 0 20px 0; color: #3b82f6; font-size: 20px; font-weight: 700; text-align: center;">
                           ${t.paymentInfo}
                         </h3>
-                        <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
-                          <tr>
-                            <td style="padding: 8px 0; color: #1e40af; font-size: 15px; font-weight: 600; width: 35%;">${t.invoiceAmount}</td>
-                            <td style="padding: 8px 0; color: #1e3a8a; font-size: 18px; font-weight: 700;">€${order.total_amount.toFixed(2)}</td>
-                          </tr>
+                         <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
+                           <tr>
+                             <td style="padding: 8px 0; color: #1e40af; font-size: 15px; font-weight: 600; width: 35%;">${t.invoiceAmount}</td>
+                             <td style="padding: 8px 0; color: #1e3a8a; font-size: 18px; font-weight: 700;">€${depositPercentage 
+                               ? (order.total_amount * (depositPercentage / 100)).toFixed(2) + ` (${depositPercentage}% Anzahlung)`
+                               : order.total_amount.toFixed(2)}</td>
+                           </tr>
                           <tr>
                             <td style="padding: 8px 0; color: #1e40af; font-size: 15px; font-weight: 600;">${t.recipient}</td>
                             <td style="padding: 8px 0; color: #1e3a8a; font-size: 15px; font-weight: 700;">${recipientName}</td>
@@ -418,8 +421,11 @@ const handler = async (req: Request): Promise<Response> => {
   );
 
   try {
-    const { order_id, include_invoice, email_type }: EmailRequest = await req.json();
+    const { order_id, include_invoice, email_type, deposit_percentage }: EmailRequest = await req.json();
     console.log('Sending confirmation email for order:', order_id, 'Type:', email_type, 'Include invoice:', include_invoice);
+    if (deposit_percentage) {
+      console.log('Deposit percentage:', deposit_percentage);
+    }
 
     // Get order with shop and resend config
     const { data: order, error: orderError } = await supabase
@@ -561,7 +567,7 @@ const handler = async (req: Request): Promise<Response> => {
 
     // Generate email template based on type
     const { subject, htmlContent } = include_invoice
-      ? generateInvoiceEmailTemplate(order, bankData, language)
+      ? generateInvoiceEmailTemplate(order, bankData, language, deposit_percentage)
       : generateConfirmationEmailTemplate(order, language);
 
     // Prepare email payload

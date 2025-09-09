@@ -11,6 +11,8 @@ const corsHeaders = {
 interface GenerateInvoiceRequest {
   order_id: string;
   language?: string;
+  deposit_note?: string;
+  deposit_percentage?: number;
 }
 
 const formatIBAN = (iban: string): string => {
@@ -176,7 +178,7 @@ const calculateFooterColumnWidths = (pdf: any, t: any, pageWidth: number, margin
   return [column1Width, column2Width, column3Width, column4Width];
 };
 
-const generateResponsivePDF = async (order: any, bankData: any, language: string = 'de') => {
+const generateResponsivePDF = async (order: any, bankData: any, language: string = 'de', depositNote?: string) => {
   console.log('Starting PDF generation matching InvoicePreview template with language:', language);
   
   const t = getTranslations(language);
@@ -543,6 +545,39 @@ const generateResponsivePDF = async (order: any, bankData: any, language: string
     pdf.text(orderNumberForInvoice, margin + 3 + paymentLabelWidth, paymentY);
     
     currentY += 37; // Move past payment card
+    
+    // Add deposit note if provided
+    if (depositNote) {
+      currentY += 5; // Small spacing
+      
+      // Deposit note box
+      pdf.setFillColor(255, 248, 220); // Light yellow background
+      pdf.rect(margin, currentY, tableWidth, 16, 'F');
+      
+      // Deposit note border
+      pdf.setDrawColor(255, 193, 7); // Yellow border
+      pdf.rect(margin, currentY, tableWidth, 16);
+      
+      pdf.setTextColor(133, 77, 14); // Dark yellow text
+      pdf.setFontSize(10);
+      pdf.setFont('helvetica', 'bold');
+      pdf.text('Zahlungshinweis:', margin + 3, currentY + 6);
+      
+      pdf.setFont('helvetica', 'normal');
+      // Split text to fit within the box
+      const maxWidth = tableWidth - 6;
+      const lines = pdf.splitTextToSize(depositNote, maxWidth);
+      let depositY = currentY + 11;
+      
+      lines.forEach((line: string) => {
+        if (depositY < currentY + 16) { // Ensure we don't overflow the box
+          pdf.text(line, margin + 3, depositY);
+          depositY += 4;
+        }
+      });
+      
+      currentY += 16; // Move past deposit note
+    }
   }
 
   currentY += 15; // Extra space before footer
@@ -644,9 +679,10 @@ const handler = async (req: Request): Promise<Response> => {
   );
 
   try {
-    const { order_id, language }: GenerateInvoiceRequest = await req.json();
+    const { order_id, language, deposit_note, deposit_percentage }: GenerateInvoiceRequest = await req.json();
     console.log('Starting invoice generation for order:', order_id);
     console.log('Requested language:', language);
+    console.log('Deposit options:', { deposit_note, deposit_percentage });
 
     // Get order with shop details
     const { data: order, error: orderError } = await supabase
@@ -779,7 +815,7 @@ const handler = async (req: Request): Promise<Response> => {
     console.log('Generating PDF with filename:', filename);
 
     // Generate PDF
-    const pdfBuffer = await generateResponsivePDF(order, bankData, finalLanguage);
+    const pdfBuffer = await generateResponsivePDF(order, bankData, finalLanguage, deposit_note);
     console.log('PDF generated successfully, size:', pdfBuffer.byteLength, 'bytes');
 
     // Upload to Supabase Storage
