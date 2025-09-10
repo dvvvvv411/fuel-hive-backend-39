@@ -148,8 +148,9 @@ export function DashboardStats() {
   };
 
   const getConversionRate = () => {
-    if (!data || data.tokensCreated === 0) return 0;
-    return (data.ordersCompleted / data.tokensCreated) * 100;
+    if (!data || data.totalOrders === 0) return 0;
+    const paidOrders = data.statusStats.paid.total;
+    return (paidOrders / data.totalOrders) * 100;
   };
 
   if (loading) {
@@ -203,7 +204,7 @@ export function DashboardStats() {
           <LargeMetricCard
             title="Conversion Rate"
             mainValue={`${conversionRate.toFixed(1)}%`}
-            secondaryValue={`${data.ordersCompleted} von ${data.tokensCreated} Token`}
+            secondaryValue={`${data.statusStats.paid.total} von ${data.totalOrders} Bestellungen`}
             icon={TrendingUp}
             iconColor="text-orange-600"
             iconBgColor="bg-orange-50"
