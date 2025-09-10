@@ -79,6 +79,7 @@ export function WrongOrdersList() {
       pdf = await pdfjs.getDocument(arrayBuffer).promise;
       
       let fullText = '';
+      // Read all pages - no early break
       for (let i = 1; i <= pdf.numPages; i++) {
         const page = await pdf.getPage(i);
         try {
@@ -87,13 +88,6 @@ export function WrongOrdersList() {
             .map((item: any) => item.str)
             .join(' ');
           fullText += pageText + ' ';
-          
-          // Check if we found an IBAN on this page to exit early
-          const quickIbanCheck = /IBAN[:\s]*(DE\s*\d{2}(?:\s*\d){18})|(\bDE\s*\d{2}(?:\s*\d){18})/gi;
-          if (quickIbanCheck.test(pageText)) {
-            // We found a potential IBAN, process this page and stop
-            break;
-          }
         } finally {
           // Clean up page resources
           page.cleanup();
@@ -102,37 +96,62 @@ export function WrongOrdersList() {
 
       console.log('Full PDF text extracted (first 500 chars):', fullText.substring(0, 500));
 
-      // Primary: Look for German IBAN with capturing group, stop before BIC/SWIFT
-      const germanIbanWithLabelRegex = /IBAN[:\s]*(DE\s*\d{2}(?:\s*\d){18})(?=\s*(?:BIC|SWIFT)\b|\s|$)/gi;
-      const labelMatch = germanIbanWithLabelRegex.exec(fullText);
+      // Collect all IBAN candidates
+      const candidates: string[] = [];
       
-      if (labelMatch && labelMatch[1]) {
-        console.log('Found IBAN with label:', labelMatch[1]);
-        // Remove anything after potential BIC/SWIFT markers
-        let cleanIban = labelMatch[1].split(/\s*BIC\s*|SWIFT/i)[0];
-        return normalizeIban(cleanIban);
+      // Find labeled IBANs (with "IBAN:" prefix)
+      const labeledIbanRegex = /IBAN[:\s]*(DE\s*\d{2}(?:\s*\d){18})/gi;
+      let match;
+      while ((match = labeledIbanRegex.exec(fullText)) !== null) {
+        candidates.push(normalizeIban(match[1]));
+      }
+      
+      // Find unlabeled German IBANs
+      const unlabeledIbanRegex = /\b(DE\s*\d{2}(?:\s*\d){18})\b/gi;
+      while ((match = unlabeledIbanRegex.exec(fullText)) !== null) {
+        const normalized = normalizeIban(match[1]);
+        if (!candidates.includes(normalized)) {
+          candidates.push(normalized);
+        }
       }
 
-      // Fallback: Look for German IBAN pattern without label, stop before BIC
-      const germanIbanRegex = /\b(DE\s*\d{2}(?:\s*\d){18})(?=\s*(?:BIC|SWIFT)\b|\s|$)/gi;
-      const germanMatch = germanIbanRegex.exec(fullText);
-      
-      if (germanMatch && germanMatch[1]) {
-        console.log('Found German IBAN pattern:', germanMatch[1]);
-        return normalizeIban(germanMatch[1]);
+      if (candidates.length === 0) {
+        console.log('No IBAN found in PDF');
+        return null;
       }
 
-      // Last resort: Look for any potential IBAN starting with common country codes
-      const anyIbanRegex = /\b([A-Z]{2}\s*\d{2}(?:\s*[A-Z0-9]){15,30})(?=\s*(?:BIC|SWIFT)\b|\s|$)/gi;
-      const anyMatch = anyIbanRegex.exec(fullText);
-      
-      if (anyMatch && anyMatch[1]) {
-        console.log('Found potential IBAN:', anyMatch[1]);
-        return normalizeIban(anyMatch[1]);
+      if (candidates.length === 1) {
+        console.log('Found single IBAN:', candidates[0]);
+        return candidates[0];
       }
-      
-      console.log('No IBAN found in PDF');
-      return null;
+
+      // Multiple candidates - use heuristics to find the best one
+      console.log('Found multiple IBAN candidates:', candidates);
+
+      // Look for "Zahlungsdetails" section and find IBANs nearby
+      const zahlungsdetailsIndex = fullText.toLowerCase().indexOf('zahlungsdetails');
+      if (zahlungsdetailsIndex !== -1) {
+        // Extract text around Zahlungsdetails (±400 characters)
+        const contextStart = Math.max(0, zahlungsdetailsIndex - 200);
+        const contextEnd = Math.min(fullText.length, zahlungsdetailsIndex + 400);
+        const contextText = fullText.substring(contextStart, contextEnd);
+        
+        // Find IBANs in this context
+        const contextIbanRegex = /\b(DE\s*\d{2}(?:\s*\d){18})\b/gi;
+        let contextMatch;
+        while ((contextMatch = contextIbanRegex.exec(contextText)) !== null) {
+          const contextIban = normalizeIban(contextMatch[1]);
+          if (candidates.includes(contextIban)) {
+            console.log('Using IBAN from Zahlungsdetails context:', contextIban);
+            return contextIban;
+          }
+        }
+      }
+
+      // If no Zahlungsdetails context or no IBAN found there, take the last IBAN
+      const chosenIban = candidates[candidates.length - 1];
+      console.log('Using last found IBAN:', chosenIban, 'from candidates:', candidates);
+      return chosenIban;
     } catch (error) {
       console.error('Error extracting IBAN from PDF:', error);
       return null;
@@ -161,13 +180,18 @@ export function WrongOrdersList() {
     for (let i = 0; i < items.length; i++) {
       const promise = processFn(items[i], i).then(result => {
         results[i] = result;
+      }).finally(() => {
+        // Remove completed promise from executing array
+        const index = executing.indexOf(promise);
+        if (index > -1) {
+          executing.splice(index, 1);
+        }
       });
       
       executing.push(promise);
       
       if (executing.length >= limit) {
         await Promise.race(executing);
-        executing.splice(executing.findIndex(p => p === promise), 1);
       }
       
       // Update progress counter
@@ -267,15 +291,29 @@ export function WrongOrdersList() {
               const normalizedFound = normalizeIban(foundIban);
               console.log(`Order ${order.order_number} - Expected: ${expectedIban}, Found: ${foundIban}, Normalized: ${normalizedFound}`);
               
-              if (normalizedFound.length !== expectedIban.length) {
-                console.log(`Skipping comparison for order ${order.order_number}: found IBAN length ${normalizedFound.length} != expected ${expectedIban.length}`);
+              // For German IBANs, ensure both are trimmed to 22 characters before comparison
+              let finalExpected = expectedIban;
+              let finalFound = normalizedFound;
+              
+              if (expectedIban.startsWith('DE') && expectedIban.length > 22) {
+                finalExpected = expectedIban.substring(0, 22);
+              }
+              if (normalizedFound.startsWith('DE') && normalizedFound.length > 22) {
+                finalFound = normalizedFound.substring(0, 22);
+              }
+              
+              // Only skip if the found IBAN is clearly invalid (too short for DE)
+              if (normalizedFound.startsWith('DE') && normalizedFound.length < 22) {
+                console.log(`Skipping comparison for order ${order.order_number}: found IBAN too short (${normalizedFound.length} chars)`);
                 return null;
-              } else if (normalizedFound !== expectedIban) {
+              }
+              
+              if (finalFound !== finalExpected) {
                 console.log(`MISMATCH detected for order ${order.order_number}`);
                 return {
                   order,
-                  expectedIban,
-                  foundIban: normalizedFound,
+                  expectedIban: finalExpected,
+                  foundIban: finalFound,
                   bankAccountName: expectedBankAccount.account_name
                 };
               }
