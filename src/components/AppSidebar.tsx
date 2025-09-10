@@ -59,10 +59,10 @@ const navigationItems = [
     value: "preview"
   },
   {
-    title: "FALSCHE ORDERS",
+    title: "Sicherheitscheck",
     url: "/dashboard",
     icon: FileText,
-    value: "false-orders"
+    value: "security-check"
   },
 ];
 

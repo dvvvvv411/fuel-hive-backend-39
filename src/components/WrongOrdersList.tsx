@@ -1,11 +1,16 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { AlertTriangle, ExternalLink, Loader2 } from 'lucide-react';
+import { Calendar } from '@/components/ui/calendar';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { AlertTriangle, ExternalLink, Loader2, CalendarIcon, Search } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
+import { format } from 'date-fns';
+import { de } from 'date-fns/locale';
+import { cn } from '@/lib/utils';
 import * as pdfjs from 'pdfjs-dist';
 
 // Set up PDF.js worker - use local worker for reliability
@@ -45,13 +50,12 @@ interface WrongOrder {
 
 export function WrongOrdersList() {
   const [wrongOrders, setWrongOrders] = useState<WrongOrder[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [processingCount, setProcessingCount] = useState(0);
   const [totalCount, setTotalCount] = useState(0);
-
-  useEffect(() => {
-    loadAndAnalyzeOrders();
-  }, []);
+  const [dateFrom, setDateFrom] = useState<Date>();
+  const [dateTo, setDateTo] = useState<Date>();
+  const [hasAnalyzed, setHasAnalyzed] = useState(false);
 
   const normalizeIban = (iban: string, expectedLength?: number): string => {
     // Remove all non-alphanumeric characters and convert to uppercase
@@ -203,17 +207,47 @@ export function WrongOrdersList() {
   };
 
   const loadAndAnalyzeOrders = async () => {
+    if (!dateFrom || !dateTo) {
+      toast({
+        title: "Zeitraum erforderlich",
+        description: "Bitte wählen Sie einen Zeitraum aus",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    if (dateTo < dateFrom) {
+      toast({
+        title: "Ungültiger Zeitraum",
+        description: "Das End-Datum muss nach dem Start-Datum liegen",
+        variant: "destructive"
+      });
+      return;
+    }
+
     try {
       setLoading(true);
+      setWrongOrders([]);
+      setHasAnalyzed(false);
+      
+      // Create date range filter (start of dateFrom to end of dateTo)
+      const fromDate = new Date(dateFrom);
+      fromDate.setHours(0, 0, 0, 0);
+      const toDate = new Date(dateTo);
+      toDate.setHours(23, 59, 59, 999);
       
       // Load orders with invoice PDFs - get count first
-      const { count, error: countError } = await supabase
+      let query = supabase
         .from('orders')
         .select('*', { count: 'exact', head: true })
         .eq('invoice_pdf_generated', true)
         .eq('invoice_sent', true)
         .not('invoice_pdf_url', 'is', null)
-        .not('selected_bank_account_id', 'is', null);
+        .not('selected_bank_account_id', 'is', null)
+        .gte('created_at', fromDate.toISOString())
+        .lte('created_at', toDate.toISOString());
+
+      const { count, error: countError } = await query;
 
       if (countError) throw countError;
 
@@ -246,6 +280,8 @@ export function WrongOrdersList() {
           .eq('invoice_sent', true)
           .not('invoice_pdf_url', 'is', null)
           .not('selected_bank_account_id', 'is', null)
+          .gte('created_at', fromDate.toISOString())
+          .lte('created_at', toDate.toISOString())
           .order('created_at', { ascending: false })
           .range(from, from + batchSize - 1);
 
@@ -336,6 +372,7 @@ export function WrongOrdersList() {
       }
 
       setWrongOrders(discrepancies);
+      setHasAnalyzed(true);
       
       if (discrepancies.length > 0) {
         toast({
@@ -403,26 +440,101 @@ export function WrongOrdersList() {
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center">
+      <div className="flex justify-between items-start">
         <div>
-          <h2 className="text-2xl font-bold text-red-600">FALSCHE ORDERS</h2>
+          <h2 className="text-2xl font-bold text-blue-600">Sicherheitscheck</h2>
           <p className="text-gray-600">
-            Bestellungen mit falschen IBANs in den versendeten Rechnungen
+            Überprüfung der IBANs in versendeten Rechnungen für ausgewählten Zeitraum
           </p>
         </div>
-        <Button onClick={loadAndAnalyzeOrders} disabled={loading}>
-          {loading ? (
-            <>
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              Analysiere...
-            </>
-          ) : (
-            'Erneut prüfen'
-          )}
-        </Button>
       </div>
 
-      {!loading && wrongOrders.length > 0 && (
+      {/* Date Range Selection */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Zeitraum auswählen</CardTitle>
+          <CardDescription>
+            Wählen Sie den Zeitraum aus, für den die Rechnungen überprüft werden sollen
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="flex items-center gap-4">
+            <div className="flex items-center gap-2">
+              <label className="text-sm font-medium">Von:</label>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    className={cn(
+                      "justify-start text-left font-normal",
+                      !dateFrom && "text-muted-foreground"
+                    )}
+                  >
+                    <CalendarIcon className="mr-2 h-4 w-4" />
+                    {dateFrom ? format(dateFrom, "PPP", { locale: de }) : "Datum wählen"}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <Calendar
+                    mode="single"
+                    selected={dateFrom}
+                    onSelect={setDateFrom}
+                    initialFocus
+                    className={cn("p-3 pointer-events-auto")}
+                  />
+                </PopoverContent>
+              </Popover>
+            </div>
+            
+            <div className="flex items-center gap-2">
+              <label className="text-sm font-medium">Bis:</label>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    className={cn(
+                      "justify-start text-left font-normal",
+                      !dateTo && "text-muted-foreground"
+                    )}
+                  >
+                    <CalendarIcon className="mr-2 h-4 w-4" />
+                    {dateTo ? format(dateTo, "PPP", { locale: de }) : "Datum wählen"}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <Calendar
+                    mode="single"
+                    selected={dateTo}
+                    onSelect={setDateTo}
+                    initialFocus
+                    className={cn("p-3 pointer-events-auto")}
+                  />
+                </PopoverContent>
+              </Popover>
+            </div>
+
+            <Button 
+              onClick={loadAndAnalyzeOrders} 
+              disabled={loading || !dateFrom || !dateTo}
+              className="ml-4"
+            >
+              {loading ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Analysiere...
+                </>
+              ) : (
+                <>
+                  <Search className="mr-2 h-4 w-4" />
+                  Sicherheitscheck starten
+                </>
+              )}
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+
+      {hasAnalyzed && !loading && wrongOrders.length > 0 && (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <Card>
             <CardHeader className="pb-3">
@@ -477,7 +589,7 @@ export function WrongOrdersList() {
         </Card>
       )}
 
-      {!loading && wrongOrders.length === 0 && (
+      {hasAnalyzed && !loading && wrongOrders.length === 0 && (
         <Card>
           <CardContent className="p-6 text-center">
             <AlertTriangle className="mx-auto h-12 w-12 text-green-500 mb-4" />
@@ -491,7 +603,7 @@ export function WrongOrdersList() {
         </Card>
       )}
 
-      {wrongOrders.length > 0 && (
+      {hasAnalyzed && wrongOrders.length > 0 && (
         <Card>
           <CardHeader>
             <div className="flex items-center gap-2">

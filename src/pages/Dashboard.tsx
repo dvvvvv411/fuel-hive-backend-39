@@ -76,7 +76,7 @@ const Dashboard = () => {
         return <ResendConfigsList />;
       case 'preview':
         return <InvoicePreview />;
-      case 'false-orders':
+      case 'security-check':
         return <WrongOrdersList />;
       case 'bank-analytics':
         return <BankAccountPerformance />;
@@ -121,7 +121,7 @@ const Dashboard = () => {
                effectiveActiveTab === 'resend-configs' ? 'Resend Configuration' :
                effectiveActiveTab === 'payment-methods' ? 'Payment Methods' :
                 effectiveActiveTab === 'preview' ? 'Invoice Preview' :
-                effectiveActiveTab === 'false-orders' ? 'FALSCHE ORDERS' :
+                effectiveActiveTab === 'security-check' ? 'Sicherheitscheck' :
                 effectiveActiveTab === 'bank-analytics' ? 'Bank Performance' :
                effectiveActiveTab === 'payment-analytics' ? 'Payment Analysis' :
                effectiveActiveTab === 'status-analytics' ? 'Status Pipeline' :
