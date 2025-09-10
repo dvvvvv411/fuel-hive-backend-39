@@ -76,6 +76,39 @@ export type Database = {
           },
         ]
       }
+      login_events: {
+        Row: {
+          created_at: string
+          email: string
+          event_type: string
+          id: string
+          ip_address: string | null
+          success: boolean
+          user_agent: string | null
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          email: string
+          event_type: string
+          id?: string
+          ip_address?: string | null
+          success?: boolean
+          user_agent?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          email?: string
+          event_type?: string
+          id?: string
+          ip_address?: string | null
+          success?: boolean
+          user_agent?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       order_tokens: {
         Row: {
           created_at: string
