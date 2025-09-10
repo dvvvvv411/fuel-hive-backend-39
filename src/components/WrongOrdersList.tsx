@@ -261,7 +261,7 @@ export function WrongOrdersList() {
 
       if (error) throw error;
 
-      setLoginEvents(events || []);
+      setLoginEvents((events || []) as LoginEvent[]);
       setHasLoadedLoginHistory(true);
       
       toast({
@@ -315,6 +315,8 @@ export function WrongOrdersList() {
     
     return userAgent.length > 50 ? userAgent.substring(0, 50) + '...' : userAgent;
   };
+
+  const loadAndAnalyzeOrders = async () => {
     if (!dateFrom || !dateTo) {
       toast({
         title: "Zeitraum erforderlich",
