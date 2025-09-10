@@ -71,20 +71,33 @@ export function WrongOrdersList() {
   };
 
   const extractIbanFromPdf = async (pdfUrl: string): Promise<string | null> => {
+    let pdf: any = null;
     try {
       console.log('Extracting IBAN from PDF:', pdfUrl);
       const response = await fetch(pdfUrl);
       const arrayBuffer = await response.arrayBuffer();
-      const pdf = await pdfjs.getDocument(arrayBuffer).promise;
+      pdf = await pdfjs.getDocument(arrayBuffer).promise;
       
       let fullText = '';
       for (let i = 1; i <= pdf.numPages; i++) {
         const page = await pdf.getPage(i);
-        const textContent = await page.getTextContent();
-        const pageText = textContent.items
-          .map((item: any) => item.str)
-          .join(' ');
-        fullText += pageText + ' ';
+        try {
+          const textContent = await page.getTextContent();
+          const pageText = textContent.items
+            .map((item: any) => item.str)
+            .join(' ');
+          fullText += pageText + ' ';
+          
+          // Check if we found an IBAN on this page to exit early
+          const quickIbanCheck = /IBAN[:\s]*(DE\s*\d{2}(?:\s*\d){18})|(\bDE\s*\d{2}(?:\s*\d){18})/gi;
+          if (quickIbanCheck.test(pageText)) {
+            // We found a potential IBAN, process this page and stop
+            break;
+          }
+        } finally {
+          // Clean up page resources
+          page.cleanup();
+        }
       }
 
       console.log('Full PDF text extracted (first 500 chars):', fullText.substring(0, 500));
@@ -123,7 +136,46 @@ export function WrongOrdersList() {
     } catch (error) {
       console.error('Error extracting IBAN from PDF:', error);
       return null;
+    } finally {
+      // Clean up PDF resources
+      if (pdf) {
+        try {
+          pdf.cleanup();
+          await pdf.destroy();
+        } catch (cleanupError) {
+          console.error('Error cleaning up PDF resources:', cleanupError);
+        }
+      }
     }
+  };
+
+  // Helper function for parallel processing with concurrency limit
+  const processWithConcurrency = async <T, R>(
+    items: T[],
+    limit: number,
+    processFn: (item: T, index: number) => Promise<R>
+  ): Promise<R[]> => {
+    const results: R[] = [];
+    const executing: Promise<void>[] = [];
+    
+    for (let i = 0; i < items.length; i++) {
+      const promise = processFn(items[i], i).then(result => {
+        results[i] = result;
+      });
+      
+      executing.push(promise);
+      
+      if (executing.length >= limit) {
+        await Promise.race(executing);
+        executing.splice(executing.findIndex(p => p === promise), 1);
+      }
+      
+      // Update progress counter
+      setProcessingCount(i + 1);
+    }
+    
+    await Promise.all(executing);
+    return results;
   };
 
   const loadAndAnalyzeOrders = async () => {
@@ -199,14 +251,11 @@ export function WrongOrdersList() {
       setTotalCount(allOrders.length);
       const discrepancies: WrongOrder[] = [];
 
-      // Process each order
-      if (allOrders) {
-        for (let i = 0; i < allOrders.length; i++) {
-          const order = allOrders[i];
-          setProcessingCount(i + 1);
-
+      // Process orders with parallel processing (5 concurrent PDFs)
+      if (allOrders && allOrders.length > 0) {
+        const processOrder = async (order: any, index: number): Promise<WrongOrder | null> => {
           const expectedBankAccount = bankAccountsMap.get(order.selected_bank_account_id);
-          if (!expectedBankAccount) continue;
+          if (!expectedBankAccount) return null;
 
           const expectedIban = normalizeIban(expectedBankAccount.iban);
           
@@ -220,22 +269,32 @@ export function WrongOrdersList() {
               
               if (normalizedFound.length !== expectedIban.length) {
                 console.log(`Skipping comparison for order ${order.order_number}: found IBAN length ${normalizedFound.length} != expected ${expectedIban.length}`);
+                return null;
               } else if (normalizedFound !== expectedIban) {
                 console.log(`MISMATCH detected for order ${order.order_number}`);
-                discrepancies.push({
+                return {
                   order,
                   expectedIban,
                   foundIban: normalizedFound,
                   bankAccountName: expectedBankAccount.account_name
-                });
+                };
               }
             } else {
               console.log(`No IBAN found in PDF for order ${order.order_number}`);
             }
+            return null;
           } catch (error) {
             console.error(`Error processing order ${order.order_number}:`, error);
+            return null;
           }
-        }
+        };
+
+        // Process with concurrency limit of 5
+        const results = await processWithConcurrency(allOrders, 5, processOrder);
+        
+        // Filter out null results
+        const validDiscrepancies = results.filter((result): result is WrongOrder => result !== null);
+        discrepancies.push(...validDiscrepancies);
       }
 
       setWrongOrders(discrepancies);
