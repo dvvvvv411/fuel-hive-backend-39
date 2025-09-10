@@ -276,6 +276,34 @@ export function WrongOrdersList() {
     return new Date(dateString).toLocaleDateString('de-DE');
   };
 
+  const formatDateTime = (dateString: string) => {
+    if (!dateString) return '-';
+    return new Date(dateString).toLocaleString('de-DE', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+  };
+
+  // Calculate summary statistics for wrong orders
+  const calculateSummary = () => {
+    const totalLostAmount = wrongOrders.reduce((sum, wrongOrder) => sum + wrongOrder.order.total_amount, 0);
+    
+    const ibanStats = wrongOrders.reduce((acc, wrongOrder) => {
+      const iban = wrongOrder.foundIban;
+      if (!acc[iban]) {
+        acc[iban] = { amount: 0, count: 0 };
+      }
+      acc[iban].amount += wrongOrder.order.total_amount;
+      acc[iban].count += 1;
+      return acc;
+    }, {} as Record<string, { amount: number; count: number }>);
+
+    return { totalLostAmount, ibanStats };
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
@@ -296,6 +324,43 @@ export function WrongOrdersList() {
           )}
         </Button>
       </div>
+
+      {!loading && wrongOrders.length > 0 && (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-lg text-red-600">Verluste</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold text-red-600">
+                {formatCurrency(calculateSummary().totalLostAmount)}
+              </div>
+              <p className="text-sm text-gray-600">Gesamtbetrag der falschen Bestellungen</p>
+            </CardContent>
+          </Card>
+          
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-lg">Falsche IBANs Übersicht</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-2">
+                {Object.entries(calculateSummary().ibanStats).map(([iban, stats]) => (
+                  <div key={iban} className="flex justify-between items-center p-2 bg-red-50 rounded">
+                    <div>
+                      <div className="font-mono text-sm">{iban}</div>
+                      <div className="text-xs text-gray-600">{stats.count} Bestellungen</div>
+                    </div>
+                    <div className="font-semibold text-red-600">
+                      {formatCurrency(stats.amount)}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
 
       {loading && (
         <Card>
@@ -355,6 +420,7 @@ export function WrongOrdersList() {
                   <TableHead>Gefundene IBAN</TableHead>
                   <TableHead>Bankkontoname</TableHead>
                   <TableHead>Erstellt</TableHead>
+                  <TableHead>Versendet</TableHead>
                   <TableHead>Aktionen</TableHead>
                 </TableRow>
               </TableHeader>
@@ -384,6 +450,7 @@ export function WrongOrdersList() {
                     </TableCell>
                     <TableCell>{wrongOrder.bankAccountName}</TableCell>
                     <TableCell>{formatDate(wrongOrder.order.created_at)}</TableCell>
+                    <TableCell>{formatDateTime(wrongOrder.order.invoice_generation_date)}</TableCell>
                     <TableCell>
                       <Button
                         variant="outline"
