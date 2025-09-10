@@ -8,8 +8,11 @@ import { AlertTriangle, ExternalLink, Loader2 } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import * as pdfjs from 'pdfjs-dist';
 
-// Set up PDF.js worker
-pdfjs.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjs.version}/pdf.worker.min.js`;
+// Set up PDF.js worker - use local worker for reliability
+pdfjs.GlobalWorkerOptions.workerSrc = new URL(
+  'pdfjs-dist/build/pdf.worker.min.mjs',
+  import.meta.url
+).toString();
 
 interface Order {
   id: string;
@@ -56,6 +59,7 @@ export function WrongOrdersList() {
 
   const extractIbanFromPdf = async (pdfUrl: string): Promise<string | null> => {
     try {
+      console.log('Extracting IBAN from PDF:', pdfUrl);
       const response = await fetch(pdfUrl);
       const arrayBuffer = await response.arrayBuffer();
       const pdf = await pdfjs.getDocument(arrayBuffer).promise;
@@ -70,16 +74,37 @@ export function WrongOrdersList() {
         fullText += pageText + ' ';
       }
 
-      // Look for IBAN pattern
-      const ibanRegex = /IBAN[:\s]*([A-Z]{2}[0-9]{2}[A-Z0-9]{4}[0-9]{7}[A-Z0-9]{0,16})/gi;
-      const matches = fullText.match(ibanRegex);
+      console.log('Full PDF text extracted (first 500 chars):', fullText.substring(0, 500));
+
+      // Primary: Look for IBAN with label
+      const ibanWithLabelRegex = /IBAN[:\s]*([A-Z]{2}\s*[0-9]{2}\s*(?:[A-Z0-9]\s*){4}(?:[0-9]\s*){7}(?:[A-Z0-9]\s*){0,16})/gi;
+      let matches = fullText.match(ibanWithLabelRegex);
       
       if (matches && matches.length > 0) {
-        // Extract just the IBAN part (remove "IBAN:" prefix)
         const ibanMatch = matches[0].replace(/IBAN[:\s]*/i, '');
+        console.log('Found IBAN with label:', ibanMatch);
         return normalizeIban(ibanMatch);
       }
+
+      // Fallback: Look for any IBAN pattern (German format)
+      const germanIbanRegex = /\b(DE\s*[0-9]{2}\s*(?:[0-9A-Z]\s*){16,20})\b/gi;
+      matches = fullText.match(germanIbanRegex);
       
+      if (matches && matches.length > 0) {
+        console.log('Found German IBAN pattern:', matches[0]);
+        return normalizeIban(matches[0]);
+      }
+
+      // Last resort: Look for any potential IBAN
+      const anyIbanRegex = /\b([A-Z]{2}\s*[0-9]{2}\s*(?:[A-Z0-9]\s*){15,30})\b/gi;
+      matches = fullText.match(anyIbanRegex);
+      
+      if (matches && matches.length > 0) {
+        console.log('Found potential IBAN:', matches[0]);
+        return normalizeIban(matches[0]);
+      }
+      
+      console.log('No IBAN found in PDF');
       return null;
     } catch (error) {
       console.error('Error extracting IBAN from PDF:', error);
@@ -145,15 +170,22 @@ export function WrongOrdersList() {
           const expectedIban = normalizeIban(expectedBankAccount.iban);
           
           try {
+            console.log(`Processing order ${order.order_number}, expected IBAN: ${expectedIban}`);
             const foundIban = await extractIbanFromPdf(order.invoice_pdf_url);
             
-            if (foundIban && foundIban !== expectedIban) {
-              discrepancies.push({
-                order,
-                expectedIban,
-                foundIban,
-                bankAccountName: expectedBankAccount.account_name
-              });
+            if (foundIban) {
+              console.log(`Order ${order.order_number} - Expected: ${expectedIban}, Found: ${foundIban}`);
+              if (foundIban !== expectedIban) {
+                console.log(`MISMATCH detected for order ${order.order_number}`);
+                discrepancies.push({
+                  order,
+                  expectedIban,
+                  foundIban,
+                  bankAccountName: expectedBankAccount.account_name
+                });
+              }
+            } else {
+              console.log(`No IBAN found in PDF for order ${order.order_number}`);
             }
           } catch (error) {
             console.error(`Error processing order ${order.order_number}:`, error);
