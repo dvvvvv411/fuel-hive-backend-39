@@ -180,6 +180,7 @@ export function BankAccountDialog({ open, onOpenChange, bankAccount, onSave }: B
                 value={formData.iban}
                 onChange={(e) => setFormData({ ...formData, iban: e.target.value.toUpperCase() })}
                 placeholder="DE89 3704 0044 0532 0130 00"
+                disabled={Boolean(bankAccount?.id)}
                 required
               />
             </div>
@@ -190,6 +191,7 @@ export function BankAccountDialog({ open, onOpenChange, bankAccount, onSave }: B
                 value={formData.bic}
                 onChange={(e) => setFormData({ ...formData, bic: e.target.value.toUpperCase() })}
                 placeholder="COBADEFFXXX"
+                disabled={Boolean(bankAccount?.id)}
               />
             </div>
           </div>
