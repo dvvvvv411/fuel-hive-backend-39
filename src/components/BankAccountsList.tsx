@@ -6,6 +6,8 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Progress } from '@/components/ui/progress';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
 import { CreditCard, Plus, Building, Edit, Trash2, Store, Euro, TrendingUp, Eye } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import { BankAccountDialog } from './BankAccountDialog';
@@ -48,6 +50,12 @@ export function BankAccountsList() {
   const [detailsDialogOpen, setDetailsDialogOpen] = useState(false);
   const [selectedAccount, setSelectedAccount] = useState<BankAccount | undefined>();
   const [selectedAccountForDetails, setSelectedAccountForDetails] = useState<BankAccount | null>(null);
+  
+  // Password protection states
+  const [passwordDialogOpen, setPasswordDialogOpen] = useState(false);
+  const [passwordInput, setPasswordInput] = useState('');
+  const [passwordError, setPasswordError] = useState('');
+  const [pendingAction, setPendingAction] = useState<() => void>(() => () => {});
 
   useEffect(() => {
     fetchData();
@@ -125,7 +133,7 @@ export function BankAccountsList() {
     }
   };
 
-  const deleteAccount = async (account: BankAccount) => {
+  const deleteAccountInternal = async (account: BankAccount) => {
     const shopsUsing = getShopsUsingAccount(account.id);
     if (shopsUsing.length > 0) {
       toast({
@@ -164,14 +172,47 @@ export function BankAccountsList() {
     }
   };
 
-  const handleEdit = (account: BankAccount) => {
+  const deleteAccount = (account: BankAccount) => {
+    setPendingAction(() => () => deleteAccountInternal(account));
+    setPasswordDialogOpen(true);
+  };
+
+  const handleEditInternal = (account: BankAccount) => {
     setSelectedAccount(account);
     setDialogOpen(true);
   };
 
-  const handleAdd = () => {
+  const handleAddInternal = () => {
     setSelectedAccount(undefined);
     setDialogOpen(true);
+  };
+
+  const handleEdit = (account: BankAccount) => {
+    setPendingAction(() => () => handleEditInternal(account));
+    setPasswordDialogOpen(true);
+  };
+
+  const handleAdd = () => {
+    setPendingAction(() => () => handleAddInternal());
+    setPasswordDialogOpen(true);
+  };
+
+  const handlePasswordSubmit = () => {
+    if (passwordInput === '666') {
+      setPasswordDialogOpen(false);
+      setPasswordInput('');
+      setPasswordError('');
+      pendingAction();
+    } else {
+      setPasswordError('Falsches Passwort');
+    }
+  };
+
+  const handlePasswordCancel = () => {
+    setPasswordDialogOpen(false);
+    setPasswordInput('');
+    setPasswordError('');
+    setPendingAction(() => () => {});
   };
 
   const handleViewDetails = (account: BankAccount) => {
@@ -460,6 +501,43 @@ export function BankAccountsList() {
         onOpenChange={setDetailsDialogOpen}
         bankAccount={selectedAccountForDetails}
       />
+
+      {/* Password Protection Dialog */}
+      <Dialog open={passwordDialogOpen} onOpenChange={handlePasswordCancel}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Passwort erforderlich</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <p className="text-sm text-gray-600">
+              Geben Sie das Passwort ein, um fortzufahren:
+            </p>
+            <div className="space-y-2">
+              <Input
+                type="password"
+                placeholder="Passwort eingeben"
+                value={passwordInput}
+                onChange={(e) => {
+                  setPasswordInput(e.target.value);
+                  setPasswordError('');
+                }}
+                onKeyPress={(e) => e.key === 'Enter' && handlePasswordSubmit()}
+              />
+              {passwordError && (
+                <p className="text-sm text-red-600">{passwordError}</p>
+              )}
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={handlePasswordCancel}>
+              Abbrechen
+            </Button>
+            <Button onClick={handlePasswordSubmit}>
+              Bestätigen
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
