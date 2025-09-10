@@ -71,6 +71,14 @@ export function AppSidebar({ activeTab, onTabChange, user, onSignOut }: AppSideb
   const navigate = useNavigate();
   const location = useLocation();
 
+  // Check if current user is restricted to only Orders
+  const isRestrictedUser = user?.id === "3338709d-0620-4384-8705-f6b4e9bf8be6";
+  
+  // Filter navigation items for restricted user
+  const visibleNavigationItems = isRestrictedUser 
+    ? navigationItems.filter(item => item.value === "orders")
+    : navigationItems;
+
   const handleSignOut = async () => {
     await onSignOut();
     navigate('/auth');
@@ -105,7 +113,7 @@ export function AppSidebar({ activeTab, onTabChange, user, onSignOut }: AppSideb
           </SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu className="space-y-1">
-              {navigationItems.map((item) => (
+              {visibleNavigationItems.map((item) => (
                 <SidebarMenuItem key={item.title}>
                   <SidebarMenuButton
                     onClick={() => handleNavigation(item)}

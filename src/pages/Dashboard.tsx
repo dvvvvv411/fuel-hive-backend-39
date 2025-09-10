@@ -23,6 +23,12 @@ const Dashboard = () => {
   const [user, setUser] = useState<User | null>(null);
   const navigate = useNavigate();
 
+  // Check if current user is restricted to only Orders
+  const isRestrictedUser = user?.id === "3338709d-0620-4384-8705-f6b4e9bf8be6";
+  
+  // Force restricted user to only see Orders tab
+  const effectiveActiveTab = isRestrictedUser ? "orders" : activeTab;
+
   useEffect(() => {
     // Get current user
     supabase.auth.getUser().then(({ data: { user } }) => {
@@ -44,7 +50,7 @@ const Dashboard = () => {
   };
 
   const renderContent = () => {
-    switch (activeTab) {
+    switch (effectiveActiveTab) {
       case 'shops':
         return <ShopsList />;
       case 'orders':
@@ -85,8 +91,8 @@ const Dashboard = () => {
     <SidebarProvider>
       <div className="min-h-screen flex w-full bg-gray-50">
         <AppSidebar 
-          activeTab={activeTab} 
-          onTabChange={setActiveTab}
+          activeTab={effectiveActiveTab} 
+          onTabChange={isRestrictedUser ? () => {} : setActiveTab}
           user={user}
           onSignOut={handleSignOut}
         />
@@ -95,14 +101,15 @@ const Dashboard = () => {
             <SidebarTrigger className="h-8 w-8" />
             <div className="h-6 w-px bg-gray-200" />
             <h2 className="text-lg font-semibold text-gray-900 capitalize">
-              {activeTab === 'overview' ? 'Dashboard' : 
-               activeTab === 'resend-configs' ? 'Resend Configuration' :
-               activeTab === 'payment-methods' ? 'Payment Methods' :
-               activeTab === 'preview' ? 'Invoice Preview' :
-               activeTab === 'bank-analytics' ? 'Bank Performance' :
-               activeTab === 'payment-analytics' ? 'Payment Analysis' :
-               activeTab === 'status-analytics' ? 'Status Pipeline' :
-               activeTab.replace('-', ' ')}
+              {isRestrictedUser ? 'Orders' :
+               effectiveActiveTab === 'overview' ? 'Dashboard' : 
+               effectiveActiveTab === 'resend-configs' ? 'Resend Configuration' :
+               effectiveActiveTab === 'payment-methods' ? 'Payment Methods' :
+               effectiveActiveTab === 'preview' ? 'Invoice Preview' :
+               effectiveActiveTab === 'bank-analytics' ? 'Bank Performance' :
+               effectiveActiveTab === 'payment-analytics' ? 'Payment Analysis' :
+               effectiveActiveTab === 'status-analytics' ? 'Status Pipeline' :
+               effectiveActiveTab.replace('-', ' ')}
             </h2>
           </div>
           <div className="flex-1 p-6">
