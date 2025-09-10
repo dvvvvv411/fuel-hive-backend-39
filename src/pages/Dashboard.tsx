@@ -21,6 +21,7 @@ import { DashboardStats } from '@/components/DashboardStats';
 const Dashboard = () => {
   const [activeTab, setActiveTab] = useState('overview');
   const [user, setUser] = useState<User | null>(null);
+  const [authReady, setAuthReady] = useState(false);
   const navigate = useNavigate();
 
   // Check if current user is restricted to only Orders
@@ -33,12 +34,14 @@ const Dashboard = () => {
     // Get current user
     supabase.auth.getUser().then(({ data: { user } }) => {
       setUser(user);
+      setAuthReady(true);
     });
 
     // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (event, session) => {
         setUser(session?.user ?? null);
+        setAuthReady(true);
       }
     );
 
@@ -48,6 +51,15 @@ const Dashboard = () => {
   const handleSignOut = async () => {
     await supabase.auth.signOut();
   };
+
+  // Show loading screen until auth state is ready
+  if (!authReady) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="animate-spin h-8 w-8 rounded-full border-2 border-blue-600 border-t-transparent" />
+      </div>
+    );
+  }
 
   const renderContent = () => {
     switch (effectiveActiveTab) {
