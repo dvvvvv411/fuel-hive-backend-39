@@ -53,8 +53,21 @@ export function WrongOrdersList() {
     loadAndAnalyzeOrders();
   }, []);
 
-  const normalizeIban = (iban: string): string => {
-    return iban.replace(/\s/g, '').toUpperCase();
+  const normalizeIban = (iban: string, expectedLength?: number): string => {
+    // Remove all non-alphanumeric characters and convert to uppercase
+    let normalized = iban.replace(/[^A-Z0-9]/g, '').toUpperCase();
+    
+    // If we have an expected length, truncate to that length
+    if (expectedLength && normalized.length > expectedLength) {
+      normalized = normalized.substring(0, expectedLength);
+    }
+    
+    // For German IBANs, ensure max 22 characters
+    if (normalized.startsWith('DE') && normalized.length > 22) {
+      normalized = normalized.substring(0, 22);
+    }
+    
+    return normalized;
   };
 
   const extractIbanFromPdf = async (pdfUrl: string): Promise<string | null> => {
@@ -76,32 +89,33 @@ export function WrongOrdersList() {
 
       console.log('Full PDF text extracted (first 500 chars):', fullText.substring(0, 500));
 
-      // Primary: Look for IBAN with label
-      const ibanWithLabelRegex = /IBAN[:\s]*([A-Z]{2}\s*[0-9]{2}\s*(?:[A-Z0-9]\s*){4}(?:[0-9]\s*){7}(?:[A-Z0-9]\s*){0,16})/gi;
-      let matches = fullText.match(ibanWithLabelRegex);
+      // Primary: Look for German IBAN with capturing group, stop before BIC/SWIFT
+      const germanIbanWithLabelRegex = /IBAN[:\s]*(DE\s*[0-9]{2}\s*(?:[0-9A-Z]\s*){16})/gi;
+      const labelMatch = germanIbanWithLabelRegex.exec(fullText);
       
-      if (matches && matches.length > 0) {
-        const ibanMatch = matches[0].replace(/IBAN[:\s]*/i, '');
-        console.log('Found IBAN with label:', ibanMatch);
-        return normalizeIban(ibanMatch);
+      if (labelMatch && labelMatch[1]) {
+        console.log('Found IBAN with label:', labelMatch[1]);
+        // Remove anything after potential BIC/SWIFT markers
+        let cleanIban = labelMatch[1].split(/\s*BIC\s*|SWIFT/i)[0];
+        return normalizeIban(cleanIban);
       }
 
-      // Fallback: Look for any IBAN pattern (German format)
-      const germanIbanRegex = /\b(DE\s*[0-9]{2}\s*(?:[0-9A-Z]\s*){16,20})\b/gi;
-      matches = fullText.match(germanIbanRegex);
+      // Fallback: Look for German IBAN pattern without label, stop before BIC
+      const germanIbanRegex = /\b(DE\s*[0-9]{2}\s*(?:[0-9A-Z]\s*){16})\s*(?:BIC|SWIFT|\s|$)/gi;
+      const germanMatch = germanIbanRegex.exec(fullText);
       
-      if (matches && matches.length > 0) {
-        console.log('Found German IBAN pattern:', matches[0]);
-        return normalizeIban(matches[0]);
+      if (germanMatch && germanMatch[1]) {
+        console.log('Found German IBAN pattern:', germanMatch[1]);
+        return normalizeIban(germanMatch[1]);
       }
 
-      // Last resort: Look for any potential IBAN
-      const anyIbanRegex = /\b([A-Z]{2}\s*[0-9]{2}\s*(?:[A-Z0-9]\s*){15,30})\b/gi;
-      matches = fullText.match(anyIbanRegex);
+      // Last resort: Look for any potential IBAN starting with common country codes
+      const anyIbanRegex = /\b([A-Z]{2}\s*[0-9]{2}\s*(?:[A-Z0-9]\s*){15,30})\s*(?:BIC|SWIFT|\s|$)/gi;
+      const anyMatch = anyIbanRegex.exec(fullText);
       
-      if (matches && matches.length > 0) {
-        console.log('Found potential IBAN:', matches[0]);
-        return normalizeIban(matches[0]);
+      if (anyMatch && anyMatch[1]) {
+        console.log('Found potential IBAN:', anyMatch[1]);
+        return normalizeIban(anyMatch[1]);
       }
       
       console.log('No IBAN found in PDF');
@@ -116,32 +130,59 @@ export function WrongOrdersList() {
     try {
       setLoading(true);
       
-      // Load orders with invoice PDFs
-      const { data: orders, error: ordersError } = await supabase
+      // Load orders with invoice PDFs - get count first
+      const { count, error: countError } = await supabase
         .from('orders')
-        .select(`
-          id,
-          order_number,
-          customer_name,
-          customer_email,
-          total_amount,
-          invoice_pdf_url,
-          selected_bank_account_id,
-          created_at,
-          invoice_generation_date,
-          shop_id,
-          shops (
-            name
-          )
-        `)
+        .select('*', { count: 'exact', head: true })
         .eq('invoice_pdf_generated', true)
         .eq('invoice_sent', true)
         .not('invoice_pdf_url', 'is', null)
-        .not('selected_bank_account_id', 'is', null)
-        .order('created_at', { ascending: false })
-        .limit(100);
+        .not('selected_bank_account_id', 'is', null);
 
-      if (ordersError) throw ordersError;
+      if (countError) throw countError;
+
+      setTotalCount(count || 0);
+      
+      // Load orders in batches of 200
+      const allOrders: any[] = [];
+      const batchSize = 200;
+      let from = 0;
+      
+      while (true) {
+        const { data: orderBatch, error: ordersError } = await supabase
+          .from('orders')
+          .select(`
+            id,
+            order_number,
+            customer_name,
+            customer_email,
+            total_amount,
+            invoice_pdf_url,
+            selected_bank_account_id,
+            created_at,
+            invoice_generation_date,
+            shop_id,
+            shops (
+              name
+            )
+          `)
+          .eq('invoice_pdf_generated', true)
+          .eq('invoice_sent', true)
+          .not('invoice_pdf_url', 'is', null)
+          .not('selected_bank_account_id', 'is', null)
+          .order('created_at', { ascending: false })
+          .range(from, from + batchSize - 1);
+
+        if (ordersError) throw ordersError;
+        
+        if (!orderBatch || orderBatch.length === 0) break;
+        
+        allOrders.push(...orderBatch);
+        from += batchSize;
+        
+        // If we got less than batchSize, we're done
+        if (orderBatch.length < batchSize) break;
+      }
       
       // Load all bank accounts
       const { data: bankAccounts, error: bankError } = await supabase
@@ -155,13 +196,13 @@ export function WrongOrdersList() {
         bankAccountsMap.set(account.id, account);
       });
 
-      setTotalCount(orders?.length || 0);
+      setTotalCount(allOrders.length);
       const discrepancies: WrongOrder[] = [];
 
       // Process each order
-      if (orders) {
-        for (let i = 0; i < orders.length; i++) {
-          const order = orders[i];
+      if (allOrders) {
+        for (let i = 0; i < allOrders.length; i++) {
+          const order = allOrders[i];
           setProcessingCount(i + 1);
 
           const expectedBankAccount = bankAccountsMap.get(order.selected_bank_account_id);
@@ -174,13 +215,16 @@ export function WrongOrdersList() {
             const foundIban = await extractIbanFromPdf(order.invoice_pdf_url);
             
             if (foundIban) {
-              console.log(`Order ${order.order_number} - Expected: ${expectedIban}, Found: ${foundIban}`);
-              if (foundIban !== expectedIban) {
+              // Truncate found IBAN to expected length for fair comparison
+              const truncatedFoundIban = normalizeIban(foundIban, expectedIban.length);
+              console.log(`Order ${order.order_number} - Expected: ${expectedIban}, Found: ${foundIban}, Truncated: ${truncatedFoundIban}`);
+              
+              if (truncatedFoundIban !== expectedIban) {
                 console.log(`MISMATCH detected for order ${order.order_number}`);
                 discrepancies.push({
                   order,
                   expectedIban,
-                  foundIban,
+                  foundIban: truncatedFoundIban,
                   bankAccountName: expectedBankAccount.account_name
                 });
               }
