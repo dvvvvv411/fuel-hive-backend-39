@@ -58,6 +58,12 @@ const navigationItems = [
     icon: Eye,
     value: "preview"
   },
+  {
+    title: "FALSCHE ORDERS",
+    url: "/dashboard",
+    icon: FileText,
+    value: "false-orders"
+  },
 ];
 
 interface AppSidebarProps {

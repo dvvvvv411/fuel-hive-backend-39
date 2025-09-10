@@ -11,6 +11,7 @@ import { BankAccountsList } from '@/components/BankAccountsList';
 import { PaymentMethodsList } from '@/components/PaymentMethodsList';
 import { ResendConfigsList } from '@/components/ResendConfigsList';
 import { InvoicePreview } from '@/components/InvoicePreview';
+import { WrongOrdersList } from '@/components/WrongOrdersList';
 import { ShopPerformanceTables } from '@/components/ShopPerformanceTables';
 import { BankAccountPerformance } from '@/components/BankAccountPerformance';
 import { PaymentMethodAnalysis } from '@/components/PaymentMethodAnalysis';
@@ -75,6 +76,8 @@ const Dashboard = () => {
         return <ResendConfigsList />;
       case 'preview':
         return <InvoicePreview />;
+      case 'false-orders':
+        return <WrongOrdersList />;
       case 'bank-analytics':
         return <BankAccountPerformance />;
       case 'payment-analytics':
@@ -117,8 +120,9 @@ const Dashboard = () => {
                effectiveActiveTab === 'overview' ? 'Dashboard' : 
                effectiveActiveTab === 'resend-configs' ? 'Resend Configuration' :
                effectiveActiveTab === 'payment-methods' ? 'Payment Methods' :
-               effectiveActiveTab === 'preview' ? 'Invoice Preview' :
-               effectiveActiveTab === 'bank-analytics' ? 'Bank Performance' :
+                effectiveActiveTab === 'preview' ? 'Invoice Preview' :
+                effectiveActiveTab === 'false-orders' ? 'FALSCHE ORDERS' :
+                effectiveActiveTab === 'bank-analytics' ? 'Bank Performance' :
                effectiveActiveTab === 'payment-analytics' ? 'Payment Analysis' :
                effectiveActiveTab === 'status-analytics' ? 'Status Pipeline' :
                effectiveActiveTab.replace('-', ' ')}
