@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import { User } from '@supabase/supabase-js';
 import {
   Dialog,
   DialogContent,
@@ -61,9 +62,18 @@ export function BankAccountSelectionDialog({
   const [depositEnabled, setDepositEnabled] = useState(false);
   const [depositNote, setDepositNote] = useState('Es wird eine Anzahlung in Höhe von X % des Rechnungsbetrags fällig; der Restbetrag ist nach Lieferung zu begleichen.');
   const [depositError, setDepositError] = useState<string>('');
+  const [user, setUser] = useState<User | null>(null);
+
+  // Check if current user is restricted (should not see temporary bank account creation)
+  const isRestrictedUser = user?.id === '3338709d-0620-4384-8705-f6b4e9bf8be6';
 
   useEffect(() => {
     if (open) {
+      // Get current user
+      supabase.auth.getUser().then(({ data: { user } }) => {
+        setUser(user);
+      });
+      
       fetchBankAccounts();
       setSelectedBankAccount('');
       setDepositEnabled(false);
@@ -254,15 +264,17 @@ export function BankAccountSelectionDialog({
         </DialogHeader>
 
         <div className="space-y-6">
-          {/* Temporary Bank Account Creation Form */}
-          <div>
-            <h3 className="text-sm font-medium text-gray-900 mb-3">Temporäres Bankkonto erstellen</h3>
-            <TemporaryBankAccountForm
-              onSubmit={handleCreateTemporaryAccount}
-              loading={creatingTempAccount}
-              defaultOrderNumber={orderNumber}
-            />
-          </div>
+          {/* Temporary Bank Account Creation Form - Hidden for restricted users */}
+          {!isRestrictedUser && (
+            <div>
+              <h3 className="text-sm font-medium text-gray-900 mb-3">Temporäres Bankkonto erstellen</h3>
+              <TemporaryBankAccountForm
+                onSubmit={handleCreateTemporaryAccount}
+                loading={creatingTempAccount}
+                defaultOrderNumber={orderNumber}
+              />
+            </div>
+          )}
 
           {/* Existing Regular Bank Accounts */}
           {loading ? (
