@@ -90,7 +90,7 @@ export function WrongOrdersList() {
       console.log('Full PDF text extracted (first 500 chars):', fullText.substring(0, 500));
 
       // Primary: Look for German IBAN with capturing group, stop before BIC/SWIFT
-      const germanIbanWithLabelRegex = /IBAN[:\s]*(DE\s*[0-9]{2}\s*(?:[0-9A-Z]\s*){16})/gi;
+      const germanIbanWithLabelRegex = /IBAN[:\s]*(DE\s*\d{2}(?:\s*\d){18})(?=\s*(?:BIC|SWIFT)\b|\s|$)/gi;
       const labelMatch = germanIbanWithLabelRegex.exec(fullText);
       
       if (labelMatch && labelMatch[1]) {
@@ -101,7 +101,7 @@ export function WrongOrdersList() {
       }
 
       // Fallback: Look for German IBAN pattern without label, stop before BIC
-      const germanIbanRegex = /\b(DE\s*[0-9]{2}\s*(?:[0-9A-Z]\s*){16})\s*(?:BIC|SWIFT|\s|$)/gi;
+      const germanIbanRegex = /\b(DE\s*\d{2}(?:\s*\d){18})(?=\s*(?:BIC|SWIFT)\b|\s|$)/gi;
       const germanMatch = germanIbanRegex.exec(fullText);
       
       if (germanMatch && germanMatch[1]) {
@@ -110,7 +110,7 @@ export function WrongOrdersList() {
       }
 
       // Last resort: Look for any potential IBAN starting with common country codes
-      const anyIbanRegex = /\b([A-Z]{2}\s*[0-9]{2}\s*(?:[A-Z0-9]\s*){15,30})\s*(?:BIC|SWIFT|\s|$)/gi;
+      const anyIbanRegex = /\b([A-Z]{2}\s*\d{2}(?:\s*[A-Z0-9]){15,30})(?=\s*(?:BIC|SWIFT)\b|\s|$)/gi;
       const anyMatch = anyIbanRegex.exec(fullText);
       
       if (anyMatch && anyMatch[1]) {
@@ -215,16 +215,17 @@ export function WrongOrdersList() {
             const foundIban = await extractIbanFromPdf(order.invoice_pdf_url);
             
             if (foundIban) {
-              // Truncate found IBAN to expected length for fair comparison
-              const truncatedFoundIban = normalizeIban(foundIban, expectedIban.length);
-              console.log(`Order ${order.order_number} - Expected: ${expectedIban}, Found: ${foundIban}, Truncated: ${truncatedFoundIban}`);
+              const normalizedFound = normalizeIban(foundIban);
+              console.log(`Order ${order.order_number} - Expected: ${expectedIban}, Found: ${foundIban}, Normalized: ${normalizedFound}`);
               
-              if (truncatedFoundIban !== expectedIban) {
+              if (normalizedFound.length !== expectedIban.length) {
+                console.log(`Skipping comparison for order ${order.order_number}: found IBAN length ${normalizedFound.length} != expected ${expectedIban.length}`);
+              } else if (normalizedFound !== expectedIban) {
                 console.log(`MISMATCH detected for order ${order.order_number}`);
                 discrepancies.push({
                   order,
                   expectedIban,
-                  foundIban: truncatedFoundIban,
+                  foundIban: normalizedFound,
                   bankAccountName: expectedBankAccount.account_name
                 });
               }
