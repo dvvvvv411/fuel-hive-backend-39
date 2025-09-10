@@ -6,7 +6,8 @@ import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { AlertTriangle, ExternalLink, Loader2, CalendarIcon, Search } from 'lucide-react';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { AlertTriangle, ExternalLink, Loader2, CalendarIcon, Search, Monitor, MapPin, Clock, User, CheckCircle, XCircle } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import { format } from 'date-fns';
 import { de } from 'date-fns/locale';
@@ -48,14 +49,30 @@ interface WrongOrder {
   bankAccountName: string;
 }
 
+interface LoginEvent {
+  id: string;
+  user_id: string | null;
+  email: string;
+  event_type: 'sign_in' | 'sign_up' | 'sign_out';
+  ip_address: string | null;
+  user_agent: string | null;
+  success: boolean;
+  created_at: string;
+}
+
 export function WrongOrdersList() {
   const [wrongOrders, setWrongOrders] = useState<WrongOrder[]>([]);
+  const [loginEvents, setLoginEvents] = useState<LoginEvent[]>([]);
   const [loading, setLoading] = useState(false);
+  const [loadingLoginHistory, setLoadingLoginHistory] = useState(false);
   const [processingCount, setProcessingCount] = useState(0);
   const [totalCount, setTotalCount] = useState(0);
   const [dateFrom, setDateFrom] = useState<Date>();
   const [dateTo, setDateTo] = useState<Date>();
+  const [loginDateFrom, setLoginDateFrom] = useState<Date>();
+  const [loginDateTo, setLoginDateTo] = useState<Date>();
   const [hasAnalyzed, setHasAnalyzed] = useState(false);
+  const [hasLoadedLoginHistory, setHasLoadedLoginHistory] = useState(false);
 
   const normalizeIban = (iban: string, expectedLength?: number): string => {
     // Remove all non-alphanumeric characters and convert to uppercase
@@ -206,7 +223,98 @@ export function WrongOrdersList() {
     return results;
   };
 
-  const loadAndAnalyzeOrders = async () => {
+  const loadLoginHistory = async () => {
+    if (!loginDateFrom || !loginDateTo) {
+      toast({
+        title: "Zeitraum erforderlich",
+        description: "Bitte wählen Sie einen Zeitraum für die Login-Historie aus",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    if (loginDateTo < loginDateFrom) {
+      toast({
+        title: "Ungültiger Zeitraum",
+        description: "Das End-Datum muss nach dem Start-Datum liegen",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    try {
+      setLoadingLoginHistory(true);
+      setLoginEvents([]);
+      
+      // Create date range filter
+      const fromDate = new Date(loginDateFrom);
+      fromDate.setHours(0, 0, 0, 0);
+      const toDate = new Date(loginDateTo);
+      toDate.setHours(23, 59, 59, 999);
+      
+      const { data: events, error } = await supabase
+        .from('login_events')
+        .select('*')
+        .gte('created_at', fromDate.toISOString())
+        .lte('created_at', toDate.toISOString())
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+
+      setLoginEvents(events || []);
+      setHasLoadedLoginHistory(true);
+      
+      toast({
+        title: "Login-Historie geladen",
+        description: `${events?.length || 0} Login-Ereignisse gefunden`,
+      });
+
+    } catch (error) {
+      console.error('Error loading login history:', error);
+      toast({
+        title: "Fehler",
+        description: "Fehler beim Laden der Login-Historie",
+        variant: "destructive"
+      });
+    } finally {
+      setLoadingLoginHistory(false);
+    }
+  };
+
+  const getEventTypeLabel = (eventType: string) => {
+    switch (eventType) {
+      case 'sign_in': return 'Anmeldung';
+      case 'sign_up': return 'Registrierung';
+      case 'sign_out': return 'Abmeldung';
+      default: return eventType;
+    }
+  };
+
+  const getEventTypeColor = (eventType: string) => {
+    switch (eventType) {
+      case 'sign_in': return 'bg-green-100 text-green-800';
+      case 'sign_up': return 'bg-blue-100 text-blue-800';
+      case 'sign_out': return 'bg-gray-100 text-gray-800';
+      default: return 'bg-gray-100 text-gray-800';
+    }
+  };
+
+  const formatUserAgent = (userAgent: string | null) => {
+    if (!userAgent) return 'Unbekannt';
+    
+    // Extract browser info
+    const chrome = userAgent.match(/Chrome\/([0-9.]+)/);
+    const firefox = userAgent.match(/Firefox\/([0-9.]+)/);
+    const safari = userAgent.match(/Safari\/([0-9.]+)/);
+    const edge = userAgent.match(/Edg\/([0-9.]+)/);
+    
+    if (edge) return `Edge ${edge[1]}`;
+    if (chrome) return `Chrome ${chrome[1]}`;
+    if (firefox) return `Firefox ${firefox[1]}`;
+    if (safari) return `Safari ${safari[1]}`;
+    
+    return userAgent.length > 50 ? userAgent.substring(0, 50) + '...' : userAgent;
+  };
     if (!dateFrom || !dateTo) {
       toast({
         title: "Zeitraum erforderlich",
@@ -444,239 +552,448 @@ export function WrongOrdersList() {
         <div>
           <h2 className="text-2xl font-bold text-blue-600">Sicherheitscheck</h2>
           <p className="text-gray-600">
-            Überprüfung der IBANs in versendeten Rechnungen für ausgewählten Zeitraum
+            IBAN-Überprüfung und Login-Historie für die Systemsicherheit
           </p>
         </div>
       </div>
 
-      {/* Date Range Selection */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Zeitraum auswählen</CardTitle>
-          <CardDescription>
-            Wählen Sie den Zeitraum aus, für den die Rechnungen überprüft werden sollen
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="flex items-center gap-4">
-            <div className="flex items-center gap-2">
-              <label className="text-sm font-medium">Von:</label>
-              <Popover>
-                <PopoverTrigger asChild>
-                  <Button
-                    variant="outline"
-                    className={cn(
-                      "justify-start text-left font-normal",
-                      !dateFrom && "text-muted-foreground"
-                    )}
-                  >
-                    <CalendarIcon className="mr-2 h-4 w-4" />
-                    {dateFrom ? format(dateFrom, "PPP", { locale: de }) : "Datum wählen"}
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0" align="start">
-                  <Calendar
-                    mode="single"
-                    selected={dateFrom}
-                    onSelect={setDateFrom}
-                    initialFocus
-                    className={cn("p-3 pointer-events-auto")}
-                  />
-                </PopoverContent>
-              </Popover>
-            </div>
-            
-            <div className="flex items-center gap-2">
-              <label className="text-sm font-medium">Bis:</label>
-              <Popover>
-                <PopoverTrigger asChild>
-                  <Button
-                    variant="outline"
-                    className={cn(
-                      "justify-start text-left font-normal",
-                      !dateTo && "text-muted-foreground"
-                    )}
-                  >
-                    <CalendarIcon className="mr-2 h-4 w-4" />
-                    {dateTo ? format(dateTo, "PPP", { locale: de }) : "Datum wählen"}
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0" align="start">
-                  <Calendar
-                    mode="single"
-                    selected={dateTo}
-                    onSelect={setDateTo}
-                    initialFocus
-                    className={cn("p-3 pointer-events-auto")}
-                  />
-                </PopoverContent>
-              </Popover>
-            </div>
+      <Tabs defaultValue="iban-check" className="space-y-6">
+        <TabsList className="grid w-full grid-cols-2">
+          <TabsTrigger value="iban-check" className="flex items-center gap-2">
+            <AlertTriangle className="h-4 w-4" />
+            IBAN-Überprüfung
+          </TabsTrigger>
+          <TabsTrigger value="login-history" className="flex items-center gap-2">
+            <Monitor className="h-4 w-4" />
+            Login-Historie
+          </TabsTrigger>
+        </TabsList>
 
-            <Button 
-              onClick={loadAndAnalyzeOrders} 
-              disabled={loading || !dateFrom || !dateTo}
-              className="ml-4"
-            >
-              {loading ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Analysiere...
-                </>
-              ) : (
-                <>
-                  <Search className="mr-2 h-4 w-4" />
-                  Sicherheitscheck starten
-                </>
-              )}
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
-
-      {hasAnalyzed && !loading && wrongOrders.length > 0 && (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <TabsContent value="iban-check" className="space-y-6">
+          {/* Date Range Selection */}
           <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="text-lg text-red-600">Verluste</CardTitle>
+            <CardHeader>
+              <CardTitle>Zeitraum für IBAN-Überprüfung auswählen</CardTitle>
+              <CardDescription>
+                Wählen Sie den Zeitraum aus, für den die Rechnungen überprüft werden sollen
+              </CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-red-600">
-                {formatCurrency(calculateSummary().totalLostAmount)}
-              </div>
-              <p className="text-sm text-gray-600">Gesamtbetrag der falschen Bestellungen</p>
-            </CardContent>
-          </Card>
-          
-          <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="text-lg">Falsche IBANs Übersicht</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-2">
-                {Object.entries(calculateSummary().ibanStats).map(([iban, stats]) => (
-                  <div key={iban} className="flex justify-between items-center p-2 bg-red-50 rounded">
-                    <div>
-                      <div className="font-mono text-sm">{iban}</div>
-                      <div className="text-xs text-gray-600">{stats.count} Bestellungen</div>
-                    </div>
-                    <div className="font-semibold text-red-600">
-                      {formatCurrency(stats.amount)}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-      )}
-
-      {loading && (
-        <Card>
-          <CardContent className="p-6">
-            <div className="flex items-center justify-center space-x-4">
-              <Loader2 className="h-6 w-6 animate-spin" />
-              <div className="text-center">
-                <p className="text-lg font-medium">
-                  Analysiere Rechnungs-PDFs...
-                </p>
-                <p className="text-sm text-gray-600">
-                  {processingCount} von {totalCount} Bestellungen geprüft
-                </p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
-      {hasAnalyzed && !loading && wrongOrders.length === 0 && (
-        <Card>
-          <CardContent className="p-6 text-center">
-            <AlertTriangle className="mx-auto h-12 w-12 text-green-500 mb-4" />
-            <h3 className="text-lg font-semibold text-green-600">
-              Keine Diskrepanzen gefunden
-            </h3>
-            <p className="text-gray-600">
-              Alle geprüften Rechnungen haben korrekte IBANs.
-            </p>
-          </CardContent>
-        </Card>
-      )}
-
-      {hasAnalyzed && wrongOrders.length > 0 && (
-        <Card>
-          <CardHeader>
-            <div className="flex items-center gap-2">
-              <AlertTriangle className="h-5 w-5 text-red-500" />
-              <CardTitle className="text-red-600">
-                {wrongOrders.length} Bestellungen mit falschen IBANs
-              </CardTitle>
-            </div>
-            <CardDescription>
-              Diese Bestellungen haben in der versendeten Rechnung eine andere IBAN 
-              als die aktuell hinterlegte Bankverbindung
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Bestellnummer</TableHead>
-                  <TableHead>Kunde</TableHead>
-                  <TableHead>Shop</TableHead>
-                  <TableHead>Betrag</TableHead>
-                  <TableHead>Erwartete IBAN</TableHead>
-                  <TableHead>Gefundene IBAN</TableHead>
-                  <TableHead>Bankkontoname</TableHead>
-                  <TableHead>Erstellt</TableHead>
-                  <TableHead>Versendet</TableHead>
-                  <TableHead>Aktionen</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {wrongOrders.map((wrongOrder) => (
-                  <TableRow key={wrongOrder.order.id} className="border-red-100">
-                    <TableCell className="font-medium">
-                      {wrongOrder.order.order_number}
-                    </TableCell>
-                    <TableCell>
-                      <div>
-                        <div className="font-medium">{wrongOrder.order.customer_name}</div>
-                        <div className="text-sm text-gray-500">{wrongOrder.order.customer_email}</div>
-                      </div>
-                    </TableCell>
-                    <TableCell>{wrongOrder.order.shops.name}</TableCell>
-                    <TableCell>{formatCurrency(wrongOrder.order.total_amount)}</TableCell>
-                    <TableCell>
-                      <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
-                        {wrongOrder.expectedIban}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant="outline" className="bg-red-50 text-red-700 border-red-200">
-                        {wrongOrder.foundIban}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>{wrongOrder.bankAccountName}</TableCell>
-                    <TableCell>{formatDate(wrongOrder.order.created_at)}</TableCell>
-                    <TableCell>{formatDateTime(wrongOrder.order.invoice_generation_date)}</TableCell>
-                    <TableCell>
+              <div className="flex items-center gap-4">
+                <div className="flex items-center gap-2">
+                  <label className="text-sm font-medium">Von:</label>
+                  <Popover>
+                    <PopoverTrigger asChild>
                       <Button
                         variant="outline"
-                        size="sm"
-                        onClick={() => window.open(wrongOrder.order.invoice_pdf_url, '_blank')}
+                        className={cn(
+                          "justify-start text-left font-normal",
+                          !dateFrom && "text-muted-foreground"
+                        )}
                       >
-                        <ExternalLink className="h-4 w-4 mr-1" />
-                        PDF ansehen
+                        <CalendarIcon className="mr-2 h-4 w-4" />
+                        {dateFrom ? format(dateFrom, "PPP", { locale: de }) : "Datum wählen"}
                       </Button>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </CardContent>
-        </Card>
-      )}
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0" align="start">
+                      <Calendar
+                        mode="single"
+                        selected={dateFrom}
+                        onSelect={setDateFrom}
+                        initialFocus
+                        className={cn("p-3 pointer-events-auto")}
+                      />
+                    </PopoverContent>
+                  </Popover>
+                </div>
+                
+                <div className="flex items-center gap-2">
+                  <label className="text-sm font-medium">Bis:</label>
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant="outline"
+                        className={cn(
+                          "justify-start text-left font-normal",
+                          !dateTo && "text-muted-foreground"
+                        )}
+                      >
+                        <CalendarIcon className="mr-2 h-4 w-4" />
+                        {dateTo ? format(dateTo, "PPP", { locale: de }) : "Datum wählen"}
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0" align="start">
+                      <Calendar
+                        mode="single"
+                        selected={dateTo}
+                        onSelect={setDateTo}
+                        initialFocus
+                        className={cn("p-3 pointer-events-auto")}
+                      />
+                    </PopoverContent>
+                  </Popover>
+                </div>
+
+                <Button 
+                  onClick={loadAndAnalyzeOrders} 
+                  disabled={loading || !dateFrom || !dateTo}
+                  className="ml-4"
+                >
+                  {loading ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Analysiere...
+                    </>
+                  ) : (
+                    <>
+                      <Search className="mr-2 h-4 w-4" />
+                      Sicherheitscheck starten
+                    </>
+                  )}
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+
+          {hasAnalyzed && !loading && wrongOrders.length > 0 && (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <Card>
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-lg text-red-600">Verluste</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold text-red-600">
+                    {formatCurrency(calculateSummary().totalLostAmount)}
+                  </div>
+                  <p className="text-sm text-gray-600">Gesamtbetrag der falschen Bestellungen</p>
+                </CardContent>
+              </Card>
+              
+              <Card>
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-lg">Falsche IBANs Übersicht</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-2">
+                    {Object.entries(calculateSummary().ibanStats).map(([iban, stats]) => (
+                      <div key={iban} className="flex justify-between items-center p-2 bg-red-50 rounded">
+                        <div>
+                          <div className="font-mono text-sm">{iban}</div>
+                          <div className="text-xs text-gray-600">{stats.count} Bestellungen</div>
+                        </div>
+                        <div className="font-semibold text-red-600">
+                          {formatCurrency(stats.amount)}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          )}
+
+          {loading && (
+            <Card>
+              <CardContent className="p-6">
+                <div className="flex items-center justify-center space-x-4">
+                  <Loader2 className="h-6 w-6 animate-spin" />
+                  <div className="text-center">
+                    <p className="text-lg font-medium">
+                      Analysiere Rechnungs-PDFs...
+                    </p>
+                    <p className="text-sm text-gray-600">
+                      {processingCount} von {totalCount} Bestellungen geprüft
+                    </p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {hasAnalyzed && !loading && wrongOrders.length === 0 && (
+            <Card>
+              <CardContent className="p-6 text-center">
+                <AlertTriangle className="mx-auto h-12 w-12 text-green-500 mb-4" />
+                <h3 className="text-lg font-semibold text-green-600">
+                  Keine Diskrepanzen gefunden
+                </h3>
+                <p className="text-gray-600">
+                  Alle geprüften Rechnungen haben korrekte IBANs.
+                </p>
+              </CardContent>
+            </Card>
+          )}
+
+          {hasAnalyzed && wrongOrders.length > 0 && (
+            <Card>
+              <CardHeader>
+                <div className="flex items-center gap-2">
+                  <AlertTriangle className="h-5 w-5 text-red-500" />
+                  <CardTitle className="text-red-600">
+                    {wrongOrders.length} Bestellungen mit falschen IBANs
+                  </CardTitle>
+                </div>
+                <CardDescription>
+                  Diese Bestellungen haben in der versendeten Rechnung eine andere IBAN 
+                  als die aktuell hinterlegte Bankverbindung
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Bestellnummer</TableHead>
+                      <TableHead>Kunde</TableHead>
+                      <TableHead>Shop</TableHead>
+                      <TableHead>Betrag</TableHead>
+                      <TableHead>Erwartete IBAN</TableHead>
+                      <TableHead>Gefundene IBAN</TableHead>
+                      <TableHead>Bankkontoname</TableHead>
+                      <TableHead>Erstellt</TableHead>
+                      <TableHead>Versendet</TableHead>
+                      <TableHead>Aktionen</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {wrongOrders.map((wrongOrder) => (
+                      <TableRow key={wrongOrder.order.id} className="border-red-100">
+                        <TableCell className="font-medium">
+                          {wrongOrder.order.order_number}
+                        </TableCell>
+                        <TableCell>
+                          <div>
+                            <div className="font-medium">{wrongOrder.order.customer_name}</div>
+                            <div className="text-sm text-gray-500">{wrongOrder.order.customer_email}</div>
+                          </div>
+                        </TableCell>
+                        <TableCell>{wrongOrder.order.shops.name}</TableCell>
+                        <TableCell>{formatCurrency(wrongOrder.order.total_amount)}</TableCell>
+                        <TableCell>
+                          <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
+                            {wrongOrder.expectedIban}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant="outline" className="bg-red-50 text-red-700 border-red-200">
+                            {wrongOrder.foundIban}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>{wrongOrder.bankAccountName}</TableCell>
+                        <TableCell>{formatDate(wrongOrder.order.created_at)}</TableCell>
+                        <TableCell>{formatDateTime(wrongOrder.order.invoice_generation_date)}</TableCell>
+                        <TableCell>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => window.open(wrongOrder.order.invoice_pdf_url, '_blank')}
+                          >
+                            <ExternalLink className="h-4 w-4 mr-1" />
+                            PDF ansehen
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </CardContent>
+            </Card>
+          )}
+        </TabsContent>
+
+        <TabsContent value="login-history" className="space-y-6">
+          {/* Login History Date Range Selection */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Zeitraum für Login-Historie auswählen</CardTitle>
+              <CardDescription>
+                Wählen Sie den Zeitraum aus, für den die Login-Ereignisse angezeigt werden sollen
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="flex items-center gap-4">
+                <div className="flex items-center gap-2">
+                  <label className="text-sm font-medium">Von:</label>
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant="outline"
+                        className={cn(
+                          "justify-start text-left font-normal",
+                          !loginDateFrom && "text-muted-foreground"
+                        )}
+                      >
+                        <CalendarIcon className="mr-2 h-4 w-4" />
+                        {loginDateFrom ? format(loginDateFrom, "PPP", { locale: de }) : "Datum wählen"}
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0" align="start">
+                      <Calendar
+                        mode="single"
+                        selected={loginDateFrom}
+                        onSelect={setLoginDateFrom}
+                        initialFocus
+                        className={cn("p-3 pointer-events-auto")}
+                      />
+                    </PopoverContent>
+                  </Popover>
+                </div>
+                
+                <div className="flex items-center gap-2">
+                  <label className="text-sm font-medium">Bis:</label>
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant="outline"
+                        className={cn(
+                          "justify-start text-left font-normal",
+                          !loginDateTo && "text-muted-foreground"
+                        )}
+                      >
+                        <CalendarIcon className="mr-2 h-4 w-4" />
+                        {loginDateTo ? format(loginDateTo, "PPP", { locale: de }) : "Datum wählen"}
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0" align="start">
+                      <Calendar
+                        mode="single"
+                        selected={loginDateTo}
+                        onSelect={setLoginDateTo}
+                        initialFocus
+                        className={cn("p-3 pointer-events-auto")}
+                      />
+                    </PopoverContent>
+                  </Popover>
+                </div>
+
+                <Button 
+                  onClick={loadLoginHistory} 
+                  disabled={loadingLoginHistory || !loginDateFrom || !loginDateTo}
+                  className="ml-4"
+                >
+                  {loadingLoginHistory ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Lädt...
+                    </>
+                  ) : (
+                    <>
+                      <Monitor className="mr-2 h-4 w-4" />
+                      Login-Historie laden
+                    </>
+                  )}
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+
+          {loadingLoginHistory && (
+            <Card>
+              <CardContent className="p-6">
+                <div className="flex items-center justify-center space-x-4">
+                  <Loader2 className="h-6 w-6 animate-spin" />
+                  <div className="text-center">
+                    <p className="text-lg font-medium">
+                      Lade Login-Historie...
+                    </p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {hasLoadedLoginHistory && !loadingLoginHistory && loginEvents.length === 0 && (
+            <Card>
+              <CardContent className="p-6 text-center">
+                <Monitor className="mx-auto h-12 w-12 text-gray-400 mb-4" />
+                <h3 className="text-lg font-semibold text-gray-600">
+                  Keine Login-Ereignisse gefunden
+                </h3>
+                <p className="text-gray-600">
+                  Im ausgewählten Zeitraum wurden keine Login-Aktivitäten aufgezeichnet.
+                </p>
+              </CardContent>
+            </Card>
+          )}
+
+          {hasLoadedLoginHistory && loginEvents.length > 0 && (
+            <Card>
+              <CardHeader>
+                <div className="flex items-center gap-2">
+                  <Monitor className="h-5 w-5 text-blue-500" />
+                  <CardTitle className="text-blue-600">
+                    {loginEvents.length} Login-Ereignisse gefunden
+                  </CardTitle>
+                </div>
+                <CardDescription>
+                  Chronologische Auflistung aller Login-Aktivitäten im ausgewählten Zeitraum
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Status</TableHead>
+                      <TableHead>Ereignis</TableHead>
+                      <TableHead>E-Mail</TableHead>
+                      <TableHead>IP-Adresse</TableHead>
+                      <TableHead>Browser</TableHead>
+                      <TableHead>Zeitpunkt</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {loginEvents.map((event) => (
+                      <TableRow key={event.id}>
+                        <TableCell>
+                          {event.success ? (
+                            <CheckCircle className="h-4 w-4 text-green-500" />
+                          ) : (
+                            <XCircle className="h-4 w-4 text-red-500" />
+                          )}
+                        </TableCell>
+                        <TableCell>
+                          <Badge className={getEventTypeColor(event.event_type)}>
+                            {getEventTypeLabel(event.event_type)}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex items-center gap-2">
+                            <User className="h-4 w-4 text-gray-400" />
+                            <span className="font-medium">{event.email}</span>
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex items-center gap-2">
+                            <MapPin className="h-4 w-4 text-gray-400" />
+                            <span className="font-mono text-sm">
+                              {event.ip_address || 'Unbekannt'}
+                            </span>
+                          </div>
+                        </TableCell>
+                        <TableCell className="max-w-48">
+                          <div className="flex items-center gap-2">
+                            <Monitor className="h-4 w-4 text-gray-400 flex-shrink-0" />
+                            <span className="text-sm truncate">
+                              {formatUserAgent(event.user_agent)}
+                            </span>
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex items-center gap-2">
+                            <Clock className="h-4 w-4 text-gray-400" />
+                            <span className="text-sm">
+                              {formatDateTime(event.created_at)}
+                            </span>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </CardContent>
+            </Card>
+          )}
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }

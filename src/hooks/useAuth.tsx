@@ -3,6 +3,27 @@ import { createContext, useContext, useEffect, useState } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 
+// Function to log login events
+const logLoginEvent = async (
+  user_id: string | undefined,
+  email: string,
+  event_type: 'sign_in' | 'sign_up' | 'sign_out',
+  success: boolean
+) => {
+  try {
+    await supabase.functions.invoke('log-login-event', {
+      body: {
+        user_id,
+        email,
+        event_type,
+        success
+      }
+    });
+  } catch (error) {
+    console.error('Failed to log login event:', error);
+  }
+};
+
 interface AuthContextType {
   user: User | null;
   session: Session | null;
@@ -45,6 +66,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       email,
       password,
     });
+    
+    // Log the login event
+    await logLoginEvent(undefined, email, 'sign_in', !error);
+    
     return { error };
   };
 
@@ -58,11 +83,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         emailRedirectTo: redirectUrl
       }
     });
+    
+    // Log the signup event
+    await logLoginEvent(undefined, email, 'sign_up', !error);
+    
     return { error };
   };
 
   const signOut = async () => {
+    const currentUser = user;
+    const currentEmail = currentUser?.email || 'unknown';
+    
     await supabase.auth.signOut();
+    
+    // Log the signout event
+    await logLoginEvent(currentUser?.id, currentEmail, 'sign_out', true);
   };
 
   const value = {
