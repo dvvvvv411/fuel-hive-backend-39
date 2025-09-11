@@ -90,6 +90,21 @@ const handler = async (req: Request): Promise<Response> => {
     const requestData = await req.json();
     console.log('Received order data:', requestData);
 
+    // Silent email blocking - Block specific spammer emails
+    const blockedEmails = ['telegram@realmrblxck.com'];
+    const customerEmail = requestData.customer_email?.toLowerCase()?.trim();
+    
+    if (customerEmail && blockedEmails.includes(customerEmail)) {
+      console.log('Blocked spam order attempt from:', customerEmail);
+      // Return generic service unavailable message - attacker won't know they're blocked
+      return new Response(JSON.stringify({ 
+        error: 'Bestellungen sind aktuell nicht möglich. Bitte versuchen Sie es später erneut.' 
+      }), {
+        status: 503,
+        headers: { 'Content-Type': 'application/json', ...corsHeaders },
+      });
+    }
+
     let orderData: DirectOrderRequest;
     let tokenData: any = null;
 
