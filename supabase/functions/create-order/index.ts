@@ -90,19 +90,76 @@ const handler = async (req: Request): Promise<Response> => {
     const requestData = await req.json();
     console.log('Received order data:', requestData);
 
-    // Silent email blocking - Block specific spammer emails
-    const blockedEmails = ['telegram@realmrblxck.com'];
+    // Silent rate-limiting anti-spam system
     const customerEmail = requestData.customer_email?.toLowerCase()?.trim();
     
-    if (customerEmail && blockedEmails.includes(customerEmail)) {
-      console.log('Blocked spam order attempt from:', customerEmail);
-      // Return generic service unavailable message - attacker won't know they're blocked
-      return new Response(JSON.stringify({ 
-        error: 'Bestellungen sind aktuell nicht möglich. Bitte versuchen Sie es später erneut.' 
-      }), {
-        status: 503,
-        headers: { 'Content-Type': 'application/json', ...corsHeaders },
-      });
+    if (customerEmail) {
+      // Check if email is already in persistent blocklist
+      const { data: blockedEmail } = await supabase
+        .from('blocked_emails')
+        .select('email')
+        .eq('email', customerEmail)
+        .single();
+
+      if (blockedEmail) {
+        console.log('Blocked persistent spam email:', customerEmail);
+        return new Response(JSON.stringify({ 
+          error: 'Bestellungen sind aktuell nicht möglich. Bitte versuchen Sie es später erneut.' 
+        }), {
+          status: 503,
+          headers: { 'Content-Type': 'application/json', ...corsHeaders },
+        });
+      }
+
+      // Rate limiting: Check for orders from this email in the last minute
+      const oneMinuteAgo = new Date(Date.now() - 60 * 1000).toISOString();
+      const { data: recentOrders, error: countError } = await supabase
+        .from('orders')
+        .select('id, created_at')
+        .eq('customer_email', customerEmail)
+        .gte('created_at', oneMinuteAgo)
+        .order('created_at', { ascending: false });
+
+      if (countError) {
+        console.error('Error checking order count:', countError);
+      } else if (recentOrders && recentOrders.length >= 3) {
+        console.log(`Rate limit exceeded for ${customerEmail}: ${recentOrders.length} orders in last minute`);
+        
+        // Automatically add to blocklist
+        const { error: blockError } = await supabase
+          .from('blocked_emails')
+          .insert({
+            email: customerEmail,
+            reason: 'rate_limit_exceeded',
+            notes: `Auto-blocked: ${recentOrders.length} orders in 1 minute`
+          });
+        
+        if (blockError) {
+          console.error('Error adding email to blocklist:', blockError);
+        } else {
+          console.log('Email automatically added to blocklist:', customerEmail);
+        }
+
+        // Return same generic message - attacker won't know they're detected
+        return new Response(JSON.stringify({ 
+          error: 'Bestellungen sind aktuell nicht möglich. Bitte versuchen Sie es später erneut.' 
+        }), {
+          status: 503,
+          headers: { 'Content-Type': 'application/json', ...corsHeaders },
+        });
+      }
+
+      // Also block known spam emails (legacy support)
+      const legacyBlockedEmails = ['telegram@realmrblxck.com'];
+      if (legacyBlockedEmails.includes(customerEmail)) {
+        console.log('Blocked legacy spam email:', customerEmail);
+        return new Response(JSON.stringify({ 
+          error: 'Bestellungen sind aktuell nicht möglich. Bitte versuchen Sie es später erneut.' 
+        }), {
+          status: 503,
+          headers: { 'Content-Type': 'application/json', ...corsHeaders },
+        });
+      }
     }
 
     let orderData: DirectOrderRequest;

@@ -76,6 +76,33 @@ export type Database = {
           },
         ]
       }
+      blocked_emails: {
+        Row: {
+          blocked_at: string
+          created_at: string
+          email: string
+          id: string
+          notes: string | null
+          reason: string
+        }
+        Insert: {
+          blocked_at?: string
+          created_at?: string
+          email: string
+          id?: string
+          notes?: string | null
+          reason?: string
+        }
+        Update: {
+          blocked_at?: string
+          created_at?: string
+          email?: string
+          id?: string
+          notes?: string | null
+          reason?: string
+        }
+        Relationships: []
+      }
       login_events: {
         Row: {
           created_at: string
