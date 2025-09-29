@@ -143,7 +143,7 @@ const getCurrencySymbol = (currency: string): string => {
     case 'EUR':
       return '€';
     case 'PLN':
-      return 'zł'; // Reverted back to symbol, using proper font now
+      return 'PLN';
     case 'USD':
       return '$';
     case 'GBP':
