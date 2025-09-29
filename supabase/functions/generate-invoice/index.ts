@@ -1,6 +1,6 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-import { jsPDF } from "npm:jspdf@3.0.1";
+import { jsPDF } from "https://esm.sh/jspdf@3.0.1";
 import { getTranslations, detectLanguage } from './translations.ts';
 
 const corsHeaders = {

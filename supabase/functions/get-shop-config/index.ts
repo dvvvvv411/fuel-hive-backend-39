@@ -98,7 +98,7 @@ const handler = async (req: Request): Promise<Response> => {
     }
 
     const activePaymentMethods = paymentMethods?.filter(spm => 
-      spm.payment_methods && spm.payment_methods.active
+      spm.payment_methods && (spm.payment_methods as any).active
     ).map(spm => spm.payment_methods) || [];
 
     console.log('Shop configuration retrieved successfully for shop:', shopId);

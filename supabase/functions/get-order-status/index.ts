@@ -118,7 +118,7 @@ const handler = async (req: Request): Promise<Response> => {
       total_amount: order.total_amount,
       payment_method: order.payment_method,
       processing_mode: order.processing_mode,
-      checkout_mode: order.shops?.checkout_mode,
+      checkout_mode: order.shops?.[0]?.checkout_mode,
       invoice: {
         generated: order.invoice_pdf_generated,
         number: order.invoice_number,
