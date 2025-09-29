@@ -1,0 +1,6 @@
+{
+  "imports": {
+    "jspdf": "npm:jspdf@3.0.1"
+  },
+  "nodeModulesDir": "auto"
+}

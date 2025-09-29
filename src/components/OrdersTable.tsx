@@ -14,6 +14,7 @@ import { BankAccountSelectionDialog } from './BankAccountSelectionDialog';
 import { ContactAttemptEmailPreview } from './ContactAttemptEmailPreview';
 import { Checkbox } from '@/components/ui/checkbox';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { formatCurrencyWithEUR } from '@/utils/bankingUtils';
 
 interface Order {
   id: string;
@@ -32,6 +33,9 @@ interface Order {
   delivery_fee: number;
   status: string;
   payment_method: string;
+  currency?: string;
+  eur_amount?: number;
+  exchange_rate?: number;
   delivery_city: string;
   delivery_street: string;
   delivery_postcode: string;
@@ -908,7 +912,13 @@ export function OrdersTable() {
                         </TableCell>
                         <TableCell>{order.product}</TableCell>
                         <TableCell>{order.liters}</TableCell>
-                        <TableCell>€{order.total_amount.toFixed(2)}</TableCell>
+                        <TableCell>
+                          {formatCurrencyWithEUR(
+                            order.total_amount, 
+                            order.currency || 'EUR', 
+                            order.eur_amount
+                          )}
+                        </TableCell>
                         <TableCell>
                           <div className="text-sm">
                             {bankAccountInfo || (

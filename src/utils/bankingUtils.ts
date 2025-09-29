@@ -8,6 +8,28 @@ export const formatCurrency = (amount: number, currency: string = 'EUR'): string
   }).format(amount);
 };
 
+export const formatCurrencyWithEUR = (amount: number, currency: string = 'EUR', eurAmount?: number): string => {
+  const mainAmount = formatCurrency(amount, currency);
+  
+  if (currency !== 'EUR' && eurAmount && eurAmount !== amount) {
+    const eurFormatted = formatCurrency(eurAmount, 'EUR');
+    return `${mainAmount} (≈ ${eurFormatted})`;
+  }
+  
+  return mainAmount;
+};
+
+export const getExchangeRate = (currency: string): number => {
+  switch (currency.toUpperCase()) {
+    case 'EUR':
+      return 1.0;
+    case 'PLN':
+      return 0.233; // 1 PLN ≈ 0.233 EUR
+    default:
+      return 1.0; // Default to EUR rate
+  }
+};
+
 export const calculateDailyUsage = async (bankAccountId: string): Promise<number> => {
   const today = new Date();
   const todayString = today.toISOString().split('T')[0]; // Get YYYY-MM-DD format

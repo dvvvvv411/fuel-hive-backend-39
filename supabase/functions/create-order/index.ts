@@ -266,6 +266,18 @@ const handler = async (req: Request): Promise<Response> => {
       orderData = requestData as DirectOrderRequest;
     }
 
+    // Fixed exchange rates
+    const getExchangeRate = (currency: string): number => {
+      switch (currency.toUpperCase()) {
+        case 'EUR':
+          return 1.0;
+        case 'PLN':
+          return 0.233; // 1 PLN ≈ 0.233 EUR
+        default:
+          return 1.0; // Default to EUR rate
+      }
+    };
+
     // Validate shop exists and get checkout mode
     const { data: shop, error: shopError } = await supabase
       .from('shops')
@@ -288,6 +300,13 @@ const handler = async (req: Request): Promise<Response> => {
     // Calculate totals
     const basePrice = orderData.liters * orderData.price_per_liter;
     const totalAmount = basePrice + orderData.delivery_fee;
+
+    // Get currency and calculate EUR equivalent
+    const currency = shop.currency || 'EUR';
+    const exchangeRate = getExchangeRate(currency);
+    const eurAmount = totalAmount * exchangeRate;
+
+    console.log(`Order currency: ${currency}, Amount: ${totalAmount}, Exchange rate: ${exchangeRate}, EUR amount: ${eurAmount}`);
 
     // Determine initial status based on checkout mode
     const initialStatus = shop.checkout_mode === 'instant' ? 'confirmed' : 'pending';
@@ -324,6 +343,9 @@ const handler = async (req: Request): Promise<Response> => {
         status: initialStatus,
         processing_mode: shop.checkout_mode,
         order_token: requestData.token || null,
+        currency: currency,
+        eur_amount: eurAmount,
+        exchange_rate: exchangeRate,
       }])
       .select()
       .single();

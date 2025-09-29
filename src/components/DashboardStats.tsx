@@ -62,9 +62,15 @@ export function DashboardStats() {
 
       const allOrders = orders || [];
 
-      // Calculate revenue
-      const todayRevenue = todayOrders.reduce((sum, order) => sum + Number(order.total_amount || 0), 0);
-      const totalRevenue = allOrders.reduce((sum, order) => sum + Number(order.total_amount || 0), 0);
+      // Calculate revenue in EUR (using eur_amount if available, otherwise total_amount for EUR orders)
+      const todayRevenue = todayOrders.reduce((sum, order) => {
+        const eurAmount = order.eur_amount || (order.currency === 'EUR' ? order.total_amount : 0);
+        return sum + Number(eurAmount || 0);
+      }, 0);
+      const totalRevenue = allOrders.reduce((sum, order) => {
+        const eurAmount = order.eur_amount || (order.currency === 'EUR' ? order.total_amount : 0);
+        return sum + Number(eurAmount || 0);
+      }, 0);
 
       // Status statistics
       const getStatusCount = (status: string, isToday: boolean) => {
