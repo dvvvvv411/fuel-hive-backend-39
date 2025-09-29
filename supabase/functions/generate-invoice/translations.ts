@@ -410,6 +410,95 @@ export function getTranslations(language: string): InvoiceTranslations {
   return translations[language] || translations.de;
 }
 
+// Function to convert Polish diacritics to ASCII for PDF compatibility
+function convertPolishToASCII(text: string): string {
+  return text
+    .replace(/ł/g, 'l')
+    .replace(/Ł/g, 'L')
+    .replace(/ą/g, 'a')
+    .replace(/Ą/g, 'A')
+    .replace(/ć/g, 'c')
+    .replace(/Ć/g, 'C')
+    .replace(/ę/g, 'e')
+    .replace(/Ę/g, 'E')
+    .replace(/ń/g, 'n')
+    .replace(/Ń/g, 'N')
+    .replace(/ó/g, 'o')
+    .replace(/Ó/g, 'O')
+    .replace(/ś/g, 's')
+    .replace(/Ś/g, 'S')
+    .replace(/ź/g, 'z')
+    .replace(/Ź/g, 'Z')
+    .replace(/ż/g, 'z')
+    .replace(/Ż/g, 'Z');
+}
+
+// Function to convert Polish product names to ASCII
+function convertPolishProductsToASCII(products: Record<string, string>): Record<string, string> {
+  const converted: Record<string, string> = {};
+  for (const [key, value] of Object.entries(products)) {
+    converted[key] = convertPolishToASCII(value);
+  }
+  return converted;
+}
+
+// Function to get PDF-safe translations (converts Polish diacritics to ASCII)
+export function getPDFTranslations(language: string): InvoiceTranslations {
+  const baseTranslations = translations[language] || translations.de;
+  
+  // Only convert Polish translations for PDF compatibility
+  if (language === 'pl') {
+    return {
+      invoice: convertPolishToASCII(baseTranslations.invoice),
+      invoiceNumber: convertPolishToASCII(baseTranslations.invoiceNumber),
+      invoiceDate: convertPolishToASCII(baseTranslations.invoiceDate),
+      dueDate: convertPolishToASCII(baseTranslations.dueDate),
+      customerDetails: convertPolishToASCII(baseTranslations.customerDetails),
+      companyDetails: convertPolishToASCII(baseTranslations.companyDetails),
+      description: convertPolishToASCII(baseTranslations.description),
+      quantity: convertPolishToASCII(baseTranslations.quantity),
+      unitPrice: convertPolishToASCII(baseTranslations.unitPrice),
+      total: convertPolishToASCII(baseTranslations.total),
+      subtotal: convertPolishToASCII(baseTranslations.subtotal),
+      vat: convertPolishToASCII(baseTranslations.vat),
+      grandTotal: convertPolishToASCII(baseTranslations.grandTotal),
+      paymentDetails: convertPolishToASCII(baseTranslations.paymentDetails),
+      bankDetails: convertPolishToASCII(baseTranslations.bankDetails),
+      accountHolder: convertPolishToASCII(baseTranslations.accountHolder),
+      iban: convertPolishToASCII(baseTranslations.iban),
+      bic: convertPolishToASCII(baseTranslations.bic),
+      paymentReference: convertPolishToASCII(baseTranslations.paymentReference),
+      thankYou: convertPolishToASCII(baseTranslations.thankYou),
+      deliveryAddress: convertPolishToASCII(baseTranslations.deliveryAddress),
+      billingAddress: convertPolishToASCII(baseTranslations.billingAddress),
+      heatingOilDelivery: convertPolishToASCII(baseTranslations.heatingOilDelivery),
+      liters: convertPolishToASCII(baseTranslations.liters),
+      pricePerLiter: convertPolishToASCII(baseTranslations.pricePerLiter),
+      deliveryFee: convertPolishToASCII(baseTranslations.deliveryFee),
+      dueDays: convertPolishToASCII(baseTranslations.dueDays),
+      currency: convertPolishToASCII(baseTranslations.currency),
+      paymentInfo: convertPolishToASCII(baseTranslations.paymentInfo),
+      recipient: convertPolishToASCII(baseTranslations.recipient),
+      bank: convertPolishToASCII(baseTranslations.bank),
+      totalAmount: convertPolishToASCII(baseTranslations.totalAmount),
+      vatLabel: convertPolishToASCII(baseTranslations.vatLabel),
+      invoiceFilename: convertPolishToASCII(baseTranslations.invoiceFilename),
+      orderNumber: baseTranslations.orderNumber ? convertPolishToASCII(baseTranslations.orderNumber) : undefined,
+      orderDate: baseTranslations.orderDate ? convertPolishToASCII(baseTranslations.orderDate) : undefined,
+      phone: baseTranslations.phone ? convertPolishToASCII(baseTranslations.phone) : undefined,
+      email: baseTranslations.email ? convertPolishToASCII(baseTranslations.email) : undefined,
+      website: baseTranslations.website ? convertPolishToASCII(baseTranslations.website) : undefined,
+      contact: convertPolishToASCII(baseTranslations.contact),
+      bankInformation: convertPolishToASCII(baseTranslations.bankInformation),
+      businessData: convertPolishToASCII(baseTranslations.businessData),
+      products: convertPolishProductsToASCII(baseTranslations.products)
+    };
+  }
+  
+  // Return original translations for other languages
+  return baseTranslations;
+}
+
 export function detectLanguage(order: any): string {
   console.log('Detecting language for order from shop country/language...');
   

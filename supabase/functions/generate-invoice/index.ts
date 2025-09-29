@@ -1,7 +1,7 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { jsPDF } from "https://esm.sh/jspdf@3.0.1";
-import { getTranslations, detectLanguage } from './translations.ts';
+import { getTranslations, detectLanguage, getPDFTranslations } from './translations.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -206,8 +206,8 @@ const calculateFooterColumnWidths = (pdf: any, t: any, pageWidth: number, margin
 
 const generateResponsivePDF = async (order: any, bankData: any, language: string = 'de', depositNote?: string) => {
   console.log('Starting PDF generation matching InvoicePreview template with language:', language);
-  
-  const t = getTranslations(language);
+
+  const t = getPDFTranslations(language);
   
   // Initialize PDF
   const pdf = new jsPDF({
