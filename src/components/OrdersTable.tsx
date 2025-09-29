@@ -15,6 +15,7 @@ import { ContactAttemptEmailPreview } from './ContactAttemptEmailPreview';
 import { Checkbox } from '@/components/ui/checkbox';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { formatCurrencyWithEUR } from '@/utils/bankingUtils';
+import { CurrencyDisplay } from './CurrencyDisplay';
 
 interface Order {
   id: string;
@@ -913,11 +914,11 @@ export function OrdersTable() {
                         <TableCell>{order.product}</TableCell>
                         <TableCell>{order.liters}</TableCell>
                         <TableCell>
-                          {formatCurrencyWithEUR(
-                            order.total_amount, 
-                            order.currency || 'EUR', 
-                            order.eur_amount
-                          )}
+                          <CurrencyDisplay
+                            amount={order.total_amount}
+                            currency={order.currency || 'EUR'}
+                            eurAmount={order.eur_amount}
+                          />
                         </TableCell>
                         <TableCell>
                           <div className="text-sm">

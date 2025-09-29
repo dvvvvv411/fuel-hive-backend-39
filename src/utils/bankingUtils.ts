@@ -19,6 +19,20 @@ export const formatCurrencyWithEUR = (amount: number, currency: string = 'EUR', 
   return mainAmount;
 };
 
+export const formatCurrencyTwoLine = (amount: number, currency: string = 'EUR', eurAmount?: number): { mainAmount: string; eurAmount?: string } => {
+  const mainAmount = formatCurrency(amount, currency);
+  
+  if (currency !== 'EUR' && eurAmount && eurAmount !== amount) {
+    const eurFormatted = formatCurrency(eurAmount, 'EUR');
+    return {
+      mainAmount,
+      eurAmount: `≈ ${eurFormatted}`
+    };
+  }
+  
+  return { mainAmount };
+};
+
 export const getExchangeRate = (currency: string): number => {
   switch (currency.toUpperCase()) {
     case 'EUR':
