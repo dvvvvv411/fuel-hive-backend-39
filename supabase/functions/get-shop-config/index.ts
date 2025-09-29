@@ -118,7 +118,7 @@ const handler = async (req: Request): Promise<Response> => {
         currency: shop.currency,
         language: shop.language,
         checkout_mode: shop.checkout_mode,
-        vat_rate: shop.vat_rate,
+        vat_rate: shop.vat_rate || 19.00,
         logo_url: shop.logo_url,
         accent_color: shop.accent_color,
         support_phone: shop.support_phone,

@@ -463,6 +463,26 @@ export function ShopDialog({ open, onOpenChange, onSuccess, shop }: ShopDialogPr
                   placeholder="HRB 12345"
                 />
               </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="vat_rate">Mehrwertsteuersatz (%)</Label>
+                <Input
+                  id="vat_rate"
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  max="100"
+                  value={formData.vat_rate || 19}
+                  onChange={(e) => {
+                    const value = parseFloat(e.target.value) || 19;
+                    handleInputChange('vat_rate', Math.min(Math.max(value, 0), 100));
+                  }}
+                  placeholder="19"
+                />
+                <p className="text-xs text-muted-foreground">
+                  Standard-Mehrwertsteuersatz in Deutschland: 19%
+                </p>
+              </div>
             </div>
           </div>
 

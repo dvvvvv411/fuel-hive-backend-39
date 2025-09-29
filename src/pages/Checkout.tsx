@@ -296,7 +296,7 @@ const Checkout = () => {
               </div>
               {tokenData.vat_amount > 0 && (
                 <p className="text-sm text-gray-600">
-                  {t.incVat} {tokenData.vat_rate}% {t.vat} ({tokenData.vat_amount.toFixed(2)} {tokenData.shop.currency})
+                  {t.incVat} {tokenData.vat_rate || 19}% {t.vat} ({tokenData.vat_amount.toFixed(2)} {tokenData.shop.currency})
                 </p>
               )}
             </CardContent>

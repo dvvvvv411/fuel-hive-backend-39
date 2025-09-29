@@ -71,7 +71,7 @@ serve(async (req) => {
     const token = `tok_${tokenSuffix}`;
 
     // Calculate VAT amount if VAT rate is available
-    const vatRate = shop.vat_rate || 0;
+    const vatRate = shop.vat_rate || 19.00;
     const vatAmount = vatRate > 0 ? (total_amount * vatRate) / (100 + vatRate) : 0;
 
     // Set expiration time (1 hour from now)
