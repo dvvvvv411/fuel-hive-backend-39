@@ -69,6 +69,21 @@ export const calculateDailyUsage = async (bankAccountId: string): Promise<number
   }
 };
 
+export const getCurrencySymbol = (currency: string): string => {
+  switch (currency?.toUpperCase()) {
+    case 'EUR':
+      return '€';
+    case 'PLN':
+      return 'zł';
+    case 'USD':
+      return '$';
+    case 'GBP':
+      return '£';
+    default:
+      return '€'; // fallback
+  }
+};
+
 export const getDailyUsagePercentage = (usage: number, limit: number): number => {
   if (limit <= 0) return 0;
   return Math.min((usage / limit) * 100, 100);

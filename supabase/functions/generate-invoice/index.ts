@@ -127,6 +127,22 @@ const processShopLogo = async (logoUrl: string): Promise<{ format: string; base6
   }
 };
 
+// Currency utility functions
+const getCurrencySymbol = (currency: string): string => {
+  switch (currency?.toUpperCase()) {
+    case 'EUR':
+      return '€';
+    case 'PLN':
+      return 'zł';
+    case 'USD':
+      return '$';
+    case 'GBP':
+      return '£';
+    default:
+      return '€';
+  }
+};
+
 // Helper function to calculate dynamic label width
 const calculateLabelWidth = (pdf: any, labels: string[], fontSize: number = 10): number => {
   pdf.setFontSize(fontSize);
@@ -426,8 +442,8 @@ const generateResponsivePDF = async (order: any, bankData: any, language: string
   pdf.text(productName, margin + 3, currentY + 5);
   pdf.text(`${order.liters} ${t.liters}`, margin + 80, currentY + 5);
   // FIXED: Changed from .toFixed(3) to .toFixed(2) for proper currency formatting
-  pdf.text(`${t.currency}${order.price_per_liter.toFixed(2)}`, margin + 115, currentY + 5);
-  pdf.text(`${t.currency}${(order.liters * order.price_per_liter).toFixed(2)}`, margin + 150, currentY + 5);
+  pdf.text(`${getCurrencySymbol(order.currency || 'EUR')}${order.price_per_liter.toFixed(2)}`, margin + 115, currentY + 5);
+  pdf.text(`${getCurrencySymbol(order.currency || 'EUR')}${(order.liters * order.price_per_liter).toFixed(2)}`, margin + 150, currentY + 5);
   
   currentY += 8;
 
@@ -435,8 +451,8 @@ const generateResponsivePDF = async (order: any, bankData: any, language: string
   if (order.delivery_fee > 0) {
     pdf.text(t.deliveryFee, margin + 3, currentY + 5);
     pdf.text('1', margin + 80, currentY + 5);
-    pdf.text(`${t.currency}${order.delivery_fee.toFixed(2)}`, margin + 115, currentY + 5);
-    pdf.text(`${t.currency}${order.delivery_fee.toFixed(2)}`, margin + 150, currentY + 5);
+    pdf.text(`${getCurrencySymbol(order.currency || 'EUR')}${order.delivery_fee.toFixed(2)}`, margin + 115, currentY + 5);
+    pdf.text(`${getCurrencySymbol(order.currency || 'EUR')}${order.delivery_fee.toFixed(2)}`, margin + 150, currentY + 5);
     currentY += 8;
   }
 
@@ -467,11 +483,11 @@ const generateResponsivePDF = async (order: any, bankData: any, language: string
   
   let totalsY = currentY + 5;
   pdf.text(`${t.subtotal}:`, totalsStartX + 3, totalsY);
-  pdf.text(`${t.currency}${totalWithoutVat.toFixed(2)}`, totalsStartX + totalsWidth - 3, totalsY, { align: 'right' });
+  pdf.text(`${getCurrencySymbol(order.currency || 'EUR')}${totalWithoutVat.toFixed(2)}`, totalsStartX + totalsWidth - 3, totalsY, { align: 'right' });
   totalsY += 4;
   
   pdf.text(`${t.vat} (${vatRate}%):`, totalsStartX + 3, totalsY);
-  pdf.text(`${t.currency}${vatAmount.toFixed(2)}`, totalsStartX + totalsWidth - 3, totalsY, { align: 'right' });
+  pdf.text(`${getCurrencySymbol(order.currency || 'EUR')}${vatAmount.toFixed(2)}`, totalsStartX + totalsWidth - 3, totalsY, { align: 'right' });
   totalsY += 5;
   
   // Add separator line
@@ -483,7 +499,7 @@ const generateResponsivePDF = async (order: any, bankData: any, language: string
   pdf.setFontSize(12);
   pdf.setFont('helvetica', 'bold');
   pdf.text(`${t.grandTotal || t.totalAmount}:`, totalsStartX + 3, totalsY + 3);
-  pdf.text(`${t.currency}${totalAmount.toFixed(2)}`, totalsStartX + totalsWidth - 3, totalsY + 3, { align: 'right' });
+  pdf.text(`${getCurrencySymbol(order.currency || 'EUR')}${totalAmount.toFixed(2)}`, totalsStartX + totalsWidth - 3, totalsY + 3, { align: 'right' });
 
   currentY += 35; // Space after totals
 

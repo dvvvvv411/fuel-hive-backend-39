@@ -8,6 +8,31 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
+// Currency utility functions
+const getCurrencySymbol = (currency: string): string => {
+  switch (currency?.toUpperCase()) {
+    case 'EUR':
+      return '€';
+    case 'PLN':
+      return 'zł';
+    case 'USD':
+      return '$';
+    case 'GBP':
+      return '£';
+    default:
+      return '€';
+  }
+};
+
+const formatCurrency = (amount: number, currency: string = 'EUR'): string => {
+  const symbol = getCurrencySymbol(currency);
+  return new Intl.NumberFormat('de-DE', {
+    style: 'decimal',
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  }).format(amount) + ' ' + symbol;
+};
+
 interface EmailRequest {
   order_id: string;
   include_invoice: boolean;
@@ -117,20 +142,20 @@ const generateConfirmationEmailTemplate = (order: any, language: string = 'de') 
                             <td style="padding: 8px 0; color: #6b7280; font-size: 15px; font-weight: 600;">${t.quantity}</td>
                             <td style="padding: 8px 0; color: #111827; font-size: 15px; font-weight: 700;">${order.liters} ${t.liters}</td>
                           </tr>
-                          <tr>
-                            <td style="padding: 8px 0; color: #6b7280; font-size: 15px; font-weight: 600;">${t.pricePerLiter}</td>
-                            <td style="padding: 8px 0; color: #111827; font-size: 15px; font-weight: 700;">€${order.price_per_liter.toFixed(2)}</td>
-                          </tr>
-                          ${order.delivery_fee > 0 ? `
-                          <tr>
-                            <td style="padding: 8px 0; color: #6b7280; font-size: 15px; font-weight: 600;">${t.deliveryFee}</td>
-                            <td style="padding: 8px 0; color: #111827; font-size: 15px; font-weight: 700;">€${order.delivery_fee.toFixed(2)}</td>
-                          </tr>
-                          ` : ''}
-                          <tr style="border-top: 2px solid ${accentColor};">
-                            <td style="padding: 16px 0 8px 0; color: ${accentColor}; font-size: 18px; font-weight: 700;">${t.totalAmount}</td>
-                            <td style="padding: 16px 0 8px 0; color: ${accentColor}; font-size: 18px; font-weight: 700;">€${order.total_amount.toFixed(2)}</td>
-                          </tr>
+                           <tr>
+                             <td style="padding: 8px 0; color: #6b7280; font-size: 15px; font-weight: 600;">${t.pricePerLiter}</td>
+                             <td style="padding: 8px 0; color: #111827; font-size: 15px; font-weight: 700;">${formatCurrency(order.price_per_liter, order.currency || 'EUR')}</td>
+                           </tr>
+                           ${order.delivery_fee > 0 ? `
+                           <tr>
+                             <td style="padding: 8px 0; color: #6b7280; font-size: 15px; font-weight: 600;">${t.deliveryFee}</td>
+                             <td style="padding: 8px 0; color: #111827; font-size: 15px; font-weight: 700;">${formatCurrency(order.delivery_fee, order.currency || 'EUR')}</td>
+                           </tr>
+                           ` : ''}
+                           <tr style="border-top: 2px solid ${accentColor};">
+                             <td style="padding: 16px 0 8px 0; color: ${accentColor}; font-size: 18px; font-weight: 700;">${t.totalAmount}</td>
+                             <td style="padding: 16px 0 8px 0; color: ${accentColor}; font-size: 18px; font-weight: 700;">${formatCurrency(order.total_amount, order.currency || 'EUR')}</td>
+                           </tr>
                         </table>
                       </td>
                     </tr>
@@ -285,11 +310,11 @@ const generateInvoiceEmailTemplate = (order: any, bankData: any, language: strin
                         </h3>
                          <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
                            <tr>
-                             <td style="padding: 8px 0; color: #1e40af; font-size: 15px; font-weight: 600; width: 35%;">${t.invoiceAmount}</td>
-                             <td style="padding: 8px 0; color: #1e3a8a; font-size: 18px; font-weight: 700;">€${depositPercentage 
-                               ? (order.total_amount * (depositPercentage / 100)).toFixed(2) + ` (${depositPercentage}% Anzahlung)`
-                               : order.total_amount.toFixed(2)}</td>
-                           </tr>
+                              <td style="padding: 8px 0; color: #1e40af; font-size: 15px; font-weight: 600; width: 35%;">${t.invoiceAmount}</td>
+                              <td style="padding: 8px 0; color: #1e3a8a; font-size: 18px; font-weight: 700;">${formatCurrency(depositPercentage 
+                                ? (order.total_amount * (depositPercentage / 100)) 
+                                : order.total_amount, order.currency || 'EUR')}${depositPercentage ? ` (${depositPercentage}% Anzahlung)` : ''}</td>
+                            </tr>
                           <tr>
                             <td style="padding: 8px 0; color: #1e40af; font-size: 15px; font-weight: 600;">${t.recipient}</td>
                             <td style="padding: 8px 0; color: #1e3a8a; font-size: 15px; font-weight: 700;">${recipientName}</td>
@@ -347,10 +372,10 @@ const generateInvoiceEmailTemplate = (order: any, bankData: any, language: strin
                             <td style="padding: 8px 0; color: #6b7280; font-size: 15px; font-weight: 600;">${t.quantity}</td>
                             <td style="padding: 8px 0; color: #111827; font-size: 15px; font-weight: 700;">${order.liters} ${t.liters}</td>
                           </tr>
-                          <tr style="border-top: 2px solid ${accentColor};">
-                            <td style="padding: 16px 0 8px 0; color: ${accentColor}; font-size: 18px; font-weight: 700;">${t.invoiceAmount}</td>
-                            <td style="padding: 16px 0 8px 0; color: ${accentColor}; font-size: 18px; font-weight: 700;">€${order.total_amount.toFixed(2)}</td>
-                          </tr>
+                           <tr style="border-top: 2px solid ${accentColor};">
+                             <td style="padding: 16px 0 8px 0; color: ${accentColor}; font-size: 18px; font-weight: 700;">${t.invoiceAmount}</td>
+                             <td style="padding: 16px 0 8px 0; color: ${accentColor}; font-size: 18px; font-weight: 700;">${formatCurrency(order.total_amount, order.currency || 'EUR')}</td>
+                           </tr>
                         </table>
                       </td>
                     </tr>
