@@ -197,6 +197,7 @@ export type Database = {
           billing_postcode: string | null
           billing_street: string | null
           created_at: string
+          currency: string
           customer_address: string | null
           customer_email: string
           customer_name: string
@@ -208,6 +209,8 @@ export type Database = {
           delivery_phone: string | null
           delivery_postcode: string
           delivery_street: string
+          eur_amount: number | null
+          exchange_rate: number | null
           hidden: boolean
           id: string
           invoice_date: string | null
@@ -241,6 +244,7 @@ export type Database = {
           billing_postcode?: string | null
           billing_street?: string | null
           created_at?: string
+          currency?: string
           customer_address?: string | null
           customer_email: string
           customer_name: string
@@ -252,6 +256,8 @@ export type Database = {
           delivery_phone?: string | null
           delivery_postcode: string
           delivery_street: string
+          eur_amount?: number | null
+          exchange_rate?: number | null
           hidden?: boolean
           id?: string
           invoice_date?: string | null
@@ -285,6 +291,7 @@ export type Database = {
           billing_postcode?: string | null
           billing_street?: string | null
           created_at?: string
+          currency?: string
           customer_address?: string | null
           customer_email?: string
           customer_name?: string
@@ -296,6 +303,8 @@ export type Database = {
           delivery_phone?: string | null
           delivery_postcode?: string
           delivery_street?: string
+          eur_amount?: number | null
+          exchange_rate?: number | null
           hidden?: boolean
           id?: string
           invoice_date?: string | null
