@@ -576,7 +576,7 @@ export const translations: Record<string, InvoiceTranslations> = {
     pricePerLiter: 'Cena za litr',
     deliveryFee: 'Opłata za dostawę',
     dueDays: '14 dni',
-    currency: '€',
+    currency: 'zł',
     phone: 'Telefon',
     email: 'Email',
     website: 'Strona internetowa',
