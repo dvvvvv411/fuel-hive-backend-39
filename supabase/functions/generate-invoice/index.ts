@@ -127,13 +127,23 @@ const processShopLogo = async (logoUrl: string): Promise<{ format: string; base6
   }
 };
 
-// Currency utility functions for PDF (uses text symbols for font compatibility)
+// PDF font selection based on language for character compatibility
+const getPDFFont = (language: string): string => {
+  switch (language?.toLowerCase()) {
+    case 'pl':
+      return 'times'; // Times font has better Polish character support
+    default:
+      return 'helvetica'; // Default for German and other languages
+  }
+};
+
+// Currency utility functions
 const getCurrencySymbol = (currency: string): string => {
   switch (currency?.toUpperCase()) {
     case 'EUR':
       return '€';
     case 'PLN':
-      return 'PLN'; // Use text instead of symbol for PDF font compatibility
+      return 'zł'; // Reverted back to symbol, using proper font now
     case 'USD':
       return '$';
     case 'GBP':
@@ -144,9 +154,9 @@ const getCurrencySymbol = (currency: string): string => {
 };
 
 // Helper function to calculate dynamic label width
-const calculateLabelWidth = (pdf: any, labels: string[], fontSize: number = 10): number => {
+const calculateLabelWidth = (pdf: any, labels: string[], fontSize: number = 10, language: string = 'de'): number => {
   pdf.setFontSize(fontSize);
-  pdf.setFont('helvetica', 'bold');
+  pdf.setFont(getPDFFont(language), 'bold');
   
   let maxWidth = 0;
   labels.forEach(label => {
@@ -165,13 +175,13 @@ const calculateLabelWidth = (pdf: any, labels: string[], fontSize: number = 10):
 };
 
 // Helper function to calculate column widths for footer
-const calculateFooterColumnWidths = (pdf: any, t: any, pageWidth: number, margin: number): number[] => {
+const calculateFooterColumnWidths = (pdf: any, t: any, pageWidth: number, margin: number, language: string = 'de'): number[] => {
   const totalWidth = pageWidth - (2 * margin);
   const baseColumnWidth = totalWidth / 4;
   
   // Calculate required widths for each column based on content
   pdf.setFontSize(8);
-  pdf.setFont('helvetica', 'normal');
+  pdf.setFont(getPDFFont(language), 'normal');
   
   const column1Width = Math.max(baseColumnWidth, pdf.getTextWidth(t.businessData) + 5);
   const column2Width = Math.max(baseColumnWidth, pdf.getTextWidth(t.contact) + 5);
@@ -207,7 +217,7 @@ const generateResponsivePDF = async (order: any, bankData: any, language: string
   });
 
   // Set default font
-  pdf.setFont('helvetica');
+  pdf.setFont(getPDFFont(language));
 
   // Page dimensions
   const pageWidth = 210;
@@ -268,13 +278,13 @@ const generateResponsivePDF = async (order: any, bankData: any, language: string
   const companyStartX = margin + 46; // After logo space
   pdf.setTextColor(accentRgb.r, accentRgb.g, accentRgb.b);
   pdf.setFontSize(20);
-  pdf.setFont('helvetica', 'bold');
+  pdf.setFont(getPDFFont(language), 'bold');
   pdf.text(order.shops?.company_name || 'Company', companyStartX, currentY + 8);
 
   // Company address and details
   pdf.setTextColor(128, 128, 128); // Gray color
   pdf.setFontSize(9);
-  pdf.setFont('helvetica', 'normal');
+  pdf.setFont(getPDFFont(language), 'normal');
   let detailY = currentY + 15;
   
   pdf.text(order.shops?.company_address || '', companyStartX, detailY);
@@ -304,7 +314,7 @@ const generateResponsivePDF = async (order: any, bankData: any, language: string
   // INVOICE TITLE - matching template
   pdf.setTextColor(accentRgb.r, accentRgb.g, accentRgb.b);
   pdf.setFontSize(24);
-  pdf.setFont('helvetica', 'bold');
+  pdf.setFont(getPDFFont(language), 'bold');
   pdf.text(t.invoice, margin, currentY);
 
   currentY += 20; // Space after title
@@ -327,13 +337,13 @@ const generateResponsivePDF = async (order: any, bankData: any, language: string
   if (hasDifferentAddresses) {
     pdf.setTextColor(accentRgb.r, accentRgb.g, accentRgb.b);
     pdf.setFontSize(11);
-    pdf.setFont('helvetica', 'bold');
+    pdf.setFont(getPDFFont(language), 'bold');
     pdf.text(t.billingAddress, leftColumnX, leftY);
     leftY += 6;
     
     pdf.setTextColor(0, 0, 0);
     pdf.setFontSize(10);
-    pdf.setFont('helvetica', 'normal');
+    pdf.setFont(getPDFFont(language), 'normal');
     const billingName = `${order.billing_first_name || order.delivery_first_name} ${order.billing_last_name || order.delivery_last_name}`;
     pdf.text(billingName, leftColumnX, leftY);
     leftY += 4;
@@ -346,18 +356,18 @@ const generateResponsivePDF = async (order: any, bankData: any, language: string
   // Delivery Address
   pdf.setTextColor(accentRgb.r, accentRgb.g, accentRgb.b);
   pdf.setFontSize(11);
-  pdf.setFont('helvetica', 'bold');
+  pdf.setFont(getPDFFont(language), 'bold');
   pdf.text(hasDifferentAddresses ? t.deliveryAddress : '', leftColumnX, leftY);
   leftY += hasDifferentAddresses ? 6 : 0;
   
   pdf.setTextColor(0, 0, 0);
   pdf.setFontSize(10);
-  pdf.setFont('helvetica', 'bold');
+  pdf.setFont(getPDFFont(language), 'bold');
   const customerName = order.customer_name || `${order.delivery_first_name} ${order.delivery_last_name}`;
   pdf.text(customerName, leftColumnX, leftY);
   leftY += 4;
   
-  pdf.setFont('helvetica', 'normal');
+  pdf.setFont(getPDFFont(language), 'normal');
   pdf.text(order.delivery_street, leftColumnX, leftY);
   leftY += 4;
   pdf.text(`${order.delivery_postcode} ${order.delivery_city}`, leftColumnX, leftY);
@@ -385,24 +395,24 @@ const generateResponsivePDF = async (order: any, bankData: any, language: string
     t.orderNumber || 'Order Number',
     t.orderDate || 'Order Date'
   ];
-  const invoiceLabelWidth = calculateLabelWidth(pdf, invoiceLabels, 10);
+  const invoiceLabelWidth = calculateLabelWidth(pdf, invoiceLabels, 10, language);
 
   // Invoice details with dynamic spacing
-  pdf.setFont('helvetica', 'bold');
+  pdf.setFont(getPDFFont(language), 'bold');
   pdf.text(`${t.invoiceDate}:`, rightColumnX, rightY);
-  pdf.setFont('helvetica', 'normal');
+  pdf.setFont(getPDFFont(language), 'normal');
   pdf.text(formattedDate, rightColumnX + invoiceLabelWidth, rightY);
   rightY += 5;
 
-  pdf.setFont('helvetica', 'bold');
+  pdf.setFont(getPDFFont(language), 'bold');
   pdf.text(`${t.orderNumber || 'Order Number'}:`, rightColumnX, rightY);
-  pdf.setFont('helvetica', 'normal');
+  pdf.setFont(getPDFFont(language), 'normal');
   pdf.text(orderNumberForInvoice, rightColumnX + invoiceLabelWidth, rightY);
   rightY += 5;
 
-  pdf.setFont('helvetica', 'bold');
+  pdf.setFont(getPDFFont(language), 'bold');
   pdf.text(`${t.orderDate || 'Order Date'}:`, rightColumnX, rightY);
-  pdf.setFont('helvetica', 'normal');
+  pdf.setFont(getPDFFont(language), 'normal');
   const orderDate = new Date(order.created_at);
   pdf.text(orderDate.toLocaleDateString(language === 'en' ? 'en-US' : 'de-DE'), rightColumnX + invoiceLabelWidth, rightY);
 
@@ -419,7 +429,7 @@ const generateResponsivePDF = async (order: any, bankData: any, language: string
   // Table header text
   pdf.setTextColor(255, 255, 255); // White text
   pdf.setFontSize(10);
-  pdf.setFont('helvetica', 'normal');
+  pdf.setFont(getPDFFont(language), 'normal');
   pdf.text(t.description, margin + 3, tableStartY + 8);
   pdf.text(t.quantity, margin + 80, tableStartY + 8);
   pdf.text(t.unitPrice, margin + 115, tableStartY + 8);
@@ -434,7 +444,7 @@ const generateResponsivePDF = async (order: any, bankData: any, language: string
   
   pdf.setTextColor(0, 0, 0);
   pdf.setFontSize(10);
-  pdf.setFont('helvetica', 'normal');
+  pdf.setFont(getPDFFont(language), 'normal');
   
   const translatedProduct = t.products[order.product] || order.product;
   const productName = translatedProduct === 'heating_oil' ? t.heatingOilDelivery || 'Heating Oil Delivery' : translatedProduct;
@@ -479,7 +489,7 @@ const generateResponsivePDF = async (order: any, bankData: any, language: string
   // Totals text
   pdf.setTextColor(0, 0, 0);
   pdf.setFontSize(10);
-  pdf.setFont('helvetica', 'normal');
+  pdf.setFont(getPDFFont(language), 'normal');
   
   let totalsY = currentY + 5;
   pdf.text(`${t.subtotal}:`, totalsStartX + 3, totalsY);
@@ -497,7 +507,7 @@ const generateResponsivePDF = async (order: any, bankData: any, language: string
   // Grand total
   pdf.setTextColor(accentRgb.r, accentRgb.g, accentRgb.b);
   pdf.setFontSize(12);
-  pdf.setFont('helvetica', 'bold');
+  pdf.setFont(getPDFFont(language), 'bold');
   pdf.text(`${t.grandTotal || t.totalAmount}:`, totalsStartX + 3, totalsY + 3);
   pdf.text(`${getCurrencySymbol(order.currency || 'EUR')}${totalAmount.toFixed(2)}`, totalsStartX + totalsWidth - 3, totalsY + 3, { align: 'right' });
 
@@ -511,7 +521,7 @@ const generateResponsivePDF = async (order: any, bankData: any, language: string
     
     pdf.setTextColor(255, 255, 255);
     pdf.setFontSize(12);
-    pdf.setFont('helvetica', 'bold');
+    pdf.setFont(getPDFFont(language), 'bold');
     pdf.text(t.paymentDetails, margin + 3, currentY + 8);
     
     // Card content
@@ -521,7 +531,7 @@ const generateResponsivePDF = async (order: any, bankData: any, language: string
     
     pdf.setTextColor(0, 0, 0);
     pdf.setFontSize(10);
-    pdf.setFont('helvetica', 'normal');
+    pdf.setFont(getPDFFont(language), 'normal');
     
     // Calculate dynamic label width for payment details
     const paymentLabels = [
@@ -530,34 +540,34 @@ const generateResponsivePDF = async (order: any, bankData: any, language: string
       t.bic || 'BIC',
       t.paymentReference
     ];
-    const paymentLabelWidth = calculateLabelWidth(pdf, paymentLabels, 10);
+    const paymentLabelWidth = calculateLabelWidth(pdf, paymentLabels, 10, language);
     
     let paymentY = cardContentY + 6;
     
-    pdf.setFont('helvetica', 'bold');
+    pdf.setFont(getPDFFont(language), 'bold');
     pdf.text(`${t.accountHolder}:`, margin + 3, paymentY);
-    pdf.setFont('helvetica', 'normal');
+    pdf.setFont(getPDFFont(language), 'normal');
     const accountHolder = bankData.use_anyname ? order.shops?.company_name : bankData.account_holder;
     pdf.text(accountHolder || '', margin + 3 + paymentLabelWidth, paymentY);
     paymentY += 4;
     
-    pdf.setFont('helvetica', 'bold');
+    pdf.setFont(getPDFFont(language), 'bold');
     pdf.text(`${t.iban}:`, margin + 3, paymentY);
-    pdf.setFont('helvetica', 'normal');
+    pdf.setFont(getPDFFont(language), 'normal');
     pdf.text(formatIBAN(bankData.iban || ''), margin + 3 + paymentLabelWidth, paymentY);
     paymentY += 4;
     
     if (bankData.bic) {
-      pdf.setFont('helvetica', 'bold');
+      pdf.setFont(getPDFFont(language), 'bold');
       pdf.text(`${t.bic}:`, margin + 3, paymentY);
-      pdf.setFont('helvetica', 'normal');
+      pdf.setFont(getPDFFont(language), 'normal');
       pdf.text(bankData.bic, margin + 3 + paymentLabelWidth, paymentY);
       paymentY += 4;
     }
     
-    pdf.setFont('helvetica', 'bold');
+    pdf.setFont(getPDFFont(language), 'bold');
     pdf.text(`${t.paymentReference}:`, margin + 3, paymentY);
-    pdf.setFont('helvetica', 'normal');
+    pdf.setFont(getPDFFont(language), 'normal');
     pdf.text(orderNumberForInvoice, margin + 3 + paymentLabelWidth, paymentY);
     
     currentY += 37; // Move past payment card
@@ -576,10 +586,10 @@ const generateResponsivePDF = async (order: any, bankData: any, language: string
       
       pdf.setTextColor(133, 77, 14); // Dark yellow text
       pdf.setFontSize(10);
-      pdf.setFont('helvetica', 'bold');
+      pdf.setFont(getPDFFont(language), 'bold');
       pdf.text('Zahlungshinweis:', margin + 3, currentY + 6);
       
-      pdf.setFont('helvetica', 'normal');
+      pdf.setFont(getPDFFont(language), 'normal');
       // Split text to fit within the box
       const maxWidth = tableWidth - 6;
       const lines = pdf.splitTextToSize(depositNote, maxWidth);
@@ -606,7 +616,7 @@ const generateResponsivePDF = async (order: any, bankData: any, language: string
   pdf.rect(0, footerStartY, pageWidth, pageHeight - footerStartY, 'F');
   
   // Calculate dynamic column widths
-  const columnWidths = calculateFooterColumnWidths(pdf, t, pageWidth, margin);
+  const columnWidths = calculateFooterColumnWidths(pdf, t, pageWidth, margin, language);
   
   pdf.setTextColor(0, 0, 0);
   pdf.setFontSize(8);
@@ -614,9 +624,9 @@ const generateResponsivePDF = async (order: any, bankData: any, language: string
   let footerY = footerStartY + 8;
   
   // Column 1: Company name and address
-  pdf.setFont('helvetica', 'bold');
+  pdf.setFont(getPDFFont(language), 'bold');
   pdf.text(order.shops?.company_name || '', margin, footerY);
-  pdf.setFont('helvetica', 'normal');
+  pdf.setFont(getPDFFont(language), 'normal');
   footerY += 4;
   pdf.text(order.shops?.company_address || '', margin, footerY);
   footerY += 3;
@@ -624,9 +634,9 @@ const generateResponsivePDF = async (order: any, bankData: any, language: string
   
   // Column 2: Contact information
   footerY = footerStartY + 8;
-  pdf.setFont('helvetica', 'bold');
+  pdf.setFont(getPDFFont(language), 'bold');
   pdf.text(t.contact, margin + columnWidths[0], footerY);
-  pdf.setFont('helvetica', 'normal');
+  pdf.setFont(getPDFFont(language), 'normal');
   footerY += 4;
   if (order.shops?.company_phone) {
     pdf.text(order.shops.company_phone, margin + columnWidths[0], footerY);
@@ -640,10 +650,10 @@ const generateResponsivePDF = async (order: any, bankData: any, language: string
   
   // Column 3: Bank information
   footerY = footerStartY + 8;
-  pdf.setFont('helvetica', 'bold');
+  pdf.setFont(getPDFFont(language), 'bold');
   pdf.text(t.bankInformation, margin + columnWidths[0] + columnWidths[1], footerY);
   if (bankData) {
-    pdf.setFont('helvetica', 'normal');
+    pdf.setFont(getPDFFont(language), 'normal');
     footerY += 4;
     const footerAccountHolder = bankData.use_anyname ? order.shops?.company_name : bankData.account_holder;
     pdf.text(footerAccountHolder || '', margin + columnWidths[0] + columnWidths[1], footerY);
@@ -657,9 +667,9 @@ const generateResponsivePDF = async (order: any, bankData: any, language: string
   
   // Column 4: Business owner and VAT ID
   footerY = footerStartY + 8;
-  pdf.setFont('helvetica', 'bold');
+  pdf.setFont(getPDFFont(language), 'bold');
   pdf.text(t.businessData, margin + columnWidths[0] + columnWidths[1] + columnWidths[2], footerY);
-  pdf.setFont('helvetica', 'normal');
+  pdf.setFont(getPDFFont(language), 'normal');
   footerY += 4;
   if (order.shops?.business_owner) {
     pdf.text(order.shops.business_owner, margin + columnWidths[0] + columnWidths[1] + columnWidths[2], footerY);
