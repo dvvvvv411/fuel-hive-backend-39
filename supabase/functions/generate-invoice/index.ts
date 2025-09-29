@@ -127,13 +127,13 @@ const processShopLogo = async (logoUrl: string): Promise<{ format: string; base6
   }
 };
 
-// Currency utility functions
+// Currency utility functions for PDF (uses text symbols for font compatibility)
 const getCurrencySymbol = (currency: string): string => {
   switch (currency?.toUpperCase()) {
     case 'EUR':
       return '€';
     case 'PLN':
-      return 'zł';
+      return 'PLN'; // Use text instead of symbol for PDF font compatibility
     case 'USD':
       return '$';
     case 'GBP':
