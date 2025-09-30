@@ -59,7 +59,10 @@ export function BankAccountPerformance() {
 
       if (ordersError) throw ordersError;
 
-      const totalRevenue = orders?.reduce((sum, order) => sum + Number(order.total_amount || 0), 0) || 0;
+      const totalRevenue = orders?.reduce((sum, order) => {
+        const eurAmount = order.eur_amount || (order.currency === 'EUR' ? order.total_amount : 0);
+        return sum + Number(eurAmount || 0);
+      }, 0) || 0;
 
       const bankAccountStats: BankAccountStats[] = bankAccounts?.map(account => {
         // Find shops using this bank account as their default
@@ -76,10 +79,16 @@ export function BankAccountPerformance() {
         const todayOrders = accountOrders.filter(order => 
           order.created_at?.startsWith(today)
         );
-        const todayRevenue = todayOrders.reduce((sum, order) => sum + Number(order.total_amount || 0), 0);
+        const todayRevenue = todayOrders.reduce((sum, order) => {
+          const eurAmount = order.eur_amount || (order.currency === 'EUR' ? order.total_amount : 0);
+          return sum + Number(eurAmount || 0);
+        }, 0);
         
         // Total data
-        const accountTotalRevenue = accountOrders.reduce((sum, order) => sum + Number(order.total_amount || 0), 0);
+        const accountTotalRevenue = accountOrders.reduce((sum, order) => {
+          const eurAmount = order.eur_amount || (order.currency === 'EUR' ? order.total_amount : 0);
+          return sum + Number(eurAmount || 0);
+        }, 0);
         
         // Market share
         const marketShare = totalRevenue > 0 ? (accountTotalRevenue / totalRevenue) * 100 : 0;

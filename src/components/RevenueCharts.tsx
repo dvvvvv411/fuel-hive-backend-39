@@ -87,7 +87,8 @@ export function RevenueCharts() {
         const orderDate = order.created_at?.split('T')[0];
         if (orderDate && dailyRevenueMap.has(orderDate)) {
           const data = dailyRevenueMap.get(orderDate)!;
-          data.revenue += Number(order.total_amount || 0);
+          const eurAmount = order.eur_amount || (order.currency === 'EUR' ? order.total_amount : 0);
+          data.revenue += Number(eurAmount || 0);
           data.orders += 1;
         }
       });
@@ -120,7 +121,10 @@ export function RevenueCharts() {
 
       const shopPerformanceData: ShopPerformanceData[] = shops?.map((shop, index) => {
         const shopOrders = filteredOrders.filter(order => order.shop_id === shop.id);
-        const revenue = shopOrders.reduce((sum, order) => sum + Number(order.total_amount || 0), 0);
+        const revenue = shopOrders.reduce((sum, order) => {
+          const eurAmount = order.eur_amount || (order.currency === 'EUR' ? order.total_amount : 0);
+          return sum + Number(eurAmount || 0);
+        }, 0);
         
         const colors = ['#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6', '#06B6D4', '#84CC16', '#F97316'];
         
@@ -144,10 +148,22 @@ export function RevenueCharts() {
         return orderDate >= fourteenDaysAgo && orderDate < sevenDaysAgo;
       }) || [];
 
-      const todayRevenue = todayOrders.reduce((sum, order) => sum + Number(order.total_amount || 0), 0);
-      const yesterdayRevenue = yesterdayOrders.reduce((sum, order) => sum + Number(order.total_amount || 0), 0);
-      const weekRevenue = weekOrders.reduce((sum, order) => sum + Number(order.total_amount || 0), 0);
-      const lastWeekRevenue = lastWeekOrders.reduce((sum, order) => sum + Number(order.total_amount || 0), 0);
+      const todayRevenue = todayOrders.reduce((sum, order) => {
+        const eurAmount = order.eur_amount || (order.currency === 'EUR' ? order.total_amount : 0);
+        return sum + Number(eurAmount || 0);
+      }, 0);
+      const yesterdayRevenue = yesterdayOrders.reduce((sum, order) => {
+        const eurAmount = order.eur_amount || (order.currency === 'EUR' ? order.total_amount : 0);
+        return sum + Number(eurAmount || 0);
+      }, 0);
+      const weekRevenue = weekOrders.reduce((sum, order) => {
+        const eurAmount = order.eur_amount || (order.currency === 'EUR' ? order.total_amount : 0);
+        return sum + Number(eurAmount || 0);
+      }, 0);
+      const lastWeekRevenue = lastWeekOrders.reduce((sum, order) => {
+        const eurAmount = order.eur_amount || (order.currency === 'EUR' ? order.total_amount : 0);
+        return sum + Number(eurAmount || 0);
+      }, 0);
 
       // Find best and worst days
       const sortedDays = dailyRevenueData.sort((a, b) => b.revenue - a.revenue);
