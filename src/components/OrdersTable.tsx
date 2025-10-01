@@ -177,7 +177,7 @@ export function OrdersTable() {
 
       // Apply filters
       if (searchTerm) {
-        query = query.or(`order_number.ilike.%${searchTerm}%,customer_name.ilike.%${searchTerm}%,customer_email.ilike.%${searchTerm}%`);
+        query = query.or(`order_number.ilike.%${searchTerm}%,customer_name.ilike.%${searchTerm}%,customer_email.ilike.%${searchTerm}%,billing_company_name.ilike.%${searchTerm}%,delivery_company_name.ilike.%${searchTerm}%`);
       }
       
       if (selectedShops.length > 0) {
@@ -880,9 +880,14 @@ export function OrdersTable() {
                           </div>
                         </TableCell>
                         <TableCell>
-                          <div>
+                          <div className="space-y-0.5">
+                            {(order.billing_company_name || order.delivery_company_name) && (
+                              <div className="font-semibold text-primary">
+                                {order.billing_company_name || order.delivery_company_name}
+                              </div>
+                            )}
                             <div className="font-medium">{order.customer_name}</div>
-                            <div className="text-sm text-gray-500">{order.customer_email}</div>
+                            <div className="text-sm text-muted-foreground">{order.customer_email}</div>
                           </div>
                         </TableCell>
                         <TableCell>
