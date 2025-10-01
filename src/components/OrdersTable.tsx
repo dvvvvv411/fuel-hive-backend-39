@@ -43,11 +43,13 @@ interface Order {
   delivery_first_name: string;
   delivery_last_name: string;
   delivery_phone: string | null;
+  delivery_company_name: string | null;
   billing_first_name: string | null;
   billing_last_name: string | null;
   billing_street: string | null;
   billing_postcode: string | null;
   billing_city: string | null;
+  billing_company_name: string | null;
   use_same_address: boolean;
   invoice_number: string | null;
   invoice_pdf_generated: boolean;

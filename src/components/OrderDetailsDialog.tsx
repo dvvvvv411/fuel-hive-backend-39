@@ -49,11 +49,13 @@ interface Order {
   delivery_postcode: string;
   delivery_city: string;
   delivery_phone: string | null;
+  delivery_company_name: string | null;
   billing_first_name: string | null;
   billing_last_name: string | null;
   billing_street: string | null;
   billing_postcode: string | null;
   billing_city: string | null;
+  billing_company_name: string | null;
   use_same_address: boolean;
   invoice_number: string | null;
   invoice_pdf_generated: boolean;
@@ -492,6 +494,11 @@ export function OrderDetailsDialog({ order, open, onOpenChange, onOrderUpdate }:
               </CardHeader>
               <CardContent>
                 <div className="space-y-2">
+                  {order.delivery_company_name && (
+                    <div className="font-semibold text-primary">
+                      {order.delivery_company_name}
+                    </div>
+                  )}
                   <div className="font-medium">
                     {order.delivery_first_name} {order.delivery_last_name}
                   </div>
@@ -520,6 +527,11 @@ export function OrderDetailsDialog({ order, open, onOpenChange, onOrderUpdate }:
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-2">
+                    {order.billing_company_name && (
+                      <div className="font-semibold text-primary">
+                        {order.billing_company_name}
+                      </div>
+                    )}
                     <div className="font-medium">
                       {order.billing_first_name} {order.billing_last_name}
                     </div>

@@ -18,12 +18,14 @@ interface DirectOrderRequest {
   delivery_postcode: string;
   delivery_city: string;
   delivery_phone?: string;
+  delivery_company_name?: string;
   use_same_address: boolean;
   billing_first_name?: string;
   billing_last_name?: string;
   billing_street?: string;
   billing_postcode?: string;
   billing_city?: string;
+  billing_company_name?: string;
   product: string;
   liters: number;
   price_per_liter: number;
@@ -39,9 +41,11 @@ interface TokenOrderRequest {
   delivery_street: string;
   delivery_postal_code: string;
   delivery_city: string;
+  delivery_company_name?: string;
   billing_street?: string;
   billing_postal_code?: string;
   billing_city?: string;
+  billing_company_name?: string;
   payment_method_id: string;
   terms_accepted: boolean;
 }
@@ -247,12 +251,14 @@ const handler = async (req: Request): Promise<Response> => {
         delivery_postcode: requestData.delivery_postal_code,
         delivery_city: requestData.delivery_city,
         delivery_phone: requestData.customer_phone,
+        delivery_company_name: requestData.delivery_company_name,
         use_same_address: !isDifferentBillingAddress,
         billing_first_name: isDifferentBillingAddress ? billingFirstName : undefined,
         billing_last_name: isDifferentBillingAddress ? billingLastName : undefined,
         billing_street: isDifferentBillingAddress ? requestData.billing_street : undefined,
         billing_postcode: isDifferentBillingAddress ? requestData.billing_postal_code : undefined,
         billing_city: isDifferentBillingAddress ? requestData.billing_city : undefined,
+        billing_company_name: isDifferentBillingAddress ? requestData.billing_company_name : undefined,
         product: tokenData.product,
         liters: tokenData.liters,
         price_per_liter: tokenData.price_per_liter,
@@ -326,12 +332,14 @@ const handler = async (req: Request): Promise<Response> => {
         delivery_postcode: orderData.delivery_postcode,
         delivery_city: orderData.delivery_city,
         delivery_phone: orderData.delivery_phone,
+        delivery_company_name: orderData.delivery_company_name,
         use_same_address: orderData.use_same_address,
         billing_first_name: orderData.billing_first_name,
         billing_last_name: orderData.billing_last_name,
         billing_street: orderData.billing_street,
         billing_postcode: orderData.billing_postcode,
         billing_city: orderData.billing_city,
+        billing_company_name: orderData.billing_company_name,
         product: orderData.product,
         liters: orderData.liters,
         price_per_liter: orderData.price_per_liter,

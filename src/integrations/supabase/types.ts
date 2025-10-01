@@ -192,6 +192,7 @@ export type Database = {
           bank_details_shown: boolean
           base_price: number
           billing_city: string | null
+          billing_company_name: string | null
           billing_first_name: string | null
           billing_last_name: string | null
           billing_postcode: string | null
@@ -203,6 +204,7 @@ export type Database = {
           customer_name: string
           customer_phone: string | null
           delivery_city: string
+          delivery_company_name: string | null
           delivery_fee: number
           delivery_first_name: string
           delivery_last_name: string
@@ -239,6 +241,7 @@ export type Database = {
           bank_details_shown?: boolean
           base_price: number
           billing_city?: string | null
+          billing_company_name?: string | null
           billing_first_name?: string | null
           billing_last_name?: string | null
           billing_postcode?: string | null
@@ -250,6 +253,7 @@ export type Database = {
           customer_name: string
           customer_phone?: string | null
           delivery_city: string
+          delivery_company_name?: string | null
           delivery_fee?: number
           delivery_first_name: string
           delivery_last_name: string
@@ -286,6 +290,7 @@ export type Database = {
           bank_details_shown?: boolean
           base_price?: number
           billing_city?: string | null
+          billing_company_name?: string | null
           billing_first_name?: string | null
           billing_last_name?: string | null
           billing_postcode?: string | null
@@ -297,6 +302,7 @@ export type Database = {
           customer_name?: string
           customer_phone?: string | null
           delivery_city?: string
+          delivery_company_name?: string | null
           delivery_fee?: number
           delivery_first_name?: string
           delivery_last_name?: string

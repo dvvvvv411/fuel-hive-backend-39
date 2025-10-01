@@ -327,50 +327,78 @@ const generateResponsivePDF = async (order: any, bankData: any, language: string
   // LEFT COLUMN - Addresses
   let leftY = startY;
   
-  // Check if we need separate billing address
+  // Check if we need separate delivery address
   const hasDifferentAddresses = order.billing_street && 
     (order.billing_street !== order.delivery_street || 
      order.billing_city !== order.delivery_city ||
      order.billing_postcode !== order.delivery_postcode);
 
-  // Billing Address (if different)
+  // MAIN ADDRESS: Billing Address (Rechnungsadresse)
+  pdf.setTextColor(accentRgb.r, accentRgb.g, accentRgb.b);
+  pdf.setFontSize(11);
+  pdf.setFont(getPDFFont(language), 'bold');
+  // Only show "Rechnungsadresse" label if there's a separate delivery address
+  if (hasDifferentAddresses) {
+    pdf.text(t.billingAddress, leftColumnX, leftY);
+    leftY += 6;
+  }
+  
+  pdf.setTextColor(0, 0, 0);
+  pdf.setFontSize(10);
+  
+  // Show billing company name if available
+  if (order.billing_company_name) {
+    pdf.setFont(getPDFFont(language), 'bold');
+    pdf.text(order.billing_company_name, leftColumnX, leftY);
+    leftY += 4;
+  }
+  
+  // Show billing person name
+  pdf.setFont(getPDFFont(language), 'bold');
+  const billingName = `${order.billing_first_name || order.delivery_first_name} ${order.billing_last_name || order.delivery_last_name}`;
+  pdf.text(billingName, leftColumnX, leftY);
+  leftY += 4;
+  
+  // Show billing address
+  pdf.setFont(getPDFFont(language), 'normal');
+  const billingStreet = order.billing_street || order.delivery_street;
+  const billingPostcode = order.billing_postcode || order.delivery_postcode;
+  const billingCity = order.billing_city || order.delivery_city;
+  pdf.text(billingStreet, leftColumnX, leftY);
+  leftY += 4;
+  pdf.text(`${billingPostcode} ${billingCity}`, leftColumnX, leftY);
+  leftY += 8;
+  
+  // DELIVERY ADDRESS (only if different from billing)
   if (hasDifferentAddresses) {
     pdf.setTextColor(accentRgb.r, accentRgb.g, accentRgb.b);
     pdf.setFontSize(11);
     pdf.setFont(getPDFFont(language), 'bold');
-    pdf.text(t.billingAddress, leftColumnX, leftY);
+    pdf.text(t.deliveryAddress, leftColumnX, leftY);
     leftY += 6;
     
     pdf.setTextColor(0, 0, 0);
     pdf.setFontSize(10);
+    
+    // Show delivery company name if available
+    if (order.delivery_company_name) {
+      pdf.setFont(getPDFFont(language), 'bold');
+      pdf.text(order.delivery_company_name, leftColumnX, leftY);
+      leftY += 4;
+    }
+    
+    // Show delivery person name
+    pdf.setFont(getPDFFont(language), 'bold');
+    const deliveryName = `${order.delivery_first_name} ${order.delivery_last_name}`;
+    pdf.text(deliveryName, leftColumnX, leftY);
+    leftY += 4;
+    
+    // Show delivery address
     pdf.setFont(getPDFFont(language), 'normal');
-    const billingName = `${order.billing_first_name || order.delivery_first_name} ${order.billing_last_name || order.delivery_last_name}`;
-    pdf.text(billingName, leftColumnX, leftY);
+    pdf.text(order.delivery_street, leftColumnX, leftY);
     leftY += 4;
-    pdf.text(order.billing_street || '', leftColumnX, leftY);
-    leftY += 4;
-    pdf.text(`${order.billing_postcode || ''} ${order.billing_city || ''}`, leftColumnX, leftY);
-    leftY += 8;
+    pdf.text(`${order.delivery_postcode} ${order.delivery_city}`, leftColumnX, leftY);
   }
-  
-  // Delivery Address
-  pdf.setTextColor(accentRgb.r, accentRgb.g, accentRgb.b);
-  pdf.setFontSize(11);
-  pdf.setFont(getPDFFont(language), 'bold');
-  pdf.text(hasDifferentAddresses ? t.deliveryAddress : '', leftColumnX, leftY);
-  leftY += hasDifferentAddresses ? 6 : 0;
-  
-  pdf.setTextColor(0, 0, 0);
-  pdf.setFontSize(10);
-  pdf.setFont(getPDFFont(language), 'bold');
-  const customerName = order.customer_name || `${order.delivery_first_name} ${order.delivery_last_name}`;
-  pdf.text(customerName, leftColumnX, leftY);
-  leftY += 4;
-  
-  pdf.setFont(getPDFFont(language), 'normal');
-  pdf.text(order.delivery_street, leftColumnX, leftY);
-  leftY += 4;
-  pdf.text(`${order.delivery_postcode} ${order.delivery_city}`, leftColumnX, leftY);
 
   // RIGHT COLUMN - Invoice details with dynamic label width
   let rightY = startY;
