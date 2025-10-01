@@ -547,7 +547,8 @@ const generateResponsivePDF = async (order: any, bankData: any, language: string
     pdf.setFont(getPDFFont(language), 'bold');
     pdf.text(`${t.accountHolder}:`, margin + 3, paymentY);
     pdf.setFont(getPDFFont(language), 'normal');
-    const accountHolder = bankData.use_anyname ? order.shops?.company_name : bankData.account_holder;
+    const shopName = (order.shops?.name || 'Heizöl-Service').trim();
+    const accountHolder = bankData.use_anyname ? shopName : bankData.account_holder;
     pdf.text(accountHolder || '', margin + 3 + paymentLabelWidth, paymentY);
     paymentY += 4;
     
