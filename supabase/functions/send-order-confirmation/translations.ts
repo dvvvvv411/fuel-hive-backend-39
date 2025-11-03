@@ -57,6 +57,11 @@ export interface EmailTranslations {
   products: {
     [key: string]: string;
   };
+  
+  // Manager thank you section
+  managerThanks: string;
+  managerSignature: string;
+  managerTitle: string;
 }
 
 const translations: { [key: string]: EmailTranslations } = {
@@ -114,7 +119,11 @@ const translations: { [key: string]: EmailTranslations } = {
       'heating_oil_premium': 'Heizöl Premium',
       'heating_oil_bio': 'Heizöl Bio',
       'standard_heizoel': 'Standard Heizöl'
-    }
+    },
+    
+    managerThanks: 'Ich möchte mich persönlich für Ihr Vertrauen bedanken!',
+    managerSignature: 'Mit freundlichen Grüßen',
+    managerTitle: 'Geschäftsführer'
   },
   
   en: {
@@ -171,7 +180,11 @@ const translations: { [key: string]: EmailTranslations } = {
       'heating_oil_premium': 'Premium Heating Oil',
       'heating_oil_bio': 'Bio Heating Oil',
       'standard_heizoel': 'Standard Heating Oil'
-    }
+    },
+    
+    managerThanks: 'I would like to personally thank you for your trust!',
+    managerSignature: 'Kind regards',
+    managerTitle: 'Managing Director'
   },
   
   fr: {
@@ -228,7 +241,11 @@ const translations: { [key: string]: EmailTranslations } = {
       'heating_oil_premium': 'Fioul premium',
       'heating_oil_bio': 'Bio fioul',
       'standard_heizoel': 'Fioul standard'
-    }
+    },
+    
+    managerThanks: 'Je voudrais vous remercier personnellement pour votre confiance !',
+    managerSignature: 'Cordialement',
+    managerTitle: 'Directeur Général'
   },
   
   it: {
@@ -285,7 +302,11 @@ const translations: { [key: string]: EmailTranslations } = {
       'heating_oil_premium': 'Gasolio premium',
       'heating_oil_bio': 'Bio gasolio',
       'standard_heizoel': 'Gasolio standard'
-    }
+    },
+    
+    managerThanks: 'Vorrei ringraziarla personalmente per la sua fiducia!',
+    managerSignature: 'Cordiali saluti',
+    managerTitle: 'Amministratore Delegato'
   },
   
   es: {
@@ -342,7 +363,11 @@ const translations: { [key: string]: EmailTranslations } = {
       'heating_oil_premium': 'Gasóleo premium',
       'heating_oil_bio': 'Bio gasóleo',
       'standard_heizoel': 'Gasóleo estándar'
-    }
+    },
+    
+    managerThanks: '¡Quisiera agradecerle personalmente por su confianza!',
+    managerSignature: 'Saludos cordiales',
+    managerTitle: 'Director General'
   },
   
   pl: {
@@ -399,7 +424,11 @@ const translations: { [key: string]: EmailTranslations } = {
       'heating_oil_premium': 'Olej opałowy premium',
       'heating_oil_bio': 'Bio olej opałowy',
       'standard_heizoel': 'Olej opałowy standardowy'
-    }
+    },
+    
+    managerThanks: 'Chciałbym osobiście podziękować za zaufanie!',
+    managerSignature: 'Z poważaniem',
+    managerTitle: 'Dyrektor Generalny'
   },
   
   nl: {
@@ -456,7 +485,11 @@ const translations: { [key: string]: EmailTranslations } = {
       'heating_oil_premium': 'Premium stookolie',
       'heating_oil_bio': 'Bio stookolie',
       'standard_heizoel': 'Standaard stookolie'
-    }
+    },
+    
+    managerThanks: 'Ik wil u persoonlijk bedanken voor uw vertrouwen!',
+    managerSignature: 'Met vriendelijke groet',
+    managerTitle: 'Directeur'
   }
 };
 

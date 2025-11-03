@@ -418,6 +418,22 @@ export function EmailPreview({ selectedShop, language, sampleData, totalAmount, 
                     </table>
                     ` : ''}
 
+                    ${bankData ? `
+                    <!-- Personal Thanks from Account Holder -->
+                    <div style="margin: 40px 0 32px 0; padding: 30px; background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%); border-radius: 12px; border: 2px solid #10b981; border-left: 6px solid #10b981;">
+                      <p style="margin: 0 0 20px 0; color: #065f46; font-size: 17px; line-height: 1.6; font-style: italic; text-align: center;">
+                        "${t.managerThanks}"
+                      </p>
+                      <div style="margin-top: 24px; padding-top: 20px; border-top: 2px solid #10b981;">
+                        <p style="margin: 0; color: #065f46; font-size: 16px; line-height: 1.8; text-align: left;">
+                          ${t.managerSignature}<br>
+                          <strong style="color: #047857; font-size: 18px;">${bankData.account_holder}</strong><br>
+                          <span style="color: #059669; font-size: 14px; font-style: italic;">${t.managerTitle}</span>
+                        </p>
+                      </div>
+                    </div>
+                    ` : ''}
+
                     <p style="margin: 0 0 16px 0; color: #374151; font-size: 16px; line-height: 1.6;">
                       ${t.contactText} ${selectedShop.company_email}.
                     </p>

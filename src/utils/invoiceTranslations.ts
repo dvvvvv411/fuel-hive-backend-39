@@ -67,6 +67,10 @@ export interface InvoiceTranslations {
   postalCode: string;
   city: string;
   incVat: string;
+  // Manager thank you section
+  managerThanks: string;
+  managerSignature: string;
+  managerTitle: string;
 }
 
 export const translations: Record<string, InvoiceTranslations> = {
@@ -136,7 +140,10 @@ export const translations: Record<string, InvoiceTranslations> = {
     streetNumber: 'Straße und Hausnummer',
     postalCode: 'PLZ',
     city: 'Stadt',
-    incVat: 'inkl.'
+    incVat: 'inkl.',
+    managerThanks: 'Ich möchte mich persönlich für Ihr Vertrauen bedanken!',
+    managerSignature: 'Mit freundlichen Grüßen',
+    managerTitle: 'Geschäftsführer'
   },
   en: {
     invoice: 'Invoice',
@@ -204,7 +211,10 @@ export const translations: Record<string, InvoiceTranslations> = {
     streetNumber: 'Street and Number',
     postalCode: 'Postal Code',
     city: 'City',
-    incVat: 'incl.'
+    incVat: 'incl.',
+    managerThanks: 'I would like to personally thank you for your trust!',
+    managerSignature: 'Kind regards',
+    managerTitle: 'Managing Director'
   },
   fr: {
     invoice: 'Facture',
@@ -272,7 +282,10 @@ export const translations: Record<string, InvoiceTranslations> = {
     streetNumber: 'Rue et numéro',
     postalCode: 'Code postal',
     city: 'Ville',
-    incVat: 'TTC'
+    incVat: 'TTC',
+    managerThanks: 'Je voudrais vous remercier personnellement pour votre confiance !',
+    managerSignature: 'Cordialement',
+    managerTitle: 'Directeur Général'
   },
   es: {
     invoice: 'Factura',
@@ -340,7 +353,10 @@ export const translations: Record<string, InvoiceTranslations> = {
     streetNumber: 'Calle y número',
     postalCode: 'Código postal',
     city: 'Ciudad',
-    incVat: 'inc.'
+    incVat: 'inc.',
+    managerThanks: '¡Quisiera agradecerle personalmente por su confianza!',
+    managerSignature: 'Saludos cordiales',
+    managerTitle: 'Director General'
   },
   it: {
     invoice: 'Fattura',
@@ -408,7 +424,10 @@ export const translations: Record<string, InvoiceTranslations> = {
     streetNumber: 'Via e numero',
     postalCode: 'Codice postale',
     city: 'Città',
-    incVat: 'incl.'
+    incVat: 'incl.',
+    managerThanks: 'Vorrei ringraziarla personalmente per la sua fiducia!',
+    managerSignature: 'Cordiali saluti',
+    managerTitle: 'Amministratore Delegato'
   },
   nl: {
     invoice: 'Factuur',
@@ -476,7 +495,10 @@ export const translations: Record<string, InvoiceTranslations> = {
     streetNumber: 'Straat en huisnummer',
     postalCode: 'Postcode',
     city: 'Stad',
-    incVat: 'incl.'
+    incVat: 'incl.',
+    managerThanks: 'Ik wil u persoonlijk bedanken voor uw vertrouwen!',
+    managerSignature: 'Met vriendelijke groet',
+    managerTitle: 'Directeur'
   },
   pt: {
     invoice: 'Fatura',
@@ -544,7 +566,10 @@ export const translations: Record<string, InvoiceTranslations> = {
     streetNumber: 'Rua e número',
     postalCode: 'Código postal',
     city: 'Cidade',
-    incVat: 'inc.'
+    incVat: 'inc.',
+    managerThanks: 'Gostaria de agradecer pessoalmente pela sua confiança!',
+    managerSignature: 'Cumprimentos',
+    managerTitle: 'Diretor Geral'
   },
   pl: {
     invoice: 'Faktura',
@@ -612,7 +637,10 @@ export const translations: Record<string, InvoiceTranslations> = {
     streetNumber: 'Ulica i numer',
     postalCode: 'Kod pocztowy',
     city: 'Miasto',
-    incVat: 'z VAT'
+    incVat: 'z VAT',
+    managerThanks: 'Chciałbym osobiście podziękować za zaufanie!',
+    managerSignature: 'Z poważaniem',
+    managerTitle: 'Dyrektor Generalny'
   },
   sv: {
     invoice: 'Faktura',
@@ -680,7 +708,10 @@ export const translations: Record<string, InvoiceTranslations> = {
     streetNumber: 'Gata och nummer',
     postalCode: 'Postnummer',
     city: 'Stad',
-    incVat: 'inkl.'
+    incVat: 'inkl.',
+    managerThanks: 'Jag vill personligen tacka dig för ditt förtroende!',
+    managerSignature: 'Med vänliga hälsningar',
+    managerTitle: 'Verkställande direktör'
   },
   da: {
     invoice: 'Faktura',
@@ -748,7 +779,10 @@ export const translations: Record<string, InvoiceTranslations> = {
     streetNumber: 'Gade og nummer',
     postalCode: 'Postnummer',
     city: 'By',
-    incVat: 'inkl.'
+    incVat: 'inkl.',
+    managerThanks: 'Jeg vil gerne personligt takke for din tillid!',
+    managerSignature: 'Med venlig hilsen',
+    managerTitle: 'Administrerende direktør'
   },
   no: {
     invoice: 'Faktura',
@@ -816,7 +850,10 @@ export const translations: Record<string, InvoiceTranslations> = {
     streetNumber: 'Gate og nummer',
     postalCode: 'Postnummer',
     city: 'By',
-    incVat: 'inkl.'
+    incVat: 'inkl.',
+    managerThanks: 'Jeg vil gjerne personlig takke for din tillit!',
+    managerSignature: 'Med vennlig hilsen',
+    managerTitle: 'Administrerende direktør'
   },
   fi: {
     invoice: 'Lasku',
@@ -884,7 +921,10 @@ export const translations: Record<string, InvoiceTranslations> = {
     streetNumber: 'Katu ja numero',
     postalCode: 'Postinumero',
     city: 'Kaupunki',
-    incVat: 'sis.'
+    incVat: 'sis.',
+    managerThanks: 'Haluan kiittää henkilökohtaisesti luottamuksestanne!',
+    managerSignature: 'Ystävällisin terveisin',
+    managerTitle: 'Toimitusjohtaja'
   }
 };
 
