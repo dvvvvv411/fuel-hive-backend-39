@@ -4,9 +4,10 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { supabase } from '@/integrations/supabase/client';
-import { FileText, Download } from 'lucide-react';
+import { FileText, Download, Mail } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { getInvoiceTranslations } from '@/utils/invoiceTranslations';
+import { EmailPreview } from './EmailPreview';
 
 interface Shop {
   id: string;
@@ -576,6 +577,24 @@ export function InvoicePreview() {
             </div>
 
           </div>
+        </CardContent>
+      </Card>
+
+      {/* Email Templates Preview */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Mail className="h-5 w-5" />
+            E-Mail Vorlagen
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <EmailPreview
+            selectedShop={selectedShop}
+            language={language}
+            sampleData={sampleData}
+            totalAmount={totalAmount}
+          />
         </CardContent>
       </Card>
     </div>
