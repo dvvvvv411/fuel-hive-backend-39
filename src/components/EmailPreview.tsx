@@ -79,6 +79,9 @@ const getEmailTranslations = (lang: string) => {
       paymentReference: 'Verwendungszweck',
       paymentNote: (invoiceNum: string, recipient: string) => 
         `Bitte überweisen Sie den Betrag unter Angabe der Rechnungsnummer "${invoiceNum}" an ${recipient}.`,
+      managerThanks: 'Ich möchte mich persönlich für Ihr Vertrauen bedanken!',
+      managerSignature: 'Mit freundlichen Grüßen',
+      managerTitle: 'Geschäftsführer',
       products: {
         heating_oil: 'Heizöl',
         diesel: 'Diesel',
@@ -113,6 +116,9 @@ const getEmailTranslations = (lang: string) => {
       paymentReference: 'Payment Reference',
       paymentNote: (invoiceNum: string, recipient: string) => 
         `Please transfer the amount using the invoice number "${invoiceNum}" to ${recipient}.`,
+      managerThanks: 'I would like to personally thank you for your trust!',
+      managerSignature: 'Kind regards',
+      managerTitle: 'Managing Director',
       products: {
         heating_oil: 'Heating Oil',
         diesel: 'Diesel',
@@ -147,6 +153,9 @@ const getEmailTranslations = (lang: string) => {
       paymentReference: 'Référence de paiement',
       paymentNote: (invoiceNum: string, recipient: string) => 
         `Veuillez virer le montant en indiquant le numéro de facture "${invoiceNum}" à ${recipient}.`,
+      managerThanks: 'Je tiens à vous remercier personnellement pour votre confiance!',
+      managerSignature: 'Cordialement',
+      managerTitle: 'Directeur Général',
       products: {
         heating_oil: 'Fioul',
         diesel: 'Diesel',
