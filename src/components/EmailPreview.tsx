@@ -39,6 +39,13 @@ interface EmailPreviewProps {
     deliveryCity: string;
   };
   totalAmount: number;
+  selectedBankAccount?: {
+    account_holder: string;
+    iban: string;
+    bic?: string;
+    bank_name?: string;
+    use_anyname?: boolean;
+  } | null;
 }
 
 // Translation helper (simplified version from edge function)
@@ -174,7 +181,7 @@ const interpolateString = (template: string, variables: Record<string, string>):
   return template.replace(/\{(\w+)\}/g, (_, key) => variables[key] || '');
 };
 
-export function EmailPreview({ selectedShop, language, sampleData, totalAmount }: EmailPreviewProps) {
+export function EmailPreview({ selectedShop, language, sampleData, totalAmount, selectedBankAccount }: EmailPreviewProps) {
   const t = getEmailTranslations(language);
   const shopName = selectedShop.company_name;
   const accentColor = selectedShop.accent_color || '#2563eb';
@@ -323,7 +330,8 @@ export function EmailPreview({ selectedShop, language, sampleData, totalAmount }
   }, [selectedShop, language, sampleData, totalAmount, t, accentColor, shopName, translatedProduct]);
 
   const generateInvoiceEmail = useMemo(() => {
-    const bankData = selectedShop.bank_accounts;
+    // Use selected bank account if available, otherwise fall back to shop's bank account
+    const bankData = selectedBankAccount || selectedShop.bank_accounts;
     const recipientName = bankData?.use_anyname ? shopName : (bankData?.account_holder || shopName);
     
     const subject = interpolateString(t.invoiceSubject, { shopName });
@@ -443,7 +451,7 @@ export function EmailPreview({ selectedShop, language, sampleData, totalAmount }
     `;
 
     return { subject, html };
-  }, [selectedShop, language, sampleData, totalAmount, t, accentColor, shopName, translatedProduct]);
+  }, [selectedShop, language, sampleData, totalAmount, t, accentColor, shopName, translatedProduct, selectedBankAccount]);
 
   return (
     <Tabs defaultValue="confirmation" className="w-full">

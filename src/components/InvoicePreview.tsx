@@ -59,11 +59,56 @@ export function InvoicePreview() {
   const [logoState, setLogoState] = useState<'loading' | 'loaded' | 'error' | 'none'>('none');
   const [logoRetryCount, setLogoRetryCount] = useState(0);
   const [logoUrl, setLogoUrl] = useState<string>('');
+  const [bankAccounts, setBankAccounts] = useState<any[]>([]);
+  const [selectedBankAccount, setSelectedBankAccount] = useState<any | null>(null);
   const { toast } = useToast();
 
   useEffect(() => {
     fetchShops();
+    fetchBankAccounts();
   }, []);
+
+  const fetchBankAccounts = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('bank_accounts')
+        .select('*')
+        .eq('active', true)
+        .eq('is_temporary', false)
+        .order('account_name');
+
+      if (error) {
+        console.error('Error fetching bank accounts:', error);
+        toast({
+          title: "Error",
+          description: "Failed to load bank accounts",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      if (data && data.length > 0) {
+        setBankAccounts(data);
+        setSelectedBankAccount(data[0]);
+      }
+    } catch (error) {
+      console.error('Error fetching bank accounts:', error);
+      toast({
+        title: "Error",
+        description: "Failed to load bank accounts",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const formatIBANShort = (iban: string): string => {
+    if (!iban) return '';
+    // Show first 8 and last 4 characters
+    if (iban.length > 12) {
+      return `${iban.slice(0, 8)}...${iban.slice(-4)}`;
+    }
+    return iban;
+  };
 
   // Reset logo state when shop changes
   useEffect(() => {
@@ -371,7 +416,29 @@ export function InvoicePreview() {
               </Select>
             </div>
 
-            <Button 
+            <div className="min-w-64">
+              <label className="block text-sm font-medium mb-2">Bank Account</label>
+              <Select 
+                value={selectedBankAccount?.id} 
+                onValueChange={(id) => {
+                  const account = bankAccounts.find(acc => acc.id === id);
+                  setSelectedBankAccount(account || null);
+                }}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select bank account" />
+                </SelectTrigger>
+                <SelectContent>
+                  {bankAccounts.map(account => (
+                    <SelectItem key={account.id} value={account.id}>
+                      {account.account_name} - {formatIBANShort(account.iban)} ({account.currency})
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <Button
               onClick={handleGeneratePDF}
               disabled={isGenerating}
               className="flex items-center gap-2"
@@ -589,12 +656,13 @@ export function InvoicePreview() {
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <EmailPreview
-            selectedShop={selectedShop}
-            language={language}
-            sampleData={sampleData}
-            totalAmount={totalAmount}
-          />
+        <EmailPreview 
+          selectedShop={selectedShop}
+          language={language}
+          sampleData={sampleData}
+          totalAmount={totalAmount}
+          selectedBankAccount={selectedBankAccount}
+        />
         </CardContent>
       </Card>
     </div>
