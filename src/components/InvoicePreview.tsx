@@ -637,7 +637,7 @@ export function InvoicePreview() {
                 {/* Column 4: Business owner and VAT ID */}
                 <div>
                   <h4 className="font-bold text-gray-800 mb-2">Geschäftsdaten</h4>
-                  {selectedShop.business_owner && <div>{selectedShop.business_owner}</div>}
+                  {selectedBankAccount?.account_holder && <div>{selectedBankAccount.account_holder}</div>}
                   {selectedShop.vat_number && <div>{selectedShop.vat_number}</div>}
                 </div>
               </div>
