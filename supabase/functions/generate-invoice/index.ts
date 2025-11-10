@@ -700,10 +700,11 @@ const generateResponsivePDF = async (order: any, bankData: any, language: string
   pdf.text(t.businessData, margin + columnWidths[0] + columnWidths[1] + columnWidths[2], footerY);
   pdf.setFont(getPDFFont(language), 'normal');
   footerY += 4;
-  if (order.shops?.business_owner) {
-    pdf.text(order.shops.business_owner, margin + columnWidths[0] + columnWidths[1] + columnWidths[2], footerY);
-    footerY += 3;
-  }
+    // Use account holder from bank account instead of business_owner
+    if (bankData?.account_holder) {
+      pdf.text(bankData.account_holder, margin + columnWidths[0] + columnWidths[1] + columnWidths[2], footerY);
+      footerY += 3;
+    }
   if (order.shops?.vat_number) {
     pdf.text(order.shops.vat_number, margin + columnWidths[0] + columnWidths[1] + columnWidths[2], footerY);
   }
