@@ -98,6 +98,7 @@ export function OrdersTable() {
   const [orders, setOrders] = useState<Order[]>([]);
   const [shops, setShops] = useState<Shop[]>([]);
   const [loading, setLoading] = useState(true);
+  const [currentUser, setCurrentUser] = useState<any>(null);
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const [showDetailsDialog, setShowDetailsDialog] = useState(false);
   const [showBankAccountDialog, setShowBankAccountDialog] = useState(false);
@@ -122,6 +123,13 @@ export function OrdersTable() {
     fetchShops();
     fetchOrders();
   }, [currentPage, searchTerm, selectedShops, selectedStatuses, dateFrom, dateTo, showHidden]);
+
+  useEffect(() => {
+    // Get current user
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      setCurrentUser(user);
+    });
+  }, []);
 
   const fetchShops = async () => {
     try {
@@ -308,6 +316,10 @@ export function OrdersTable() {
 
   const markAsExchanged = async (orderId: string) => {
     await updateOrderStatus(orderId, 'confirmed');
+  };
+
+  const markAsReady = async (orderId: string) => {
+    await updateOrderStatus(orderId, 'ready');
   };
 
   const generateInvoice = async (
@@ -537,6 +549,8 @@ export function OrdersTable() {
         return 'bg-green-100 text-green-800 border-green-200';
       case 'cancelled':
         return 'bg-red-100 text-red-800 border-red-200';
+      case 'ready':
+        return 'bg-cyan-100 text-cyan-800 border-cyan-200';
       default:
         return 'bg-gray-100 text-gray-800 border-gray-200';
     }
@@ -554,6 +568,8 @@ export function OrdersTable() {
         return 'Bezahlt';
       case 'cancelled':
         return 'Down';
+      case 'ready':
+        return 'Ready';
       default:
         return status;
     }
@@ -766,6 +782,7 @@ export function OrdersTable() {
                 <div className="p-2 space-y-2">
                   {[
                     { value: 'pending', label: 'Neu' },
+                    { value: 'ready', label: 'Ready' },
                     { value: 'invoice_sent', label: 'Rechnung versendet' },
                     { value: 'paid', label: 'Bezahlt' },
                     { value: 'confirmed', label: 'Bestätigt' },
@@ -957,6 +974,7 @@ export function OrdersTable() {
                             </SelectTrigger>
                             <SelectContent>
                               <SelectItem value="pending">Neu</SelectItem>
+                              <SelectItem value="ready">Ready</SelectItem>
                               <SelectItem value="invoice_sent">Rechnung versendet</SelectItem>
                               <SelectItem value="paid">Bezahlt</SelectItem>
                               <SelectItem value="confirmed">Bestätigt</SelectItem>
@@ -979,13 +997,26 @@ export function OrdersTable() {
                             
                             {order.status === 'pending' && !showHidden && (
                               <>
-                                <Button
-                                  size="sm"
-                                  onClick={() => handleInvoiceClick(order)}
-                                >
-                                  <FileText className="h-4 w-4 mr-1" />
-                                  Rechnung
-                                </Button>
+                                {/* Conditional rendering based on user */}
+                                {currentUser?.id === '3338709d-0620-4384-8705-f6b4e9bf8be6' ? (
+                                  // Ready Button for special user
+                                  <Button
+                                    size="sm"
+                                    onClick={() => markAsReady(order.id)}
+                                    className="bg-cyan-500 hover:bg-cyan-600 text-white"
+                                  >
+                                    Ready
+                                  </Button>
+                                ) : (
+                                  // Original Rechnung Button for all other users
+                                  <Button
+                                    size="sm"
+                                    onClick={() => handleInvoiceClick(order)}
+                                  >
+                                    <FileText className="h-4 w-4 mr-1" />
+                                    Rechnung
+                                  </Button>
+                                )}
                                 
                                 <Button
                                   variant="outline"
