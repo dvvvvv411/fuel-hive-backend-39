@@ -41,10 +41,11 @@ export function RevenueCharts() {
   const [trendData, setTrendData] = useState<TrendData | null>(null);
   const [loading, setLoading] = useState(true);
   const [timeFrame, setTimeFrame] = useState<TimeFrame>('week');
+  const [dailyChartView, setDailyChartView] = useState<'30days' | 'total'>('30days');
 
   useEffect(() => {
     fetchChartsData();
-  }, [timeFrame]);
+  }, [timeFrame, dailyChartView]);
 
   const fetchChartsData = async () => {
     try {
@@ -90,14 +91,25 @@ export function RevenueCharts() {
 
       if (shopsError) throw shopsError;
 
-      // Prepare daily revenue data (last 30 days)
+      // Prepare daily revenue data
       const dailyRevenueMap = new Map<string, { revenue: number; orders: number }>();
       
-      for (let i = 0; i < 30; i++) {
-        const date = new Date(thirtyDaysAgo);
-        date.setDate(date.getDate() + i);
-        const dateStr = date.toISOString().split('T')[0];
-        dailyRevenueMap.set(dateStr, { revenue: 0, orders: 0 });
+      if (dailyChartView === '30days') {
+        // Last 30 days
+        for (let i = 0; i < 30; i++) {
+          const date = new Date(thirtyDaysAgo);
+          date.setDate(date.getDate() + i);
+          const dateStr = date.toISOString().split('T')[0];
+          dailyRevenueMap.set(dateStr, { revenue: 0, orders: 0 });
+        }
+      } else {
+        // Total: All available data
+        orders?.forEach(order => {
+          const orderDate = order.created_at?.split('T')[0];
+          if (orderDate && !dailyRevenueMap.has(orderDate)) {
+            dailyRevenueMap.set(orderDate, { revenue: 0, orders: 0 });
+          }
+        });
       }
 
       orders?.forEach(order => {
@@ -110,12 +122,14 @@ export function RevenueCharts() {
         }
       });
 
-      const dailyRevenueData: DailyRevenueData[] = Array.from(dailyRevenueMap.entries()).map(([date, data]) => ({
-        date,
-        revenue: data.revenue,
-        orders: data.orders,
-        formattedDate: new Date(date).toLocaleDateString('de-DE', { month: 'short', day: 'numeric' })
-      }));
+      const dailyRevenueData: DailyRevenueData[] = Array.from(dailyRevenueMap.entries())
+        .sort((a, b) => a[0].localeCompare(b[0]))
+        .map(([date, data]) => ({
+          date,
+          revenue: data.revenue,
+          orders: data.orders,
+          formattedDate: new Date(date).toLocaleDateString('de-DE', { month: 'short', day: 'numeric' })
+        }));
 
       // Shop performance data based on timeframe
       const getTimeFrameFilter = (timeFrame: TimeFrame) => {
@@ -338,13 +352,33 @@ export function RevenueCharts() {
       {/* Daily Revenue Chart */}
       <Card className="bg-white shadow-sm border border-gray-200">
         <CardHeader>
-          <CardTitle className="text-lg font-semibold text-gray-900 flex items-center gap-2">
-            <TrendingUp className="h-5 w-5 text-blue-600" />
-            Täglicher Umsatz (Letzte 30 Tage)
-          </CardTitle>
-          <CardDescription>
-            Umsatzentwicklung mit Hover-Details für Datum, Umsatz und Bestellungen
-          </CardDescription>
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+            <div>
+              <CardTitle className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+                <TrendingUp className="h-5 w-5 text-blue-600" />
+                Täglicher Umsatz {dailyChartView === '30days' ? '(Letzte 30 Tage)' : '(Gesamter Zeitraum)'}
+              </CardTitle>
+              <CardDescription>
+                Umsatzentwicklung mit Hover-Details für Datum, Umsatz und Bestellungen
+              </CardDescription>
+            </div>
+            <div className="flex gap-2">
+              <Button
+                variant={dailyChartView === '30days' ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => setDailyChartView('30days')}
+              >
+                30 Tage
+              </Button>
+              <Button
+                variant={dailyChartView === 'total' ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => setDailyChartView('total')}
+              >
+                Gesamt
+              </Button>
+            </div>
+          </div>
         </CardHeader>
         <CardContent>
           <div className="h-80">
