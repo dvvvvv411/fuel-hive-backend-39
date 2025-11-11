@@ -166,7 +166,7 @@ export function RevenueCharts() {
       }, 0);
 
       // Find best and worst days
-      const sortedDays = dailyRevenueData.sort((a, b) => b.revenue - a.revenue);
+      const sortedDays = [...dailyRevenueData].sort((a, b) => b.revenue - a.revenue);
       const bestDay = sortedDays[0] || { date: '', revenue: 0 };
       const worstDay = sortedDays[sortedDays.length - 1] || { date: '', revenue: 0 };
 

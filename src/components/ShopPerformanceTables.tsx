@@ -5,8 +5,9 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { toast } from '@/hooks/use-toast';
-import { TrendingUp, TrendingDown, Edit, Store, Globe, Zap, Clock } from 'lucide-react';
+import { TrendingUp, TrendingDown, Edit, Store, Globe, Zap, Clock, ChevronDown, ChevronUp } from 'lucide-react';
 
 interface ShopPerformanceData {
   shopId: string;
@@ -36,6 +37,7 @@ export function ShopPerformanceTables() {
   const [todaySortDirection, setTodaySortDirection] = useState<'asc' | 'desc'>('desc');
   const [totalSortField, setTotalSortField] = useState<string>('totalRevenue');
   const [totalSortDirection, setTotalSortDirection] = useState<'asc' | 'desc'>('desc');
+  const [isTotalCollapsed, setIsTotalCollapsed] = useState(false);
 
   useEffect(() => {
     fetchShopPerformanceData();
@@ -268,7 +270,7 @@ export function ShopPerformanceTables() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {todayData.map((shop) => (
+                {todayData.filter(shop => shop.todayOrders > 0).map((shop) => (
                   <TableRow key={shop.shopId} className="hover:bg-gray-50">
                     <TableCell>
                       <div className="flex flex-col">
@@ -334,122 +336,135 @@ export function ShopPerformanceTables() {
 
       {/* Gesamt Performance */}
       <Card className="bg-white shadow-sm border border-gray-200">
-        <CardHeader>
-          <CardTitle className="text-lg font-semibold text-gray-900 flex items-center gap-2">
-            <Store className="h-5 w-5 text-green-600" />
-            Shop-Performance (Gesamt)
-          </CardTitle>
-          <CardDescription>
-            Gesamtleistung Ihrer Shops mit Marktanteil und Trend-Analyse
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="overflow-x-auto">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead 
-                    className="cursor-pointer hover:bg-gray-50 select-none"
-                    onClick={() => handleSort('shopName', 'total')}
-                  >
-                    Shop-Name {totalSortField === 'shopName' && (totalSortDirection === 'desc' ? '↓' : '↑')}
-                  </TableHead>
-                  <TableHead 
-                    className="cursor-pointer hover:bg-gray-50 select-none text-right"
-                    onClick={() => handleSort('totalOrders', 'total')}
-                  >
-                    Total Bestellungen {totalSortField === 'totalOrders' && (totalSortDirection === 'desc' ? '↓' : '↑')}
-                  </TableHead>
-                  <TableHead 
-                    className="cursor-pointer hover:bg-gray-50 select-none text-right"
-                    onClick={() => handleSort('totalRevenue', 'total')}
-                  >
-                    Total Umsatz {totalSortField === 'totalRevenue' && (totalSortDirection === 'desc' ? '↓' : '↑')}
-                  </TableHead>
-                  <TableHead 
-                    className="cursor-pointer hover:bg-gray-50 select-none text-right"
-                    onClick={() => handleSort('totalAvgOrder', 'total')}
-                  >
-                    Ø Bestellwert {totalSortField === 'totalAvgOrder' && (totalSortDirection === 'desc' ? '↓' : '↑')}
-                  </TableHead>
-                  <TableHead 
-                    className="cursor-pointer hover:bg-gray-50 select-none text-right"
-                    onClick={() => handleSort('revenuePercentage', 'total')}
-                  >
-                    Marktanteil {totalSortField === 'revenuePercentage' && (totalSortDirection === 'desc' ? '↓' : '↑')}
-                  </TableHead>
-                  <TableHead className="text-center">Best Day</TableHead>
-                  <TableHead 
-                    className="cursor-pointer hover:bg-gray-50 select-none text-center"
-                    onClick={() => handleSort('last7DaysTrend', 'total')}
-                  >
-                    7-Tage Trend {totalSortField === 'last7DaysTrend' && (totalSortDirection === 'desc' ? '↓' : '↑')}
-                  </TableHead>
-                  <TableHead className="text-center">Aktionen</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {totalData.map((shop) => (
-                  <TableRow key={shop.shopId} className="hover:bg-gray-50">
-                    <TableCell>
-                      <div className="flex flex-col">
-                        <div className="font-medium text-gray-900">{shop.shopName}</div>
-                        <div className="text-sm text-gray-500">{shop.companyName}</div>
-                      </div>
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <Badge className={getPerformanceColor(shop.totalOrders, 'orders')}>
-                        {shop.totalOrders}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <Badge className={getPerformanceColor(shop.totalRevenue, 'revenue')}>
-                        {formatCurrency(shop.totalRevenue)}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="text-right">
-                      {formatCurrency(shop.totalAvgOrder)}
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <div className="flex flex-col items-end">
-                        <span className="font-medium">{shop.revenuePercentage.toFixed(1)}%</span>
-                        <div className="w-16 bg-gray-200 rounded-full h-1 mt-1">
-                          <div 
-                            className="bg-blue-600 h-1 rounded-full" 
-                            style={{ width: `${Math.min(shop.revenuePercentage, 100)}%` }}
-                          ></div>
-                        </div>
-                      </div>
-                    </TableCell>
-                    <TableCell className="text-center">
-                      <div className="flex flex-col text-sm">
-                        <span className="font-medium">{formatDate(shop.bestDay)}</span>
-                        <span className="text-gray-500">{formatCurrency(shop.bestDayRevenue)}</span>
-                      </div>
-                    </TableCell>
-                    <TableCell className="text-center">
-                      <div className="flex items-center justify-center gap-1">
-                        {shop.last7DaysTrend >= 0 ? (
-                          <TrendingUp className="h-4 w-4 text-green-600" />
-                        ) : (
-                          <TrendingDown className="h-4 w-4 text-red-600" />
-                        )}
-                        <span className={`text-sm font-medium ${shop.last7DaysTrend >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                          {shop.last7DaysTrend >= 0 ? '+' : ''}{shop.last7DaysTrend.toFixed(1)}%
-                        </span>
-                      </div>
-                    </TableCell>
-                    <TableCell className="text-center">
-                      <Button variant="outline" size="sm" className="h-8 w-8 p-0">
-                        <Edit className="h-3 w-3" />
-                      </Button>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </div>
-        </CardContent>
+        <Collapsible open={!isTotalCollapsed} onOpenChange={() => setIsTotalCollapsed(!isTotalCollapsed)}>
+          <CardHeader>
+            <CollapsibleTrigger className="w-full">
+              <div className="flex items-center justify-between">
+                <div className="text-left">
+                  <CardTitle className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+                    <Store className="h-5 w-5 text-green-600" />
+                    Shop-Performance (Gesamt)
+                  </CardTitle>
+                  <CardDescription>
+                    Gesamtleistung Ihrer Shops mit Marktanteil und Trend-Analyse
+                  </CardDescription>
+                </div>
+                <Button variant="ghost" size="sm" className="ml-auto">
+                  {isTotalCollapsed ? <ChevronDown className="h-4 w-4" /> : <ChevronUp className="h-4 w-4" />}
+                </Button>
+              </div>
+            </CollapsibleTrigger>
+          </CardHeader>
+          <CollapsibleContent>
+            <CardContent>
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead 
+                        className="cursor-pointer hover:bg-gray-50 select-none"
+                        onClick={() => handleSort('shopName', 'total')}
+                      >
+                        Shop-Name {totalSortField === 'shopName' && (totalSortDirection === 'desc' ? '↓' : '↑')}
+                      </TableHead>
+                      <TableHead 
+                        className="cursor-pointer hover:bg-gray-50 select-none text-right"
+                        onClick={() => handleSort('totalOrders', 'total')}
+                      >
+                        Total Bestellungen {totalSortField === 'totalOrders' && (totalSortDirection === 'desc' ? '↓' : '↑')}
+                      </TableHead>
+                      <TableHead 
+                        className="cursor-pointer hover:bg-gray-50 select-none text-right"
+                        onClick={() => handleSort('totalRevenue', 'total')}
+                      >
+                        Total Umsatz {totalSortField === 'totalRevenue' && (totalSortDirection === 'desc' ? '↓' : '↑')}
+                      </TableHead>
+                      <TableHead 
+                        className="cursor-pointer hover:bg-gray-50 select-none text-right"
+                        onClick={() => handleSort('totalAvgOrder', 'total')}
+                      >
+                        Ø Bestellwert {totalSortField === 'totalAvgOrder' && (totalSortDirection === 'desc' ? '↓' : '↑')}
+                      </TableHead>
+                      <TableHead 
+                        className="cursor-pointer hover:bg-gray-50 select-none text-right"
+                        onClick={() => handleSort('revenuePercentage', 'total')}
+                      >
+                        Marktanteil {totalSortField === 'revenuePercentage' && (totalSortDirection === 'desc' ? '↓' : '↑')}
+                      </TableHead>
+                      <TableHead className="text-center">Best Day</TableHead>
+                      <TableHead 
+                        className="cursor-pointer hover:bg-gray-50 select-none text-center"
+                        onClick={() => handleSort('last7DaysTrend', 'total')}
+                      >
+                        7-Tage Trend {totalSortField === 'last7DaysTrend' && (totalSortDirection === 'desc' ? '↓' : '↑')}
+                      </TableHead>
+                      <TableHead className="text-center">Aktionen</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {totalData.map((shop) => (
+                      <TableRow key={shop.shopId} className="hover:bg-gray-50">
+                        <TableCell>
+                          <div className="flex flex-col">
+                            <div className="font-medium text-gray-900">{shop.shopName}</div>
+                            <div className="text-sm text-gray-500">{shop.companyName}</div>
+                          </div>
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <Badge className={getPerformanceColor(shop.totalOrders, 'orders')}>
+                            {shop.totalOrders}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <Badge className={getPerformanceColor(shop.totalRevenue, 'revenue')}>
+                            {formatCurrency(shop.totalRevenue)}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="text-right">
+                          {formatCurrency(shop.totalAvgOrder)}
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <div className="flex flex-col items-end">
+                            <span className="font-medium">{shop.revenuePercentage.toFixed(1)}%</span>
+                            <div className="w-16 bg-gray-200 rounded-full h-1 mt-1">
+                              <div 
+                                className="bg-blue-600 h-1 rounded-full" 
+                                style={{ width: `${Math.min(shop.revenuePercentage, 100)}%` }}
+                              ></div>
+                            </div>
+                          </div>
+                        </TableCell>
+                        <TableCell className="text-center">
+                          <div className="flex flex-col text-sm">
+                            <span className="font-medium">{formatDate(shop.bestDay)}</span>
+                            <span className="text-gray-500">{formatCurrency(shop.bestDayRevenue)}</span>
+                          </div>
+                        </TableCell>
+                        <TableCell className="text-center">
+                          <div className="flex items-center justify-center gap-1">
+                            {shop.last7DaysTrend >= 0 ? (
+                              <TrendingUp className="h-4 w-4 text-green-600" />
+                            ) : (
+                              <TrendingDown className="h-4 w-4 text-red-600" />
+                            )}
+                            <span className={`text-sm font-medium ${shop.last7DaysTrend >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                              {shop.last7DaysTrend >= 0 ? '+' : ''}{shop.last7DaysTrend.toFixed(1)}%
+                            </span>
+                          </div>
+                        </TableCell>
+                        <TableCell className="text-center">
+                          <Button variant="outline" size="sm" className="h-8 w-8 p-0">
+                            <Edit className="h-3 w-3" />
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            </CardContent>
+          </CollapsibleContent>
+        </Collapsible>
       </Card>
     </div>
   );
