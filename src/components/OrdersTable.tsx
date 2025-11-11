@@ -94,7 +94,11 @@ interface Shop {
   name: string;
 }
 
-export function OrdersTable() {
+interface OrdersTableProps {
+  initialStatusFilter?: string[];
+}
+
+export function OrdersTable({ initialStatusFilter = [] }: OrdersTableProps = {}) {
   const [orders, setOrders] = useState<Order[]>([]);
   const [shops, setShops] = useState<Shop[]>([]);
   const [loading, setLoading] = useState(true);
@@ -109,7 +113,7 @@ export function OrdersTable() {
   // Filter states - changed to arrays for multi-select
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedShops, setSelectedShops] = useState<string[]>([]);
-  const [selectedStatuses, setSelectedStatuses] = useState<string[]>([]);
+  const [selectedStatuses, setSelectedStatuses] = useState<string[]>(initialStatusFilter);
   const [dateFrom, setDateFrom] = useState('');
   const [dateTo, setDateTo] = useState('');
   const [showHidden, setShowHidden] = useState(false);
@@ -118,6 +122,13 @@ export function OrdersTable() {
   const [currentPage, setCurrentPage] = useState(1);
   const [totalCount, setTotalCount] = useState(0);
   const itemsPerPage = 20;
+
+  // Update filter when initialStatusFilter changes
+  useEffect(() => {
+    if (initialStatusFilter.length > 0) {
+      setSelectedStatuses(initialStatusFilter);
+    }
+  }, [initialStatusFilter]);
 
   useEffect(() => {
     fetchShops();

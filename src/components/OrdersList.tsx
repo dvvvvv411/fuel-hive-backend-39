@@ -1,24 +1,67 @@
-
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import { FileText, Plus } from 'lucide-react';
-import { toast } from '@/hooks/use-toast';
 import { OrdersTable } from './OrdersTable';
 
 export function OrdersList() {
+  const [currentUser, setCurrentUser] = useState<any>(null);
+  const [readyCount, setReadyCount] = useState(0);
+  const [statusFilter, setStatusFilter] = useState<string[]>([]);
+
+  // Get current user
+  useEffect(() => {
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      setCurrentUser(user);
+    });
+  }, []);
+
+  // Fetch ready orders count (only for special user)
+  useEffect(() => {
+    if (currentUser?.id === '70156cbe-8d83-4b7c-b421-3bbe6ca71298') {
+      fetchReadyCount();
+    }
+  }, [currentUser]);
+
+  const fetchReadyCount = async () => {
+    try {
+      const { count, error } = await supabase
+        .from('orders')
+        .select('*', { count: 'exact', head: true })
+        .eq('status', 'ready');
+
+      if (error) throw error;
+      setReadyCount(count || 0);
+    } catch (error) {
+      console.error('Error fetching ready count:', error);
+    }
+  };
+
+  const handleBadgeClick = () => {
+    setStatusFilter(['ready']);
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
-        <div>
-          <h2 className="text-2xl font-bold">Bestellungen</h2>
-          <p className="text-gray-600">Verwalten Sie alle Heizöl-Bestellungen</p>
+        <div className="flex items-center gap-3">
+          <div>
+            <h2 className="text-2xl font-bold">Bestellungen</h2>
+            <div className="flex items-center gap-2">
+              <p className="text-gray-600">Verwalten Sie alle Heizöl-Bestellungen</p>
+              {currentUser?.id === '70156cbe-8d83-4b7c-b421-3bbe6ca71298' && (
+                <Badge 
+                  onClick={handleBadgeClick}
+                  className="bg-cyan-500 hover:bg-cyan-600 text-white cursor-pointer"
+                >
+                  {readyCount}
+                </Badge>
+              )}
+            </div>
+          </div>
         </div>
       </div>
 
-      <OrdersTable />
+      <OrdersTable initialStatusFilter={statusFilter} />
     </div>
   );
 }
