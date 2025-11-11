@@ -37,7 +37,12 @@ export function OrdersList() {
   };
 
   const handleBadgeClick = () => {
-    setStatusFilter(['ready']);
+    // Toggle: Wenn Filter aktiv ist, dann zurücksetzen, sonst auf 'ready' setzen
+    if (statusFilter.length > 0) {
+      setStatusFilter([]);
+    } else {
+      setStatusFilter(['ready']);
+    }
   };
 
   return (
@@ -51,7 +56,11 @@ export function OrdersList() {
               {currentUser?.id === '70156cbe-8d83-4b7c-b421-3bbe6ca71298' && (
                 <Badge 
                   onClick={handleBadgeClick}
-                  className="bg-cyan-500 hover:bg-cyan-600 text-white cursor-pointer"
+                  className={`${
+                    statusFilter.includes('ready') 
+                      ? 'bg-cyan-700 hover:bg-cyan-800' 
+                      : 'bg-cyan-500 hover:bg-cyan-600'
+                  } text-white cursor-pointer transition-colors`}
                 >
                   {readyCount}
                 </Badge>
