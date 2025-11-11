@@ -55,19 +55,50 @@ export function ShopPerformanceTables() {
 
       if (shopsError) throw shopsError;
 
-      // Fetch all orders
-      const { data: orders, error: ordersError } = await supabase
-        .from('orders')
-        .select('*');
+      // Fetch ALL orders with pagination (no 1000 limit)
+      let orders: any[] = [];
+      let from = 0;
+      const batchSize = 1000;
+      let hasMore = true;
 
-      if (ordersError) throw ordersError;
+      while (hasMore) {
+        const { data: ordersBatch, error: ordersError } = await supabase
+          .from('orders')
+          .select('*')
+          .range(from, from + batchSize - 1);
 
-      // Fetch order tokens for conversion rate
-      const { data: tokens, error: tokensError } = await supabase
-        .from('order_tokens')
-        .select('*');
+        if (ordersError) throw ordersError;
+        
+        if (ordersBatch && ordersBatch.length > 0) {
+          orders = [...orders, ...ordersBatch];
+          from += batchSize;
+          hasMore = ordersBatch.length === batchSize;
+        } else {
+          hasMore = false;
+        }
+      }
 
-      if (tokensError) throw tokensError;
+      // Fetch ALL order tokens with pagination
+      let tokens: any[] = [];
+      from = 0;
+      hasMore = true;
+
+      while (hasMore) {
+        const { data: tokensBatch, error: tokensError } = await supabase
+          .from('order_tokens')
+          .select('*')
+          .range(from, from + batchSize - 1);
+
+        if (tokensError) throw tokensError;
+        
+        if (tokensBatch && tokensBatch.length > 0) {
+          tokens = [...tokens, ...tokensBatch];
+          from += batchSize;
+          hasMore = tokensBatch.length === batchSize;
+        } else {
+          hasMore = false;
+        }
+      }
 
       const totalRevenue = orders?.reduce((sum, order) => sum + Number(order.total_amount || 0), 0) || 0;
 
@@ -113,9 +144,9 @@ export function ShopPerformanceTables() {
           return acc;
         }, {} as Record<string, number>);
 
-        const bestDay = Object.entries(dailyRevenue).reduce((best, [date, revenue]) => {
+        const bestDay = Object.entries(dailyRevenue).reduce<{ date: string | null; revenue: number }>((best, [date, revenue]: [string, number]) => {
           return revenue > best.revenue ? { date, revenue } : best;
-        }, { date: null as string | null, revenue: 0 });
+        }, { date: null, revenue: 0 });
 
         return {
           shopId: shop.id,
