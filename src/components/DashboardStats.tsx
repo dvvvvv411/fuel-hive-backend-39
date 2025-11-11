@@ -42,25 +42,54 @@ export function DashboardStats() {
     try {
       const today = new Date().toISOString().split('T')[0];
       
-      // Fetch all orders
-      const { data: orders, error } = await supabase
-        .from('orders')
-        .select('*');
+      // Fetch ALL orders with pagination (no 1000 limit)
+      let allOrders: any[] = [];
+      let from = 0;
+      const batchSize = 1000;
+      let hasMore = true;
 
-      if (error) throw error;
+      while (hasMore) {
+        const { data: ordersBatch, error } = await supabase
+          .from('orders')
+          .select('*')
+          .range(from, from + batchSize - 1);
 
-      // Fetch order tokens
-      const { data: tokens, error: tokensError } = await supabase
-        .from('order_tokens')
-        .select('*');
+        if (error) throw error;
+        
+        if (ordersBatch && ordersBatch.length > 0) {
+          allOrders = [...allOrders, ...ordersBatch];
+          from += batchSize;
+          hasMore = ordersBatch.length === batchSize;
+        } else {
+          hasMore = false;
+        }
+      }
 
-      if (tokensError) throw tokensError;
+      // Fetch ALL order tokens with pagination
+      let allTokens: any[] = [];
+      from = 0;
+      hasMore = true;
 
-      const todayOrders = orders?.filter(order => 
+      while (hasMore) {
+        const { data: tokensBatch, error: tokensError } = await supabase
+          .from('order_tokens')
+          .select('*')
+          .range(from, from + batchSize - 1);
+
+        if (tokensError) throw tokensError;
+        
+        if (tokensBatch && tokensBatch.length > 0) {
+          allTokens = [...allTokens, ...tokensBatch];
+          from += batchSize;
+          hasMore = tokensBatch.length === batchSize;
+        } else {
+          hasMore = false;
+        }
+      }
+
+      const todayOrders = allOrders.filter(order => 
         order.created_at?.startsWith(today)
-      ) || [];
-
-      const allOrders = orders || [];
+      );
 
       // Calculate revenue in EUR (using eur_amount if available, otherwise total_amount for EUR orders)
       const todayRevenue = todayOrders.reduce((sum, order) => {
@@ -100,7 +129,7 @@ export function DashboardStats() {
         totalRevenue,
         todayOrders: todayOrders.length,
         totalOrders: allOrders.length,
-        tokensCreated: tokens?.length || 0,
+        tokensCreated: allTokens.length,
         ordersCompleted: allOrders.filter(order => order.status === 'confirmed' || order.status === 'paid').length,
         statusStats: {
           pending: {
