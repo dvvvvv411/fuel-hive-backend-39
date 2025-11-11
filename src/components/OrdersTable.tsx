@@ -125,9 +125,7 @@ export function OrdersTable({ initialStatusFilter = [] }: OrdersTableProps = {})
 
   // Update filter when initialStatusFilter changes
   useEffect(() => {
-    if (initialStatusFilter.length > 0) {
-      setSelectedStatuses(initialStatusFilter);
-    }
+    setSelectedStatuses(initialStatusFilter);
   }, [initialStatusFilter]);
 
   useEffect(() => {
