@@ -995,11 +995,11 @@ export function OrdersTable() {
                               <Eye className="h-4 w-4" />
                             </Button>
                             
-                            {order.status === 'pending' && !showHidden && (
+                            {(order.status === 'pending' || order.status === 'ready') && !showHidden && (
                               <>
-                                {/* Conditional rendering based on user */}
-                                {currentUser?.id === '3338709d-0620-4384-8705-f6b4e9bf8be6' ? (
-                                  // Ready Button for special user
+                                {/* Show Ready button only for special user AND pending status */}
+                                {currentUser?.id === '3338709d-0620-4384-8705-f6b4e9bf8be6' && order.status === 'pending' ? (
+                                  // Ready Button for special user at pending status
                                   <Button
                                     size="sm"
                                     onClick={() => markAsReady(order.id)}
@@ -1008,7 +1008,7 @@ export function OrdersTable() {
                                     Ready
                                   </Button>
                                 ) : (
-                                  // Original Rechnung Button for all other users
+                                  // Rechnung Button for all users at "ready" status or normal users at "pending" status
                                   <Button
                                     size="sm"
                                     onClick={() => handleInvoiceClick(order)}
