@@ -61,16 +61,33 @@ export function RevenueCharts() {
       const fourteenDaysAgo = new Date(today);
       fourteenDaysAgo.setDate(fourteenDaysAgo.getDate() - 14);
 
-      // Fetch orders and shops
-      const { data: orders, error: ordersError } = await supabase
-        .from('orders')
-        .select('*');
+      // Fetch ALL orders with pagination (no 1000 limit)
+      let orders: any[] = [];
+      let from = 0;
+      const batchSize = 1000;
+      let hasMore = true;
+
+      while (hasMore) {
+        const { data: ordersBatch, error: ordersError } = await supabase
+          .from('orders')
+          .select('*')
+          .range(from, from + batchSize - 1);
+
+        if (ordersError) throw ordersError;
+        
+        if (ordersBatch && ordersBatch.length > 0) {
+          orders = [...orders, ...ordersBatch];
+          from += batchSize;
+          hasMore = ordersBatch.length === batchSize;
+        } else {
+          hasMore = false;
+        }
+      }
 
       const { data: shops, error: shopsError } = await supabase
         .from('shops')
         .select('id, name');
 
-      if (ordersError) throw ordersError;
       if (shopsError) throw shopsError;
 
       // Prepare daily revenue data (last 30 days)
