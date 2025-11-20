@@ -7,6 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 import { BrandingFields } from './BrandingFields';
+import { QuickaddShopDialog, type QuickaddData } from './QuickaddShopDialog';
 
 interface ShopDialogProps {
   open: boolean;
@@ -18,6 +19,7 @@ interface ShopDialogProps {
 export function ShopDialog({ open, onOpenChange, onSuccess, shop }: ShopDialogProps) {
   const [loading, setLoading] = useState(false);
   const [logoUploading, setLogoUploading] = useState(false);
+  const [quickaddOpen, setQuickaddOpen] = useState(false);
   const [bankAccounts, setBankAccounts] = useState<any[]>([]);
   const [resendConfigs, setResendConfigs] = useState<any[]>([]);
   
@@ -148,6 +150,32 @@ export function ShopDialog({ open, onOpenChange, onSuccess, shop }: ShopDialogPr
     }
   }, [shop]);
 
+  const handleQuickaddConfirm = (data: QuickaddData) => {
+    setFormData(prev => ({
+      ...prev,
+      name: data.name,
+      company_name: data.company_name,
+      company_email: data.company_email,
+      company_phone: data.company_phone,
+      company_website: data.company_website,
+      company_address: data.company_address,
+      company_city: data.company_city,
+      company_postcode: data.company_postcode,
+      vat_number: data.vat_number,
+      business_owner: data.business_owner,
+      court_name: data.court_name,
+      registration_number: data.registration_number,
+      accent_color: data.accent_color,
+    }));
+    
+    setQuickaddOpen(false);
+    
+    toast({
+      title: 'Erfolg',
+      description: 'Daten wurden übernommen',
+    });
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
@@ -263,6 +291,18 @@ export function ShopDialog({ open, onOpenChange, onSuccess, shop }: ShopDialogPr
             {shop ? 'Shop bearbeiten' : 'Neuen Shop erstellen'}
           </DialogTitle>
         </DialogHeader>
+
+        {!shop && (
+          <div className="flex justify-end">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setQuickaddOpen(true)}
+            >
+              ⚡ Quickadd
+            </Button>
+          </div>
+        )}
 
         <form onSubmit={handleSubmit} className="space-y-6">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -588,6 +628,12 @@ export function ShopDialog({ open, onOpenChange, onSuccess, shop }: ShopDialogPr
           </div>
         </form>
       </DialogContent>
+      
+      <QuickaddShopDialog
+        open={quickaddOpen}
+        onOpenChange={setQuickaddOpen}
+        onConfirm={handleQuickaddConfirm}
+      />
     </Dialog>
   );
 }
