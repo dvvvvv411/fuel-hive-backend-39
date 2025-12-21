@@ -1,4 +1,6 @@
 import { useState, useEffect } from 'react';
+import { format } from 'date-fns';
+import { de } from 'date-fns/locale';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -7,8 +9,11 @@ import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/switch';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Checkbox } from '@/components/ui/checkbox';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Calendar } from '@/components/ui/calendar';
 import { toast } from '@/hooks/use-toast';
-import { Users, Store, RefreshCw } from 'lucide-react';
+import { Users, Store, RefreshCw, CalendarIcon, X } from 'lucide-react';
+import { cn } from '@/lib/utils';
 
 interface Profile {
   id: string;
@@ -19,6 +24,7 @@ interface Profile {
 interface UserRole {
   user_id: string;
   role: 'admin' | 'caller';
+  visible_from_date: string | null;
 }
 
 interface CallerShop {
@@ -59,7 +65,7 @@ export function EmployeeManagement() {
       // Fetch all user roles
       const { data: rolesData, error: rolesError } = await supabase
         .from('user_roles')
-        .select('user_id, role');
+        .select('user_id, role, visible_from_date');
 
       if (rolesError) throw rolesError;
 
@@ -106,6 +112,11 @@ export function EmployeeManagement() {
     return callerShops.filter(cs => cs.user_id === userId).map(cs => cs.shop_id);
   };
 
+  const getUserVisibleFromDate = (userId: string): string | null => {
+    const callerRole = userRoles.find(r => r.user_id === userId && r.role === 'caller');
+    return callerRole?.visible_from_date || null;
+  };
+
   const toggleCallerRole = async (userId: string) => {
     const currentRole = getUserRole(userId);
     
@@ -141,7 +152,7 @@ export function EmployeeManagement() {
 
         if (error) throw error;
 
-        setUserRoles(prev => [...prev, { user_id: userId, role: 'caller' }]);
+        setUserRoles(prev => [...prev, { user_id: userId, role: 'caller', visible_from_date: null }]);
 
         toast({
           title: 'Erfolg',
@@ -219,6 +230,39 @@ export function EmployeeManagement() {
     }
   };
 
+  const saveVisibleFromDate = async (userId: string, date: Date | null) => {
+    try {
+      const dateString = date ? format(date, 'yyyy-MM-dd') : null;
+      
+      const { error } = await supabase
+        .from('user_roles')
+        .update({ visible_from_date: dateString })
+        .eq('user_id', userId)
+        .eq('role', 'caller');
+
+      if (error) throw error;
+
+      // Update local state
+      setUserRoles(prev => prev.map(r => 
+        r.user_id === userId && r.role === 'caller' 
+          ? { ...r, visible_from_date: dateString } 
+          : r
+      ));
+
+      toast({
+        title: 'Erfolg',
+        description: date ? `Sichtbar ab ${format(date, 'dd.MM.yyyy')}` : 'Datum entfernt - alle Orders sichtbar',
+      });
+    } catch (error) {
+      console.error('Error saving visible from date:', error);
+      toast({
+        title: 'Fehler',
+        description: 'Datum konnte nicht gespeichert werden',
+        variant: 'destructive',
+      });
+    }
+  };
+
   const getRoleBadge = (role: 'admin' | 'caller' | null) => {
     switch (role) {
       case 'admin':
@@ -267,6 +311,7 @@ export function EmployeeManagement() {
                     <TableHead>E-Mail</TableHead>
                     <TableHead>Rolle</TableHead>
                     <TableHead>Shops</TableHead>
+                    <TableHead>Sichtbar ab</TableHead>
                     <TableHead>Caller-Rolle</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -275,6 +320,7 @@ export function EmployeeManagement() {
                     const role = getUserRole(profile.id);
                     const isCaller = role === 'caller';
                     const isAdmin = role === 'admin';
+                    const visibleFromDate = getUserVisibleFromDate(profile.id);
 
                     return (
                       <TableRow key={profile.id}>
@@ -295,7 +341,52 @@ export function EmployeeManagement() {
                               {getShopCount(profile.id)}
                             </Button>
                           ) : (
-                            <span className="text-gray-400">-</span>
+                            <span className="text-muted-foreground">-</span>
+                          )}
+                        </TableCell>
+                        <TableCell>
+                          {isCaller ? (
+                            <Popover>
+                              <PopoverTrigger asChild>
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  className={cn(
+                                    "justify-start text-left font-normal",
+                                    !visibleFromDate && "text-muted-foreground"
+                                  )}
+                                >
+                                  <CalendarIcon className="h-4 w-4 mr-2" />
+                                  {visibleFromDate 
+                                    ? format(new Date(visibleFromDate), 'dd.MM.yyyy')
+                                    : 'Alle Orders'
+                                  }
+                                </Button>
+                              </PopoverTrigger>
+                              <PopoverContent className="w-auto p-0" align="start">
+                                <div className="p-2 border-b flex justify-between items-center">
+                                  <span className="text-sm font-medium">Sichtbar ab</span>
+                                  {visibleFromDate && (
+                                    <Button 
+                                      variant="ghost" 
+                                      size="sm"
+                                      onClick={() => saveVisibleFromDate(profile.id, null)}
+                                    >
+                                      <X className="h-4 w-4" />
+                                    </Button>
+                                  )}
+                                </div>
+                                <Calendar
+                                  mode="single"
+                                  selected={visibleFromDate ? new Date(visibleFromDate) : undefined}
+                                  onSelect={(date) => saveVisibleFromDate(profile.id, date || null)}
+                                  locale={de}
+                                  className={cn("p-3 pointer-events-auto")}
+                                />
+                              </PopoverContent>
+                            </Popover>
+                          ) : (
+                            <span className="text-muted-foreground">-</span>
                           )}
                         </TableCell>
                         <TableCell>

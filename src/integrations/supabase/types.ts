@@ -609,18 +609,21 @@ export type Database = {
           id: string
           role: Database["public"]["Enums"]["app_role"]
           user_id: string
+          visible_from_date: string | null
         }
         Insert: {
           created_at?: string | null
           id?: string
           role: Database["public"]["Enums"]["app_role"]
           user_id: string
+          visible_from_date?: string | null
         }
         Update: {
           created_at?: string | null
           id?: string
           role?: Database["public"]["Enums"]["app_role"]
           user_id?: string
+          visible_from_date?: string | null
         }
         Relationships: []
       }

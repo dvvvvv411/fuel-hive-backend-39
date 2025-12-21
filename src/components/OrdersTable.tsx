@@ -123,7 +123,7 @@ export function OrdersTable({ initialStatusFilter = [] }: OrdersTableProps = {})
   const [totalCount, setTotalCount] = useState(0);
   const itemsPerPage = 20;
 
-  const { isCaller, allowedShopIds, hasAllShopsAccess } = useUserRole();
+  const { isCaller, allowedShopIds, hasAllShopsAccess, visibleFromDate } = useUserRole();
 
   // Update filter when initialStatusFilter changes
   useEffect(() => {
@@ -133,7 +133,7 @@ export function OrdersTable({ initialStatusFilter = [] }: OrdersTableProps = {})
   useEffect(() => {
     fetchShops();
     fetchOrders();
-  }, [currentPage, searchTerm, selectedShops, selectedStatuses, dateFrom, dateTo, showHidden, allowedShopIds, hasAllShopsAccess]);
+  }, [currentPage, searchTerm, selectedShops, selectedStatuses, dateFrom, dateTo, showHidden, allowedShopIds, hasAllShopsAccess, visibleFromDate]);
 
   const fetchShops = async () => {
     try {
@@ -201,6 +201,11 @@ export function OrdersTable({ initialStatusFilter = [] }: OrdersTableProps = {})
       // Apply caller shop filter first (if caller has specific shop assignments)
       if (!hasAllShopsAccess && allowedShopIds.length > 0) {
         query = query.in('shop_id', allowedShopIds);
+      }
+
+      // Apply caller visible_from_date filter
+      if (isCaller && visibleFromDate) {
+        query = query.gte('created_at', `${visibleFromDate}T00:00:00.000Z`);
       }
       
       if (selectedShops.length > 0) {
