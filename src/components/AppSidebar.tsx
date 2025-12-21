@@ -13,7 +13,7 @@ import {
   SidebarMenuItem,
 } from '@/components/ui/sidebar';
 import { Button } from '@/components/ui/button';
-import { Store, FileText, CreditCard, LayoutDashboard, LogOut, Fuel, Mail, Banknote, Eye } from 'lucide-react';
+import { Store, FileText, CreditCard, LayoutDashboard, LogOut, Fuel, Mail, Banknote, Eye, Users } from 'lucide-react';
 
 const navigationItems = [
   {
@@ -64,6 +64,12 @@ const navigationItems = [
     icon: FileText,
     value: "security-check"
   },
+  {
+    title: "Mitarbeiter",
+    url: "/dashboard",
+    icon: Users,
+    value: "employees"
+  },
 ];
 
 interface AppSidebarProps {
@@ -71,17 +77,15 @@ interface AppSidebarProps {
   onTabChange: (tab: string) => void;
   user: User | null;
   onSignOut: () => Promise<void>;
+  isCaller?: boolean;
 }
 
-export function AppSidebar({ activeTab, onTabChange, user, onSignOut }: AppSidebarProps) {
+export function AppSidebar({ activeTab, onTabChange, user, onSignOut, isCaller = false }: AppSidebarProps) {
   const navigate = useNavigate();
   const location = useLocation();
-
-  // Check if current user is restricted to only Orders
-  const isRestrictedUser = user?.id === "3338709d-0620-4384-8705-f6b4e9bf8be6";
   
-  // Filter navigation items for restricted user
-  const visibleNavigationItems = isRestrictedUser 
+  // Filter navigation items for caller
+  const visibleNavigationItems = isCaller 
     ? navigationItems.filter(item => item.value === "orders")
     : navigationItems;
 
@@ -143,7 +147,7 @@ export function AppSidebar({ activeTab, onTabChange, user, onSignOut }: AppSideb
         <div className="space-y-3">
           <div className="px-3 py-2">
             <p className="text-sm font-medium text-gray-900">{user?.email}</p>
-            <p className="text-xs text-gray-500">Administrator</p>
+            <p className="text-xs text-gray-500">{isCaller ? 'Caller' : 'Administrator'}</p>
           </div>
           <Button 
             onClick={handleSignOut} 

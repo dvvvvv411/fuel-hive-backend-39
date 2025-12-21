@@ -18,18 +18,19 @@ import { PaymentMethodAnalysis } from '@/components/PaymentMethodAnalysis';
 import { StatusPipelineAnalysis } from '@/components/StatusPipelineAnalysis';
 import { RevenueCharts } from '@/components/RevenueCharts';
 import { DashboardStats } from '@/components/DashboardStats';
+import { EmployeeManagement } from '@/components/EmployeeManagement';
+import { useUserRole } from '@/hooks/useUserRole';
 
 const Dashboard = () => {
   const [activeTab, setActiveTab] = useState('overview');
   const [user, setUser] = useState<User | null>(null);
   const [authReady, setAuthReady] = useState(false);
   const navigate = useNavigate();
-
-  // Check if current user is restricted to only Orders
-  const isRestrictedUser = user?.id === "3338709d-0620-4384-8705-f6b4e9bf8be6";
   
-  // Force restricted user to only see Orders tab
-  const effectiveActiveTab = isRestrictedUser ? "orders" : activeTab;
+  const { isCaller, loading: roleLoading } = useUserRole();
+  
+  // Force caller to only see Orders tab
+  const effectiveActiveTab = isCaller ? "orders" : activeTab;
 
   useEffect(() => {
     // Get current user
@@ -54,7 +55,7 @@ const Dashboard = () => {
   };
 
   // Show loading screen until auth state is ready
-  if (!authReady) {
+  if (!authReady || roleLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
         <div className="animate-spin h-8 w-8 rounded-full border-2 border-blue-600 border-t-transparent" />
@@ -84,6 +85,8 @@ const Dashboard = () => {
         return <PaymentMethodAnalysis />;
       case 'status-analytics':
         return <StatusPipelineAnalysis />;
+      case 'employees':
+        return <EmployeeManagement />;
       default:
         return (
           <div className="space-y-8">
@@ -107,24 +110,26 @@ const Dashboard = () => {
       <div className="min-h-screen flex w-full bg-gray-50">
         <AppSidebar 
           activeTab={effectiveActiveTab} 
-          onTabChange={isRestrictedUser ? () => {} : setActiveTab}
+          onTabChange={isCaller ? () => {} : setActiveTab}
           user={user}
           onSignOut={handleSignOut}
+          isCaller={isCaller}
         />
         <SidebarInset className="flex-1">
           <div className="flex h-16 items-center gap-4 border-b border-gray-200 bg-white px-6">
             <SidebarTrigger className="h-8 w-8" />
             <div className="h-6 w-px bg-gray-200" />
             <h2 className="text-lg font-semibold text-gray-900 capitalize">
-              {isRestrictedUser ? 'Orders' :
+              {isCaller ? 'Orders' :
                effectiveActiveTab === 'overview' ? 'Dashboard' : 
                effectiveActiveTab === 'resend-configs' ? 'Resend Configuration' :
                effectiveActiveTab === 'payment-methods' ? 'Payment Methods' :
-                effectiveActiveTab === 'preview' ? 'Invoice Preview' :
-                effectiveActiveTab === 'security-check' ? 'Sicherheitscheck' :
-                effectiveActiveTab === 'bank-analytics' ? 'Bank Performance' :
+               effectiveActiveTab === 'preview' ? 'Invoice Preview' :
+               effectiveActiveTab === 'security-check' ? 'Sicherheitscheck' :
+               effectiveActiveTab === 'bank-analytics' ? 'Bank Performance' :
                effectiveActiveTab === 'payment-analytics' ? 'Payment Analysis' :
                effectiveActiveTab === 'status-analytics' ? 'Status Pipeline' :
+               effectiveActiveTab === 'employees' ? 'Mitarbeiterverwaltung' :
                effectiveActiveTab.replace('-', ' ')}
             </h2>
           </div>

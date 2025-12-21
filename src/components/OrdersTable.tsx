@@ -16,6 +16,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { formatCurrencyWithEUR } from '@/utils/bankingUtils';
 import { CurrencyDisplay } from './CurrencyDisplay';
+import { useUserRole } from '@/hooks/useUserRole';
 
 interface Order {
   id: string;
@@ -102,7 +103,6 @@ export function OrdersTable({ initialStatusFilter = [] }: OrdersTableProps = {})
   const [orders, setOrders] = useState<Order[]>([]);
   const [shops, setShops] = useState<Shop[]>([]);
   const [loading, setLoading] = useState(true);
-  const [currentUser, setCurrentUser] = useState<any>(null);
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const [showDetailsDialog, setShowDetailsDialog] = useState(false);
   const [showBankAccountDialog, setShowBankAccountDialog] = useState(false);
@@ -123,6 +123,8 @@ export function OrdersTable({ initialStatusFilter = [] }: OrdersTableProps = {})
   const [totalCount, setTotalCount] = useState(0);
   const itemsPerPage = 20;
 
+  const { isCaller, allowedShopIds, hasAllShopsAccess } = useUserRole();
+
   // Update filter when initialStatusFilter changes
   useEffect(() => {
     setSelectedStatuses(initialStatusFilter);
@@ -131,22 +133,21 @@ export function OrdersTable({ initialStatusFilter = [] }: OrdersTableProps = {})
   useEffect(() => {
     fetchShops();
     fetchOrders();
-  }, [currentPage, searchTerm, selectedShops, selectedStatuses, dateFrom, dateTo, showHidden]);
-
-  useEffect(() => {
-    // Get current user
-    supabase.auth.getUser().then(({ data: { user } }) => {
-      setCurrentUser(user);
-    });
-  }, []);
+  }, [currentPage, searchTerm, selectedShops, selectedStatuses, dateFrom, dateTo, showHidden, allowedShopIds, hasAllShopsAccess]);
 
   const fetchShops = async () => {
     try {
-      const { data, error } = await supabase
+      let query = supabase
         .from('shops')
         .select('id, name')
-        .eq('active', true)
-        .order('name');
+        .eq('active', true);
+
+      // Filter shops for callers with specific shop assignments
+      if (!hasAllShopsAccess && allowedShopIds.length > 0) {
+        query = query.in('id', allowedShopIds);
+      }
+
+      const { data, error } = await query.order('name');
 
       if (error) throw error;
       setShops(data || []);
@@ -197,8 +198,21 @@ export function OrdersTable({ initialStatusFilter = [] }: OrdersTableProps = {})
         query = query.or(`order_number.ilike.%${searchTerm}%,customer_name.ilike.%${searchTerm}%,customer_email.ilike.%${searchTerm}%,billing_company_name.ilike.%${searchTerm}%,delivery_company_name.ilike.%${searchTerm}%`);
       }
       
+      // Apply caller shop filter first (if caller has specific shop assignments)
+      if (!hasAllShopsAccess && allowedShopIds.length > 0) {
+        query = query.in('shop_id', allowedShopIds);
+      }
+      
       if (selectedShops.length > 0) {
-        query = query.in('shop_id', selectedShops);
+        // If caller has shop restrictions, intersect with their allowed shops
+        if (!hasAllShopsAccess && allowedShopIds.length > 0) {
+          const filteredShops = selectedShops.filter(id => allowedShopIds.includes(id));
+          if (filteredShops.length > 0) {
+            query = query.in('shop_id', filteredShops);
+          }
+        } else {
+          query = query.in('shop_id', selectedShops);
+        }
       }
       
       if (selectedStatuses.length > 0) {
@@ -1006,9 +1020,9 @@ export function OrdersTable({ initialStatusFilter = [] }: OrdersTableProps = {})
                             
                             {(order.status === 'pending' || order.status === 'ready') && !showHidden && (
                               <>
-                                {/* Show Ready button only for special user AND pending status */}
-                                {currentUser?.id === '3338709d-0620-4384-8705-f6b4e9bf8be6' && order.status === 'pending' ? (
-                                  // Ready Button for special user at pending status
+                                {/* Show Ready button only for callers AND pending status */}
+                                {isCaller && order.status === 'pending' ? (
+                                  // Ready Button for callers at pending status
                                   <Button
                                     size="sm"
                                     onClick={() => markAsReady(order.id)}
