@@ -238,8 +238,8 @@ export function ShopPerformanceTables() {
     return (
       <div className="space-y-6">
         <div className="animate-pulse">
-          <div className="h-8 bg-gray-200 rounded w-1/3 mb-4"></div>
-          <div className="h-64 bg-gray-200 rounded"></div>
+          <div className="h-8 bg-gray-100 rounded-xl w-1/3 mb-4"></div>
+          <div className="h-64 bg-gray-100 rounded-2xl"></div>
         </div>
       </div>
     );
@@ -251,21 +251,23 @@ export function ShopPerformanceTables() {
   return (
     <div className="space-y-8">
       {/* Heute Performance */}
-      <Card className="bg-white shadow-sm border border-gray-200">
-        <CardHeader>
+      <Card className="bg-white/80 backdrop-blur-sm shadow-lg border border-gray-100 rounded-2xl overflow-hidden">
+        <CardHeader className="bg-gradient-to-r from-gray-50/80 to-white">
           <CardTitle className="text-lg font-semibold text-gray-900 flex items-center gap-2">
-            <Clock className="h-5 w-5 text-blue-600" />
+            <div className="h-8 w-8 rounded-lg bg-blue-50 flex items-center justify-center">
+              <Clock className="h-4 w-4 text-blue-600" />
+            </div>
             Shop-Performance (Heute)
           </CardTitle>
-          <CardDescription>
+          <CardDescription className="text-gray-500">
             Tagesleistung Ihrer Shops mit Farbcodierung für Top-Performer
           </CardDescription>
         </CardHeader>
-        <CardContent>
+        <CardContent className="pt-2">
           <div className="overflow-x-auto">
             <Table>
-              <TableHeader>
-                <TableRow>
+              <TableHeader className="bg-gray-50/80">
+                <TableRow className="hover:bg-transparent">
                   <TableHead 
                     className="cursor-pointer hover:bg-gray-50 select-none"
                     onClick={() => handleSort('shopName', 'today')}
@@ -366,32 +368,34 @@ export function ShopPerformanceTables() {
       </Card>
 
       {/* Gesamt Performance */}
-      <Card className="bg-white shadow-sm border border-gray-200">
+      <Card className="bg-white/80 backdrop-blur-sm shadow-lg border border-gray-100 rounded-2xl overflow-hidden">
         <Collapsible open={!isTotalCollapsed} onOpenChange={() => setIsTotalCollapsed(!isTotalCollapsed)}>
-          <CardHeader>
+          <CardHeader className="bg-gradient-to-r from-gray-50/80 to-white">
             <CollapsibleTrigger className="w-full">
               <div className="flex items-center justify-between">
                 <div className="text-left">
                   <CardTitle className="text-lg font-semibold text-gray-900 flex items-center gap-2">
-                    <Store className="h-5 w-5 text-green-600" />
+                    <div className="h-8 w-8 rounded-lg bg-green-50 flex items-center justify-center">
+                      <Store className="h-4 w-4 text-green-600" />
+                    </div>
                     Shop-Performance (Gesamt)
                   </CardTitle>
-                  <CardDescription>
+                  <CardDescription className="text-gray-500">
                     Gesamtleistung Ihrer Shops mit Marktanteil und Trend-Analyse
                   </CardDescription>
                 </div>
-                <Button variant="ghost" size="sm" className="ml-auto">
+                <Button variant="ghost" size="sm" className="ml-auto rounded-lg hover:bg-gray-100/80">
                   {isTotalCollapsed ? <ChevronDown className="h-4 w-4" /> : <ChevronUp className="h-4 w-4" />}
                 </Button>
               </div>
             </CollapsibleTrigger>
           </CardHeader>
           <CollapsibleContent>
-            <CardContent>
+            <CardContent className="pt-2">
               <div className="overflow-x-auto">
                 <Table>
-                  <TableHeader>
-                    <TableRow>
+                  <TableHeader className="bg-gray-50/80">
+                    <TableRow className="hover:bg-transparent">
                       <TableHead 
                         className="cursor-pointer hover:bg-gray-50 select-none"
                         onClick={() => handleSort('shopName', 'total')}

@@ -57,19 +57,21 @@ export function SimpleStatusCards({ statusStats }: SimpleStatusCardsProps) {
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
       {statusItems.map((item) => (
-        <Card key={item.title} className="bg-white shadow-sm border border-gray-200">
+        <Card key={item.title} className="bg-white/80 backdrop-blur-sm shadow-md shadow-gray-100/50 border border-gray-100 hover:shadow-lg transition-all duration-300 rounded-xl">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
-            <CardTitle className="text-sm font-medium text-gray-600">{item.title}</CardTitle>
-            <item.icon className={`h-5 w-5 ${item.iconColor}`} />
+            <CardTitle className="text-sm font-semibold text-gray-500">{item.title}</CardTitle>
+            <div className={`h-8 w-8 rounded-lg ${item.bgColor} flex items-center justify-center`}>
+              <item.icon className={`h-4 w-4 ${item.iconColor}`} />
+            </div>
           </CardHeader>
           <CardContent className="pb-4">
             <div className="flex items-center gap-3 mb-2">
-              <Badge variant="outline" className={`${item.bgColor} ${item.textColor} ${item.borderColor} text-lg px-3 py-1`}>
+              <Badge variant="outline" className={`${item.bgColor} ${item.textColor} ${item.borderColor} text-lg px-4 py-1.5 rounded-full font-semibold shadow-sm`}>
                 {item.data.total}
               </Badge>
-              <span className="text-sm text-gray-600">Gesamt</span>
+              <span className="text-sm text-gray-500">Gesamt</span>
             </div>
-            <div className="text-sm text-gray-600">Heute: <span className="font-semibold">{item.data.today}</span></div>
+            <div className="text-sm text-gray-500">Heute: <span className="font-semibold text-gray-700">{item.data.today}</span></div>
           </CardContent>
         </Card>
       ))}
