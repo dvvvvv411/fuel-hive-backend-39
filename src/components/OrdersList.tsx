@@ -50,9 +50,9 @@ export function OrdersList() {
       <div className="flex justify-between items-center">
         <div className="flex items-center gap-3">
           <div>
-            <h2 className="text-2xl font-bold">Bestellungen</h2>
+            <h2 className="text-2xl font-bold bg-gradient-to-r from-gray-900 via-gray-800 to-gray-700 bg-clip-text text-transparent">Bestellungen</h2>
             <div className="flex items-center gap-2">
-              <p className="text-gray-600">Verwalten Sie alle Heizöl-Bestellungen</p>
+              <p className="text-gray-500">Verwalten Sie alle Heizöl-Bestellungen</p>
               {currentUser?.id === '70156cbe-8d83-4b7c-b421-3bbe6ca71298' && (
                 <Badge 
                   onClick={handleBadgeClick}

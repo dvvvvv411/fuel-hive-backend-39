@@ -282,19 +282,19 @@ export function EmployeeManagement() {
 
   return (
     <div className="space-y-6">
-      <Card>
+      <Card className="bg-white/80 backdrop-blur-sm shadow-lg shadow-gray-200/50 border border-gray-100 rounded-2xl">
         <CardHeader>
           <div className="flex items-center justify-between">
             <div>
-              <CardTitle className="flex items-center gap-2">
-                <Users className="h-5 w-5" />
+              <CardTitle className="flex items-center gap-2 bg-gradient-to-r from-gray-900 via-gray-800 to-gray-700 bg-clip-text text-transparent">
+                <Users className="h-5 w-5 text-orange-500" />
                 Mitarbeiterverwaltung
               </CardTitle>
               <CardDescription>
                 Verwalten Sie Benutzerrollen und Shop-Zuordnungen
               </CardDescription>
             </div>
-            <Button variant="outline" onClick={fetchData}>
+            <Button variant="outline" onClick={fetchData} className="hover:bg-orange-50 hover:border-orange-200 transition-colors">
               <RefreshCw className="h-4 w-4 mr-2" />
               Aktualisieren
             </Button>
@@ -302,12 +302,15 @@ export function EmployeeManagement() {
         </CardHeader>
         <CardContent>
           {loading ? (
-            <div className="text-center py-8">Lade Daten...</div>
+            <div className="text-center py-8">
+              <div className="animate-spin h-8 w-8 rounded-full border-2 border-orange-500 border-t-transparent mx-auto"></div>
+              <p className="mt-2 text-gray-500">Lade Daten...</p>
+            </div>
           ) : (
-            <div className="border rounded-lg overflow-hidden">
+            <div className="border border-gray-100 rounded-xl overflow-hidden">
               <Table>
-                <TableHeader>
-                  <TableRow>
+                <TableHeader className="bg-gray-50/80">
+                  <TableRow className="hover:bg-transparent">
                     <TableHead>E-Mail</TableHead>
                     <TableHead>Rolle</TableHead>
                     <TableHead>Shops</TableHead>

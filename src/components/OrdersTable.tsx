@@ -750,10 +750,10 @@ export function OrdersTable({ initialStatusFilter = [] }: OrdersTableProps = {})
 
   return (
     <div className="space-y-6">
-      <Card>
+      <Card className="bg-white/80 backdrop-blur-sm shadow-lg shadow-gray-200/50 border border-gray-100 rounded-2xl">
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <FileText className="h-5 w-5" />
+          <CardTitle className="flex items-center gap-2 text-xl font-semibold bg-gradient-to-r from-gray-900 via-gray-800 to-gray-700 bg-clip-text text-transparent">
+            <FileText className="h-5 w-5 text-orange-500" />
             Bestellungen verwalten
           </CardTitle>
           <CardDescription>
@@ -866,10 +866,10 @@ export function OrdersTable({ initialStatusFilter = [] }: OrdersTableProps = {})
           </div>
 
           {/* Orders Table */}
-          <div className="border rounded-lg overflow-x-auto">
+          <div className="border border-gray-100 rounded-xl overflow-x-auto">
             <Table>
-              <TableHeader>
-                <TableRow>
+              <TableHeader className="bg-gray-50/80">
+                <TableRow className="hover:bg-transparent">
                   <TableHead>Datum</TableHead>
                   <TableHead>Bestellnummer</TableHead>
                   <TableHead>Kunde</TableHead>

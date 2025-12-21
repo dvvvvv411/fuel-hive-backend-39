@@ -216,7 +216,7 @@ export function StatusPipelineAnalysis() {
   if (loading) {
     return (
       <div className="space-y-6">
-        <Card className="bg-white shadow-sm border border-gray-200">
+        <Card className="bg-white/80 backdrop-blur-sm shadow-lg shadow-gray-200/50 border border-gray-100 rounded-2xl">
           <CardHeader>
             <div className="animate-pulse">
               <div className="h-6 bg-gray-200 rounded w-1/3 mb-2"></div>
@@ -226,7 +226,7 @@ export function StatusPipelineAnalysis() {
           <CardContent>
             <div className="animate-pulse space-y-4">
               {[...Array(4)].map((_, i) => (
-                <div key={i} className="h-20 bg-gray-100 rounded"></div>
+                <div key={i} className="h-20 bg-gray-100 rounded-xl"></div>
               ))}
             </div>
           </CardContent>
@@ -241,9 +241,9 @@ export function StatusPipelineAnalysis() {
   return (
     <div className="space-y-6">
       {/* Pipeline Overview */}
-      <Card className="bg-white shadow-sm border border-gray-200">
+      <Card className="bg-white/80 backdrop-blur-sm shadow-lg shadow-gray-200/50 border border-gray-100 rounded-2xl">
         <CardHeader>
-          <CardTitle className="text-lg font-semibold text-gray-900">
+          <CardTitle className="text-lg font-semibold bg-gradient-to-r from-gray-900 via-gray-800 to-gray-700 bg-clip-text text-transparent">
             Status-Pipeline Übersicht
           </CardTitle>
           <CardDescription>
@@ -303,7 +303,7 @@ export function StatusPipelineAnalysis() {
 
       {/* Performance Insights */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <Card className="bg-green-50 border-green-200">
+        <Card className="bg-green-50/80 backdrop-blur-sm shadow-md border border-green-200 rounded-xl hover:shadow-lg transition-all duration-300">
           <CardHeader className="pb-3">
             <CardTitle className="text-sm font-medium text-green-700">Gesamt Conversion Rate</CardTitle>
           </CardHeader>
@@ -317,7 +317,7 @@ export function StatusPipelineAnalysis() {
           </CardContent>
         </Card>
 
-        <Card className="bg-orange-50 border-orange-200">
+        <Card className="bg-orange-50/80 backdrop-blur-sm shadow-md border border-orange-200 rounded-xl hover:shadow-lg transition-all duration-300">
           <CardHeader className="pb-3">
             <CardTitle className="text-sm font-medium text-orange-700">Kritischer Punkt</CardTitle>
           </CardHeader>
@@ -333,7 +333,7 @@ export function StatusPipelineAnalysis() {
           </CardContent>
         </Card>
 
-        <Card className="bg-blue-50 border-blue-200">
+        <Card className="bg-blue-50/80 backdrop-blur-sm shadow-md border border-blue-200 rounded-xl hover:shadow-lg transition-all duration-300">
           <CardHeader className="pb-3">
             <CardTitle className="text-sm font-medium text-blue-700">Durchschnittliche Bearbeitungszeit</CardTitle>
           </CardHeader>

@@ -552,15 +552,15 @@ export function WrongOrdersList() {
     <div className="space-y-6">
       <div className="flex justify-between items-start">
         <div>
-          <h2 className="text-2xl font-bold text-blue-600">Sicherheitscheck</h2>
-          <p className="text-gray-600">
+          <h2 className="text-2xl font-bold bg-gradient-to-r from-orange-500 to-orange-600 bg-clip-text text-transparent">Sicherheitscheck</h2>
+          <p className="text-gray-500">
             IBAN-Überprüfung und Login-Historie für die Systemsicherheit
           </p>
         </div>
       </div>
 
       <Tabs defaultValue="iban-check" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-2">
+        <TabsList className="grid w-full grid-cols-2 bg-gray-100/80 rounded-xl p-1">
           <TabsTrigger value="iban-check" className="flex items-center gap-2">
             <AlertTriangle className="h-4 w-4" />
             IBAN-Überprüfung
@@ -573,9 +573,9 @@ export function WrongOrdersList() {
 
         <TabsContent value="iban-check" className="space-y-6">
           {/* Date Range Selection */}
-          <Card>
+          <Card className="bg-white/80 backdrop-blur-sm shadow-lg shadow-gray-200/50 border border-gray-100 rounded-2xl">
             <CardHeader>
-              <CardTitle>Zeitraum für IBAN-Überprüfung auswählen</CardTitle>
+              <CardTitle className="bg-gradient-to-r from-gray-900 via-gray-800 to-gray-700 bg-clip-text text-transparent">Zeitraum für IBAN-Überprüfung auswählen</CardTitle>
               <CardDescription>
                 Wählen Sie den Zeitraum aus, für den die Rechnungen überprüft werden sollen
               </CardDescription>
@@ -659,7 +659,7 @@ export function WrongOrdersList() {
 
           {hasAnalyzed && !loading && wrongOrders.length > 0 && (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <Card>
+              <Card className="bg-red-50/80 backdrop-blur-sm shadow-md border border-red-100 rounded-xl">
                 <CardHeader className="pb-3">
                   <CardTitle className="text-lg text-red-600">Verluste</CardTitle>
                 </CardHeader>
@@ -671,9 +671,9 @@ export function WrongOrdersList() {
                 </CardContent>
               </Card>
               
-              <Card>
+              <Card className="bg-white/80 backdrop-blur-sm shadow-md border border-gray-100 rounded-xl">
                 <CardHeader className="pb-3">
-                  <CardTitle className="text-lg">Falsche IBANs Übersicht</CardTitle>
+                  <CardTitle className="text-lg bg-gradient-to-r from-gray-900 to-gray-700 bg-clip-text text-transparent">Falsche IBANs Übersicht</CardTitle>
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-2">
@@ -695,10 +695,10 @@ export function WrongOrdersList() {
           )}
 
           {loading && (
-            <Card>
+            <Card className="bg-white/80 backdrop-blur-sm shadow-md border border-gray-100 rounded-xl">
               <CardContent className="p-6">
                 <div className="flex items-center justify-center space-x-4">
-                  <Loader2 className="h-6 w-6 animate-spin" />
+                  <div className="animate-spin h-6 w-6 rounded-full border-2 border-orange-500 border-t-transparent"></div>
                   <div className="text-center">
                     <p className="text-lg font-medium">
                       Analysiere Rechnungs-PDFs...
@@ -713,7 +713,7 @@ export function WrongOrdersList() {
           )}
 
           {hasAnalyzed && !loading && wrongOrders.length === 0 && (
-            <Card>
+            <Card className="bg-green-50/80 backdrop-blur-sm shadow-md border border-green-100 rounded-xl">
               <CardContent className="p-6 text-center">
                 <AlertTriangle className="mx-auto h-12 w-12 text-green-500 mb-4" />
                 <h3 className="text-lg font-semibold text-green-600">
@@ -727,11 +727,11 @@ export function WrongOrdersList() {
           )}
 
           {hasAnalyzed && wrongOrders.length > 0 && (
-            <Card>
+            <Card className="bg-white/80 backdrop-blur-sm shadow-lg shadow-gray-200/50 border border-gray-100 rounded-2xl">
               <CardHeader>
                 <div className="flex items-center gap-2">
                   <AlertTriangle className="h-5 w-5 text-red-500" />
-                  <CardTitle className="text-red-600">
+                  <CardTitle className="text-red-600 font-semibold">
                     {wrongOrders.length} Bestellungen mit falschen IBANs
                   </CardTitle>
                 </div>
@@ -742,8 +742,8 @@ export function WrongOrdersList() {
               </CardHeader>
               <CardContent>
                 <Table>
-                  <TableHeader>
-                    <TableRow>
+                  <TableHeader className="bg-gray-50/80">
+                    <TableRow className="hover:bg-transparent">
                       <TableHead>Bestellnummer</TableHead>
                       <TableHead>Kunde</TableHead>
                       <TableHead>Shop</TableHead>
@@ -804,9 +804,9 @@ export function WrongOrdersList() {
 
         <TabsContent value="login-history" className="space-y-6">
           {/* Login History Date Range Selection */}
-          <Card>
+          <Card className="bg-white/80 backdrop-blur-sm shadow-lg shadow-gray-200/50 border border-gray-100 rounded-2xl">
             <CardHeader>
-              <CardTitle>Zeitraum für Login-Historie auswählen</CardTitle>
+              <CardTitle className="bg-gradient-to-r from-gray-900 via-gray-800 to-gray-700 bg-clip-text text-transparent">Zeitraum für Login-Historie auswählen</CardTitle>
               <CardDescription>
                 Wählen Sie den Zeitraum aus, für den die Login-Ereignisse angezeigt werden sollen
               </CardDescription>
@@ -889,10 +889,10 @@ export function WrongOrdersList() {
           </Card>
 
           {loadingLoginHistory && (
-            <Card>
+            <Card className="bg-white/80 backdrop-blur-sm shadow-md border border-gray-100 rounded-xl">
               <CardContent className="p-6">
                 <div className="flex items-center justify-center space-x-4">
-                  <Loader2 className="h-6 w-6 animate-spin" />
+                  <div className="animate-spin h-6 w-6 rounded-full border-2 border-orange-500 border-t-transparent"></div>
                   <div className="text-center">
                     <p className="text-lg font-medium">
                       Lade Login-Historie...

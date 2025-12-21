@@ -274,7 +274,7 @@ export function RevenueCharts() {
     <div className="space-y-8">
       {/* Trend Indicators */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <Card className="bg-white shadow-sm border border-gray-200">
+        <Card className="bg-white/80 backdrop-blur-sm shadow-md shadow-gray-200/50 border border-gray-100 rounded-xl hover:shadow-lg transition-all duration-300">
           <CardHeader className="pb-3">
             <CardTitle className="text-sm font-medium text-gray-600">Heute vs. Gestern</CardTitle>
           </CardHeader>
@@ -293,7 +293,7 @@ export function RevenueCharts() {
           </CardContent>
         </Card>
 
-        <Card className="bg-white shadow-sm border border-gray-200">
+        <Card className="bg-white/80 backdrop-blur-sm shadow-md shadow-gray-200/50 border border-gray-100 rounded-xl hover:shadow-lg transition-all duration-300">
           <CardHeader className="pb-3">
             <CardTitle className="text-sm font-medium text-gray-600">Diese Woche vs. Letzte</CardTitle>
           </CardHeader>
@@ -312,7 +312,7 @@ export function RevenueCharts() {
           </CardContent>
         </Card>
 
-        <Card className="bg-green-50 border-green-200">
+        <Card className="bg-green-50/80 backdrop-blur-sm shadow-md border border-green-200 rounded-xl hover:shadow-lg transition-all duration-300">
           <CardHeader className="pb-3">
             <CardTitle className="text-sm font-medium text-green-700">Bester Tag</CardTitle>
           </CardHeader>
@@ -326,7 +326,7 @@ export function RevenueCharts() {
           </CardContent>
         </Card>
 
-        <Card className="bg-orange-50 border-orange-200">
+        <Card className="bg-orange-50/80 backdrop-blur-sm shadow-md border border-orange-200 rounded-xl hover:shadow-lg transition-all duration-300">
           <CardHeader className="pb-3">
             <CardTitle className="text-sm font-medium text-orange-700">Bestellungen Heute</CardTitle>
           </CardHeader>
@@ -350,12 +350,12 @@ export function RevenueCharts() {
       </div>
 
       {/* Daily Revenue Chart */}
-      <Card className="bg-white shadow-sm border border-gray-200">
+      <Card className="bg-white/80 backdrop-blur-sm shadow-lg shadow-gray-200/50 border border-gray-100 rounded-2xl">
         <CardHeader>
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <div>
-              <CardTitle className="text-lg font-semibold text-gray-900 flex items-center gap-2">
-                <TrendingUp className="h-5 w-5 text-blue-600" />
+              <CardTitle className="text-lg font-semibold bg-gradient-to-r from-gray-900 via-gray-800 to-gray-700 bg-clip-text text-transparent flex items-center gap-2">
+                <TrendingUp className="h-5 w-5 text-orange-500" />
                 Täglicher Umsatz {dailyChartView === '30days' ? '(Letzte 30 Tage)' : '(Gesamter Zeitraum)'}
               </CardTitle>
               <CardDescription>
@@ -425,12 +425,12 @@ export function RevenueCharts() {
       </Card>
 
       {/* Shop Performance Chart */}
-      <Card className="bg-white shadow-sm border border-gray-200">
+      <Card className="bg-white/80 backdrop-blur-sm shadow-lg shadow-gray-200/50 border border-gray-100 rounded-2xl">
         <CardHeader>
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <div>
-              <CardTitle className="text-lg font-semibold text-gray-900 flex items-center gap-2">
-                <BarChart3 className="h-5 w-5 text-green-600" />
+              <CardTitle className="text-lg font-semibold bg-gradient-to-r from-gray-900 via-gray-800 to-gray-700 bg-clip-text text-transparent flex items-center gap-2">
+                <BarChart3 className="h-5 w-5 text-orange-500" />
                 Shop-Performance Vergleich
               </CardTitle>
               <CardDescription>
