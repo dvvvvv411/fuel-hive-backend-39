@@ -12,6 +12,7 @@ const Index = () => {
   const [phraseIndex, setPhraseIndex] = useState(0);
   const [displayText, setDisplayText] = useState("");
   const [isDeleting, setIsDeleting] = useState(false);
+  const [isButtonHovered, setIsButtonHovered] = useState(false);
 
   useEffect(() => {
     const currentPhrase = phrases[phraseIndex];
@@ -107,17 +108,17 @@ const Index = () => {
           className="text-center animate-fade-in"
           style={{ animationDelay: '0ms', animationFillMode: 'both' }}
         >
-          <span className="block text-6xl sm:text-7xl md:text-8xl lg:text-[10rem] font-bold tracking-tighter text-white leading-none">
+          <span className={`block text-6xl sm:text-7xl md:text-8xl lg:text-[10rem] font-bold tracking-tighter leading-none transition-colors duration-300 ${isButtonHovered ? 'text-[#F97316]' : 'text-white'}`}>
             SHOP
           </span>
-          <span className="block text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-extralight tracking-[0.2em] sm:tracking-[0.3em] text-white/80 mt-2 md:mt-4">
+          <span className={`block text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-extralight tracking-[0.2em] sm:tracking-[0.3em] mt-2 md:mt-4 transition-colors duration-300 ${isButtonHovered ? 'text-[#F97316]' : 'text-white/80'}`}>
             MANAGEMENT
           </span>
         </h1>
 
         {/* Subtext */}
         <p 
-          className="mt-8 md:mt-12 text-base sm:text-lg md:text-xl text-neutral-500 text-center whitespace-nowrap animate-fade-in"
+          className={`mt-8 md:mt-12 text-base sm:text-lg md:text-xl text-center whitespace-nowrap animate-fade-in transition-colors duration-300 ${isButtonHovered ? 'text-[#F97316]' : 'text-neutral-500'}`}
           style={{ animationDelay: '150ms', animationFillMode: 'both' }}
         >
           Die intelligente Plattform für Multi-Shop Management.
@@ -130,7 +131,9 @@ const Index = () => {
         >
           <Link to="/auth">
             <button 
-              className="group px-8 py-4 bg-white text-black font-medium text-base rounded-full transition-all duration-300 hover:bg-white/90 hover:scale-105 shadow-[0_0_60px_rgba(255,255,255,0.12)] flex items-center gap-2"
+              onMouseEnter={() => setIsButtonHovered(true)}
+              onMouseLeave={() => setIsButtonHovered(false)}
+              className={`group px-8 py-4 font-medium text-base rounded-full transition-all duration-300 hover:scale-105 flex items-center gap-2 ${isButtonHovered ? 'bg-[#F97316] text-white shadow-[0_0_60px_rgba(249,115,22,0.3)]' : 'bg-white text-black shadow-[0_0_60px_rgba(255,255,255,0.12)]'}`}
             >
               Jetzt starten
               <ArrowRight className="w-4 h-4 transition-transform duration-300 group-hover:translate-x-1" />
