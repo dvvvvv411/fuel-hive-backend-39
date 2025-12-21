@@ -991,24 +991,49 @@ export function OrdersTable({ initialStatusFilter = [] }: OrdersTableProps = {})
                           )}
                         </TableCell>
                         <TableCell>
-                          <Select
-                            value={order.status}
-                            onValueChange={(value) => updateOrderStatus(order.id, value)}
-                          >
-                            <SelectTrigger className="w-32">
+                          {isCaller ? (
+                            // Caller: nur pending/ready änderbar, andere Status nur als Badge
+                            (order.status === 'pending' || order.status === 'ready') ? (
+                              <Select
+                                value={order.status}
+                                onValueChange={(value) => updateOrderStatus(order.id, value)}
+                              >
+                                <SelectTrigger className="w-32">
+                                  <Badge className={getStatusColor(order.status)}>
+                                    {getStatusLabel(order.status)}
+                                  </Badge>
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="pending">Neu</SelectItem>
+                                  <SelectItem value="ready">Ready</SelectItem>
+                                </SelectContent>
+                              </Select>
+                            ) : (
                               <Badge className={getStatusColor(order.status)}>
                                 {getStatusLabel(order.status)}
                               </Badge>
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="pending">Neu</SelectItem>
-                              <SelectItem value="ready">Ready</SelectItem>
-                              <SelectItem value="invoice_sent">Rechnung versendet</SelectItem>
-                              <SelectItem value="paid">Bezahlt</SelectItem>
-                              <SelectItem value="confirmed">Bestätigt</SelectItem>
-                              <SelectItem value="cancelled">Down</SelectItem>
-                            </SelectContent>
-                          </Select>
+                            )
+                          ) : (
+                            // Admin: voller Dropdown
+                            <Select
+                              value={order.status}
+                              onValueChange={(value) => updateOrderStatus(order.id, value)}
+                            >
+                              <SelectTrigger className="w-32">
+                                <Badge className={getStatusColor(order.status)}>
+                                  {getStatusLabel(order.status)}
+                                </Badge>
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="pending">Neu</SelectItem>
+                                <SelectItem value="ready">Ready</SelectItem>
+                                <SelectItem value="invoice_sent">Rechnung versendet</SelectItem>
+                                <SelectItem value="paid">Bezahlt</SelectItem>
+                                <SelectItem value="confirmed">Bestätigt</SelectItem>
+                                <SelectItem value="cancelled">Down</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          )}
                         </TableCell>
                         <TableCell>
                           <div className="flex items-center gap-2">

@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import { useUserRole } from '@/hooks/useUserRole';
 import {
   Dialog,
   DialogContent,
@@ -79,6 +80,7 @@ interface OrderDetailsDialogProps {
 export function OrderDetailsDialog({ order, open, onOpenChange, onOrderUpdate }: OrderDetailsDialogProps) {
   const [updating, setUpdating] = useState(false);
   const [showPDFViewer, setShowPDFViewer] = useState(false);
+  const { isCaller } = useUserRole();
 
   const updateOrderStatus = async (newStatus: string) => {
     try {
@@ -305,10 +307,12 @@ export function OrderDetailsDialog({ order, open, onOpenChange, onOrderUpdate }:
                           <Mail className="h-4 w-4 mr-2" />
                           Eingangsbestätigung senden
                         </Button>
-                        <Button onClick={generateInvoice} disabled={updating} size="sm">
-                          <FileText className="h-4 w-4 mr-2" />
-                          Rechnung erstellen
-                        </Button>
+                        {!isCaller && (
+                          <Button onClick={generateInvoice} disabled={updating} size="sm">
+                            <FileText className="h-4 w-4 mr-2" />
+                            Rechnung erstellen
+                          </Button>
+                        )}
                       </>
                     )}
                     
