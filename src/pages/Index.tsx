@@ -94,9 +94,8 @@ const Index = () => {
           className="h-8 mb-4 md:mb-6 animate-fade-in"
           style={{ animationDelay: '0ms', animationFillMode: 'both' }}
         >
-          <span 
-            className="text-sm sm:text-base md:text-lg font-medium tracking-wider"
-            style={{ color: '#F97316' }}
+        <span 
+            className={`text-sm sm:text-base md:text-lg font-medium tracking-wider transition-colors duration-300 ${isButtonHovered ? 'text-white' : 'text-[#F97316]'}`}
           >
             {displayText}
             <span className="animate-pulse">|</span>
