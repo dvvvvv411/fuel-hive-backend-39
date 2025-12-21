@@ -3,7 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { User } from '@supabase/supabase-js';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { SidebarProvider, SidebarInset, SidebarTrigger } from '@/components/ui/sidebar';
+import { SidebarProvider, SidebarInset, useSidebar } from '@/components/ui/sidebar';
+import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { AppSidebar } from '@/components/AppSidebar';
 import { ShopsList } from '@/components/ShopsList';
 import { OrdersList } from '@/components/OrdersList';
@@ -109,17 +110,57 @@ const Dashboard = () => {
 
   return (
     <SidebarProvider>
-      <div className="min-h-screen flex w-full bg-gradient-to-br from-gray-50 via-white to-gray-100">
-        <AppSidebar 
-          activeTab={effectiveActiveTab} 
-          onTabChange={isCaller ? () => {} : setActiveTab}
-          user={user}
-          onSignOut={handleSignOut}
-          isCaller={isCaller}
-        />
-        <SidebarInset className="flex-1">
-          <div className="flex h-16 items-center gap-4 border-b border-gray-100 bg-white/70 backdrop-blur-md px-6 shadow-sm">
-            <SidebarTrigger className="h-8 w-8 text-gray-600 hover:text-gray-900 transition-colors" />
+      <DashboardContent 
+        effectiveActiveTab={effectiveActiveTab}
+        isCaller={isCaller}
+        setActiveTab={setActiveTab}
+        user={user}
+        handleSignOut={handleSignOut}
+        renderContent={renderContent}
+      />
+    </SidebarProvider>
+  );
+};
+
+// Separate component to use useSidebar hook inside SidebarProvider
+const DashboardContent = ({ 
+  effectiveActiveTab, 
+  isCaller, 
+  setActiveTab, 
+  user, 
+  handleSignOut, 
+  renderContent 
+}: {
+  effectiveActiveTab: string;
+  isCaller: boolean;
+  setActiveTab: (tab: string) => void;
+  user: User | null;
+  handleSignOut: () => Promise<void>;
+  renderContent: () => React.ReactNode;
+}) => {
+  const { toggleSidebar, open } = useSidebar();
+
+  return (
+    <div className="min-h-screen flex w-full bg-gradient-to-br from-gray-50 via-white to-gray-100">
+      <AppSidebar 
+        activeTab={effectiveActiveTab} 
+        onTabChange={isCaller ? () => {} : setActiveTab}
+        user={user}
+        onSignOut={handleSignOut}
+        isCaller={isCaller}
+      />
+      <SidebarInset className="flex-1">
+        <div className="flex h-16 items-center gap-4 border-b border-gray-100 bg-white/70 backdrop-blur-md px-6 shadow-sm">
+          <button 
+            onClick={toggleSidebar}
+            className="h-8 w-8 flex items-center justify-center rounded-lg bg-orange-100 hover:bg-orange-200 transition-all duration-200"
+          >
+            {open ? (
+              <ChevronLeft className="h-5 w-5 text-orange-600" />
+            ) : (
+              <ChevronRight className="h-5 w-5 text-orange-600" />
+            )}
+          </button>
             <div className="h-6 w-px bg-gray-200" />
             <h2 className="text-lg font-semibold text-gray-900 capitalize">
               {isCaller ? 'Orders' :
@@ -140,8 +181,7 @@ const Dashboard = () => {
           </div>
         </SidebarInset>
       </div>
-    </SidebarProvider>
-  );
-};
+    );
+  };
 
 export default Dashboard;
