@@ -163,18 +163,18 @@ export function ShopsTable({ shops, onShopsChange }: ShopsTableProps) {
 
   return (
     <>
-      <Card className="bg-white shadow-sm border border-gray-200">
+      <Card className="bg-white/80 backdrop-blur-sm shadow-lg shadow-gray-200/50 border border-gray-100 rounded-2xl">
         <CardHeader>
-          <CardTitle className="text-xl font-semibold">Shops</CardTitle>
+          <CardTitle className="text-xl font-semibold bg-gradient-to-r from-gray-900 via-gray-800 to-gray-700 bg-clip-text text-transparent">Shops</CardTitle>
           <CardDescription>
             Verwalten Sie Ihre Heizöl-Shops und deren Konfiguration
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="rounded-md border">
+          <div className="rounded-xl border border-gray-100 overflow-hidden">
             <Table>
-              <TableHeader>
-                <TableRow>
+              <TableHeader className="bg-gray-50/80">
+                <TableRow className="hover:bg-transparent">
                   <TableHead>Logo</TableHead>
                   <TableHead>Firma</TableHead>
                   <TableHead>ID</TableHead>

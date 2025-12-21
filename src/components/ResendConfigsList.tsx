@@ -116,7 +116,7 @@ export function ResendConfigsList() {
   if (loading) {
     return (
       <div className="flex items-center justify-center py-8">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+        <div className="animate-spin h-8 w-8 rounded-full border-2 border-orange-500 border-t-transparent"></div>
       </div>
     );
   }
@@ -125,19 +125,19 @@ export function ResendConfigsList() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">Resend-Konfigurationen</h1>
-          <p className="text-gray-600 mt-2">Verwalten Sie Ihre E-Mail-Konfigurationen für den Versand</p>
+          <h1 className="text-3xl font-bold bg-gradient-to-r from-gray-900 via-gray-800 to-gray-700 bg-clip-text text-transparent">Resend-Konfigurationen</h1>
+          <p className="text-gray-500 mt-2">Verwalten Sie Ihre E-Mail-Konfigurationen für den Versand</p>
         </div>
-        <Button onClick={() => setDialogOpen(true)}>
+        <Button onClick={() => setDialogOpen(true)} className="bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white shadow-lg shadow-orange-500/25">
           <Plus className="h-4 w-4 mr-2" />
           Neue Konfiguration
         </Button>
       </div>
 
       {configs.length === 0 ? (
-        <Card>
+        <Card className="bg-white/80 backdrop-blur-sm shadow-lg shadow-gray-200/50 border border-gray-100 rounded-2xl">
           <CardContent className="flex flex-col items-center justify-center py-12">
-            <Mail className="h-12 w-12 text-gray-400 mb-4" />
+            <Mail className="h-12 w-12 text-orange-400 mb-4" />
             <h3 className="text-lg font-semibold text-gray-900 mb-2">Keine Konfigurationen vorhanden</h3>
             <p className="text-gray-500 text-center mb-4">
               Erstellen Sie Ihre erste Resend-Konfiguration, um E-Mails versenden zu können.
@@ -151,11 +151,11 @@ export function ResendConfigsList() {
       ) : (
         <div className="grid gap-6">
           {configs.map((config) => (
-            <Card key={config.id} className="bg-white shadow-sm border border-gray-200">
+            <Card key={config.id} className="bg-white/80 backdrop-blur-sm shadow-md shadow-gray-200/50 border border-gray-100 rounded-xl hover:shadow-lg transition-all duration-300">
               <CardHeader>
                 <div className="flex items-center justify-between">
                   <div>
-                    <CardTitle className="text-lg font-semibold text-gray-900">
+                    <CardTitle className="text-lg font-semibold bg-gradient-to-r from-gray-900 to-gray-700 bg-clip-text text-transparent">
                       {config.config_name}
                     </CardTitle>
                     <CardDescription>

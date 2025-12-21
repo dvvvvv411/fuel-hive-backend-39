@@ -243,9 +243,9 @@ export function BankAccountsList() {
 
       {/* Regular Bank Accounts */}
       {regularBankAccounts.length === 0 ? (
-        <Card>
+        <Card className="bg-white/80 backdrop-blur-sm shadow-lg shadow-gray-200/50 border border-gray-100 rounded-2xl">
           <CardContent className="flex flex-col items-center justify-center py-12">
-            <CreditCard className="h-12 w-12 text-gray-400 mb-4" />
+            <CreditCard className="h-12 w-12 text-orange-400 mb-4" />
             <h3 className="text-lg font-medium text-gray-900 mb-2">Keine Bankkonten gefunden</h3>
             <p className="text-gray-500 text-center mb-4">
               Fügen Sie Bankkonten hinzu, um Zahlungen für Heizöl-Bestellungen zu erhalten
@@ -257,17 +257,17 @@ export function BankAccountsList() {
           </CardContent>
         </Card>
       ) : (
-        <Card>
+        <Card className="bg-white/80 backdrop-blur-sm shadow-lg shadow-gray-200/50 border border-gray-100 rounded-2xl">
           <CardHeader>
-            <CardTitle>Normale Bankkonten ({regularBankAccounts.length})</CardTitle>
+            <CardTitle className="bg-gradient-to-r from-gray-900 via-gray-800 to-gray-700 bg-clip-text text-transparent">Normale Bankkonten ({regularBankAccounts.length})</CardTitle>
             <CardDescription>
               Übersicht aller konfigurierten normalen Bankkonten mit Tageslimits und aktueller Nutzung
             </CardDescription>
           </CardHeader>
           <CardContent>
             <Table>
-              <TableHeader>
-                <TableRow>
+              <TableHeader className="bg-gray-50/80">
+                <TableRow className="hover:bg-transparent">
                   <TableHead>Kontoname</TableHead>
                   <TableHead>Bank</TableHead>
                   <TableHead>IBAN</TableHead>
@@ -401,17 +401,17 @@ export function BankAccountsList() {
 
       {/* Temporary Bank Accounts */}
       {temporaryBankAccounts.length > 0 && (
-        <Card>
+        <Card className="bg-white/80 backdrop-blur-sm shadow-lg shadow-gray-200/50 border border-gray-100 rounded-2xl">
           <CardHeader>
-            <CardTitle>Temporäre Bankkonten ({temporaryBankAccounts.length})</CardTitle>
+            <CardTitle className="bg-gradient-to-r from-gray-900 via-gray-800 to-gray-700 bg-clip-text text-transparent">Temporäre Bankkonten ({temporaryBankAccounts.length})</CardTitle>
             <CardDescription>
               Temporäre Bankkonten die für spezifische Bestellungen erstellt wurden
             </CardDescription>
           </CardHeader>
           <CardContent>
             <Table>
-              <TableHeader>
-                <TableRow>
+              <TableHeader className="bg-gray-50/80">
+                <TableRow className="hover:bg-transparent">
                   <TableHead>Kontoname</TableHead>
                   <TableHead>Bank</TableHead>
                   <TableHead>IBAN</TableHead>
