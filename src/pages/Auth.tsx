@@ -21,10 +21,10 @@ interface CryptoPrices {
 }
 
 const CRYPTO_CONFIG = [
-  { id: 'bitcoin', name: 'Bitcoin', symbol: 'BTC', icon: '₿' },
-  { id: 'ethereum', name: 'Ethereum', symbol: 'ETH', icon: 'Ξ' },
-  { id: 'monero', name: 'Monero', symbol: 'XMR', icon: 'ɱ' },
-  { id: 'solana', name: 'Solana', symbol: 'SOL', icon: '◎' },
+  { id: 'bitcoin', name: 'Bitcoin', symbol: 'BTC', icon: 'https://assets.coingecko.com/coins/images/1/small/bitcoin.png' },
+  { id: 'ethereum', name: 'Ethereum', symbol: 'ETH', icon: 'https://assets.coingecko.com/coins/images/279/small/ethereum.png' },
+  { id: 'monero', name: 'Monero', symbol: 'XMR', icon: 'https://assets.coingecko.com/coins/images/69/small/monero_logo.png' },
+  { id: 'solana', name: 'Solana', symbol: 'SOL', icon: 'https://assets.coingecko.com/coins/images/4128/small/solana.png' },
 ];
 
 const Auth = () => {
@@ -253,9 +253,11 @@ const Auth = () => {
                     className="flex items-center justify-between p-3 rounded-lg bg-white/5 border border-white/5 hover:border-white/10 transition-colors"
                   >
                     <div className="flex items-center gap-3">
-                      <div className="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center text-lg">
-                        {crypto.icon}
-                      </div>
+                          <img 
+                            src={crypto.icon} 
+                            alt={crypto.name}
+                            className="w-8 h-8 rounded-full"
+                          />
                       <div>
                         <p className="text-white font-medium text-sm">{crypto.name}</p>
                         <p className="text-white/40 text-xs">{crypto.symbol}</p>
