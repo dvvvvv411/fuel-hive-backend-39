@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { toast } from '@/hooks/use-toast';
-import { ArrowLeft, TrendingUp, TrendingDown, Loader2 } from 'lucide-react';
+import { ArrowLeft, TrendingUp, TrendingDown, Loader2, Shield, Lock } from 'lucide-react';
 
 interface CryptoPrice {
   eur: number;
@@ -179,7 +179,7 @@ const Auth = () => {
       >
         <div className="grid grid-cols-1 md:grid-cols-2">
           {/* Left Side - Login/Signup */}
-          <div className="p-6 md:p-8 border-b md:border-b-0 md:border-r border-white/10">
+          <div className="p-6 md:p-8 border-b md:border-b-0 md:border-r border-white/10 flex flex-col justify-center">
             {/* Header */}
             <div className="mb-6 md:mb-8">
               <div className="flex flex-col items-center md:items-start">
@@ -290,10 +290,24 @@ const Auth = () => {
                 </form>
               </TabsContent>
             </Tabs>
+
+            {/* Trust Indicators */}
+            <div className="mt-6 pt-4 border-t border-white/5">
+              <div className="flex items-center justify-center gap-6 text-white/30 text-xs">
+                <div className="flex items-center gap-1.5">
+                  <Shield className="w-3.5 h-3.5" />
+                  <span>SSL Verschlüsselt</span>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <Lock className="w-3.5 h-3.5" />
+                  <span>Sichere Daten</span>
+                </div>
+              </div>
+            </div>
           </div>
 
           {/* Right Side - Crypto Prices */}
-          <div className="p-6 md:p-8 bg-white/[0.02]">
+          <div className="p-6 md:p-8 bg-white/[0.02] flex flex-col justify-center">
             {/* Header */}
             <div className="mb-6">
               <span className="text-xs text-[#F97316] font-medium tracking-wider">
@@ -302,9 +316,6 @@ const Auth = () => {
               <h3 className="text-xl font-bold text-white mt-1">
                 Krypto Preise
               </h3>
-              <p className="text-white/40 text-sm mt-1">
-                Aktualisiert alle 60 Sekunden
-              </p>
             </div>
 
             {/* Crypto Cards */}
@@ -369,10 +380,6 @@ const Auth = () => {
               ))}
             </div>
 
-            {/* Footer Note */}
-            <p className="text-white/30 text-xs mt-4 text-center">
-              Powered by CoinGecko API
-            </p>
           </div>
         </div>
       </div>
