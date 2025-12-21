@@ -30,7 +30,7 @@ const Index = () => {
 
         {/* Subtext */}
         <p 
-          className="mt-8 md:mt-12 text-base sm:text-lg md:text-xl text-neutral-500 text-center max-w-md animate-fade-in"
+          className="mt-8 md:mt-12 text-base sm:text-lg md:text-xl text-neutral-500 text-center whitespace-nowrap animate-fade-in"
           style={{ animationDelay: '150ms', animationFillMode: 'both' }}
         >
           Die intelligente Plattform für Multi-Shop Management.
