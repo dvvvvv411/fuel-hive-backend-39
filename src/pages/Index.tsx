@@ -1,8 +1,45 @@
 import { Link } from "react-router-dom";
-import { Button } from "@/components/ui/button";
 import { ArrowRight } from "lucide-react";
+import { useState, useEffect } from "react";
+
+const phrases = [
+  "LETS MAKE SOME MONEY",
+  "ITS FREEZING OUTSIDE",
+  "TODAY IS A GOOD DAY TO DIE"
+];
 
 const Index = () => {
+  const [phraseIndex, setPhraseIndex] = useState(0);
+  const [displayText, setDisplayText] = useState("");
+  const [isDeleting, setIsDeleting] = useState(false);
+
+  useEffect(() => {
+    const currentPhrase = phrases[phraseIndex];
+    
+    const timeout = setTimeout(() => {
+      if (!isDeleting) {
+        // Typing
+        if (displayText.length < currentPhrase.length) {
+          setDisplayText(currentPhrase.slice(0, displayText.length + 1));
+        } else {
+          // Finished typing, pause then start deleting
+          setTimeout(() => setIsDeleting(true), 2000);
+        }
+      } else {
+        // Deleting
+        if (displayText.length > 0) {
+          setDisplayText(displayText.slice(0, -1));
+        } else {
+          // Finished deleting, move to next phrase
+          setIsDeleting(false);
+          setPhraseIndex((prev) => (prev + 1) % phrases.length);
+        }
+      }
+    }, isDeleting ? 50 : 100);
+
+    return () => clearTimeout(timeout);
+  }, [displayText, isDeleting, phraseIndex]);
+
   return (
     <div className="relative min-h-screen w-full overflow-hidden bg-black">
       {/* Single subtle gradient glow - top center */}
@@ -15,6 +52,20 @@ const Index = () => {
 
       {/* Main content */}
       <div className="relative z-10 flex flex-col items-center justify-center min-h-screen px-6">
+        {/* Typewriter text */}
+        <div 
+          className="h-8 mb-4 md:mb-6 animate-fade-in"
+          style={{ animationDelay: '0ms', animationFillMode: 'both' }}
+        >
+          <span 
+            className="text-sm sm:text-base md:text-lg font-medium tracking-wider"
+            style={{ color: '#F97316' }}
+          >
+            {displayText}
+            <span className="animate-pulse">|</span>
+          </span>
+        </div>
+
         {/* Headline */}
         <h1 
           className="text-center animate-fade-in"
