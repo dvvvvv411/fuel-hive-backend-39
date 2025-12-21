@@ -50,6 +50,42 @@ const Index = () => {
         }}
       />
 
+      {/* Orange gradient orb - bottom left */}
+      <div 
+        className="absolute bottom-[-10%] left-[-5%] w-[500px] h-[500px] rounded-full blur-[120px] pointer-events-none animate-float"
+        style={{
+          background: 'radial-gradient(circle, #F97316 0%, #FB923C 40%, transparent 70%)',
+        }}
+      />
+
+      {/* Orange gradient orb - right middle */}
+      <div 
+        className="absolute top-[30%] right-[-10%] w-[400px] h-[400px] rounded-full blur-[100px] pointer-events-none animate-float-reverse"
+        style={{
+          background: 'radial-gradient(circle, #FBBF24 0%, #F97316 50%, transparent 70%)',
+        }}
+      />
+
+      {/* Floating particles */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none">
+        {[...Array(6)].map((_, i) => (
+          <div
+            key={i}
+            className="absolute rounded-full animate-float-particle"
+            style={{
+              width: `${3 + Math.random() * 4}px`,
+              height: `${3 + Math.random() * 4}px`,
+              left: `${10 + i * 15}%`,
+              bottom: '-20px',
+              background: '#F97316',
+              opacity: 0.3,
+              animationDelay: `${i * 2.5}s`,
+              animationDuration: `${12 + Math.random() * 8}s`,
+            }}
+          />
+        ))}
+      </div>
+
       {/* Main content */}
       <div className="relative z-10 flex flex-col items-center justify-center min-h-screen px-6">
         {/* Typewriter text */}
