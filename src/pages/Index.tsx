@@ -21,7 +21,7 @@ const Index = () => {
           style={{ animationDelay: '0ms', animationFillMode: 'both' }}
         >
           <span className="block text-6xl sm:text-7xl md:text-8xl lg:text-[10rem] font-bold tracking-tighter text-white leading-none">
-            HEIZÖL
+            SHOP
           </span>
           <span className="block text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-extralight tracking-[0.2em] sm:tracking-[0.3em] text-white/80 mt-2 md:mt-4">
             MANAGEMENT
@@ -33,7 +33,7 @@ const Index = () => {
           className="mt-8 md:mt-12 text-base sm:text-lg md:text-xl text-neutral-500 text-center max-w-md animate-fade-in"
           style={{ animationDelay: '150ms', animationFillMode: 'both' }}
         >
-          Die intelligente Plattform für Heizölhändler.
+          Die intelligente Plattform für Multi-Shop Management.
         </p>
 
         {/* CTA Button */}
