@@ -123,7 +123,7 @@ export function OrdersTable({ initialStatusFilter = [] }: OrdersTableProps = {})
   const [totalCount, setTotalCount] = useState(0);
   const itemsPerPage = 20;
 
-  const { isCaller, allowedShopIds, hasAllShopsAccess, visibleFromDate } = useUserRole();
+  const { isCaller, allowedShopIds, hasAllShopsAccess, visibleFromDate, loading: roleLoading } = useUserRole();
 
   // Update filter when initialStatusFilter changes
   useEffect(() => {
@@ -131,9 +131,12 @@ export function OrdersTable({ initialStatusFilter = [] }: OrdersTableProps = {})
   }, [initialStatusFilter]);
 
   useEffect(() => {
+    // Wait until role data is loaded before fetching orders
+    if (roleLoading) return;
+    
     fetchShops();
     fetchOrders();
-  }, [currentPage, searchTerm, selectedShops, selectedStatuses, dateFrom, dateTo, showHidden, allowedShopIds, hasAllShopsAccess, visibleFromDate]);
+  }, [currentPage, searchTerm, selectedShops, selectedStatuses, dateFrom, dateTo, showHidden, allowedShopIds, hasAllShopsAccess, visibleFromDate, roleLoading]);
 
   const fetchShops = async () => {
     try {
@@ -886,7 +889,7 @@ export function OrdersTable({ initialStatusFilter = [] }: OrdersTableProps = {})
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {loading ? (
+                {(loading || roleLoading) ? (
                   <TableRow>
                     <TableCell colSpan={14} className="text-center py-8">
                       Lade Bestellungen...
