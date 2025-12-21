@@ -7,12 +7,14 @@ interface UserRoleState {
   isAdmin: boolean;
   allowedShopIds: string[];
   hasAllShopsAccess: boolean;
+  visibleFromDate: string | null;
   loading: boolean;
 }
 
 export function useUserRole(): UserRoleState {
   const [role, setRole] = useState<'admin' | 'caller' | null>(null);
   const [allowedShopIds, setAllowedShopIds] = useState<string[]>([]);
+  const [visibleFromDate, setVisibleFromDate] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -23,6 +25,7 @@ export function useUserRole(): UserRoleState {
         if (!user) {
           setRole(null);
           setAllowedShopIds([]);
+          setVisibleFromDate(null);
           setLoading(false);
           return;
         }
@@ -30,7 +33,7 @@ export function useUserRole(): UserRoleState {
         // Fetch user's role from user_roles table
         const { data: roleData, error: roleError } = await supabase
           .from('user_roles')
-          .select('role')
+          .select('role, visible_from_date')
           .eq('user_id', user.id);
 
         if (roleError) {
@@ -42,8 +45,13 @@ export function useUserRole(): UserRoleState {
           const roles = roleData.map(r => r.role);
           if (roles.includes('admin')) {
             setRole('admin');
+            setVisibleFromDate(null);
           } else if (roles.includes('caller')) {
             setRole('caller');
+            
+            // Get visible_from_date for caller
+            const callerRole = roleData.find(r => r.role === 'caller');
+            setVisibleFromDate(callerRole?.visible_from_date || null);
             
             // Fetch allowed shops for caller
             const { data: shopData, error: shopError } = await supabase
@@ -59,6 +67,7 @@ export function useUserRole(): UserRoleState {
           }
         } else {
           setRole(null);
+          setVisibleFromDate(null);
         }
       } catch (error) {
         console.error('Error in useUserRole:', error);
@@ -83,6 +92,7 @@ export function useUserRole(): UserRoleState {
     isAdmin: role === 'admin',
     allowedShopIds,
     hasAllShopsAccess: allowedShopIds.length === 0,
+    visibleFromDate,
     loading
   };
 }
