@@ -57,8 +57,8 @@ const Dashboard = () => {
   // Show loading screen until auth state is ready
   if (!authReady || roleLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <div className="animate-spin h-8 w-8 rounded-full border-2 border-blue-600 border-t-transparent" />
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-50 via-white to-gray-100">
+        <div className="animate-spin h-10 w-10 rounded-full border-[3px] border-orange-500 border-t-transparent" />
       </div>
     );
   }
@@ -91,8 +91,10 @@ const Dashboard = () => {
         return (
           <div className="space-y-8">
             <div>
-              <h1 className="text-3xl font-bold text-gray-900">Dashboard Overview</h1>
-              <p className="text-gray-600 mt-2">Welcome to your heating oil admin dashboard</p>
+              <h1 className="text-3xl font-bold bg-gradient-to-r from-gray-900 via-gray-800 to-gray-700 bg-clip-text text-transparent">
+                Dashboard Overview
+              </h1>
+              <p className="text-gray-500 mt-2">Welcome to your heating oil admin dashboard</p>
             </div>
 
             <DashboardStats />
@@ -107,7 +109,7 @@ const Dashboard = () => {
 
   return (
     <SidebarProvider>
-      <div className="min-h-screen flex w-full bg-gray-50">
+      <div className="min-h-screen flex w-full bg-gradient-to-br from-gray-50 via-white to-gray-100">
         <AppSidebar 
           activeTab={effectiveActiveTab} 
           onTabChange={isCaller ? () => {} : setActiveTab}
@@ -116,8 +118,8 @@ const Dashboard = () => {
           isCaller={isCaller}
         />
         <SidebarInset className="flex-1">
-          <div className="flex h-16 items-center gap-4 border-b border-gray-200 bg-white px-6">
-            <SidebarTrigger className="h-8 w-8" />
+          <div className="flex h-16 items-center gap-4 border-b border-gray-100 bg-white/70 backdrop-blur-md px-6 shadow-sm">
+            <SidebarTrigger className="h-8 w-8 text-gray-600 hover:text-gray-900 transition-colors" />
             <div className="h-6 w-px bg-gray-200" />
             <h2 className="text-lg font-semibold text-gray-900 capitalize">
               {isCaller ? 'Orders' :
