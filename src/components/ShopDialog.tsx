@@ -8,7 +8,8 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 import { BrandingFields } from './BrandingFields';
 import { QuickaddShopDialog, type QuickaddData } from './QuickaddShopDialog';
-
+import { ResendConfigDialog } from './ResendConfigDialog';
+import { Plus } from 'lucide-react';
 interface ShopDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -20,6 +21,7 @@ export function ShopDialog({ open, onOpenChange, onSuccess, shop }: ShopDialogPr
   const [loading, setLoading] = useState(false);
   const [logoUploading, setLogoUploading] = useState(false);
   const [quickaddOpen, setQuickaddOpen] = useState(false);
+  const [resendConfigDialogOpen, setResendConfigDialogOpen] = useState(false);
   const [bankAccounts, setBankAccounts] = useState<any[]>([]);
   const [resendConfigs, setResendConfigs] = useState<any[]>([]);
   
@@ -531,27 +533,39 @@ export function ShopDialog({ open, onOpenChange, onSuccess, shop }: ShopDialogPr
             <h3 className="text-lg font-semibold mb-4">E-Mail-Konfiguration</h3>
             <div className="space-y-2">
               <Label htmlFor="resend_config_id">Resend-Konfiguration</Label>
-              <Select 
-                value={formData.resend_config_id || ''} 
-                onValueChange={(value) => handleInputChange('resend_config_id', value || null)}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Resend-Konfiguration auswählen..." />
-                </SelectTrigger>
-                <SelectContent>
-                  {resendConfigs.map((config) => (
-                    <SelectItem key={config.id} value={config.id}>
-                      {config.config_name} - {config.from_email}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <div className="flex gap-2">
+                <Select 
+                  value={formData.resend_config_id || ''} 
+                  onValueChange={(value) => handleInputChange('resend_config_id', value || null)}
+                >
+                  <SelectTrigger className="flex-1">
+                    <SelectValue placeholder="Resend-Konfiguration auswählen..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {resendConfigs.map((config) => (
+                      <SelectItem key={config.id} value={config.id}>
+                        {config.config_name} - {config.from_email}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="icon"
+                  onClick={() => setResendConfigDialogOpen(true)}
+                  className="shrink-0 border-orange-300 hover:bg-orange-50 hover:border-orange-400"
+                  title="Neue Resend-Konfiguration erstellen"
+                >
+                  <Plus className="h-4 w-4 text-orange-600" />
+                </Button>
+              </div>
               {resendConfigs.length === 0 && (
-                <p className="text-sm text-gray-500">
-                  Keine aktiven Resend-Konfigurationen gefunden. Bitte erstellen Sie zuerst eine Resend-Konfiguration.
+                <p className="text-sm text-muted-foreground">
+                  Keine aktiven Resend-Konfigurationen gefunden.
                 </p>
               )}
-              <p className="text-sm text-gray-600">
+              <p className="text-sm text-muted-foreground">
                 Wählen Sie eine Resend-Konfiguration für den E-Mail-Versand dieses Shops.
               </p>
             </div>
@@ -633,6 +647,17 @@ export function ShopDialog({ open, onOpenChange, onSuccess, shop }: ShopDialogPr
         open={quickaddOpen}
         onOpenChange={setQuickaddOpen}
         onConfirm={handleQuickaddConfirm}
+      />
+      
+      <ResendConfigDialog
+        open={resendConfigDialogOpen}
+        onOpenChange={setResendConfigDialogOpen}
+        onSave={async (newConfigId?: string) => {
+          await fetchResendConfigs();
+          if (newConfigId) {
+            handleInputChange('resend_config_id', newConfigId);
+          }
+        }}
       />
     </Dialog>
   );
