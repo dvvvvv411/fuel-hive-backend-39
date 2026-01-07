@@ -7,11 +7,12 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Pagination, PaginationContent, PaginationItem, PaginationLink, PaginationNext, PaginationPrevious } from '@/components/ui/pagination';
-import { Search, RefreshCw, FileText, Eye, DollarSign, Check, EyeOff, Copy, Mail } from 'lucide-react';
+import { Search, RefreshCw, FileText, Eye, DollarSign, Check, EyeOff, Copy, Mail, Pencil } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import { OrderDetailsDialog } from './OrderDetailsDialog';
 import { BankAccountSelectionDialog } from './BankAccountSelectionDialog';
 import { ContactAttemptEmailPreview } from './ContactAttemptEmailPreview';
+import { AddressEditDialog } from './AddressEditDialog';
 import { Checkbox } from '@/components/ui/checkbox';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { formatCurrencyWithEUR } from '@/utils/bankingUtils';
@@ -109,6 +110,8 @@ export function OrdersTable({ initialStatusFilter = [] }: OrdersTableProps = {})
   const [selectedOrderForInvoice, setSelectedOrderForInvoice] = useState<Order | null>(null);
   const [showEmailPreviewDialog, setShowEmailPreviewDialog] = useState(false);
   const [selectedOrderForEmail, setSelectedOrderForEmail] = useState<Order | null>(null);
+  const [showAddressEditDialog, setShowAddressEditDialog] = useState(false);
+  const [selectedOrderForAddress, setSelectedOrderForAddress] = useState<Order | null>(null);
   
   // Filter states - changed to arrays for multi-select
   const [searchTerm, setSearchTerm] = useState('');
@@ -953,9 +956,21 @@ export function OrdersTable({ initialStatusFilter = [] }: OrdersTableProps = {})
                           )}
                         </TableCell>
                         <TableCell>
-                          <div className="text-sm">
-                            <div>{address.street}</div>
-                            <div>{address.cityPostcode}</div>
+                          <div 
+                            className="text-sm cursor-pointer hover:bg-orange-50 hover:text-orange-700 p-1 rounded transition-colors group"
+                            onClick={() => {
+                              setSelectedOrderForAddress(order);
+                              setShowAddressEditDialog(true);
+                            }}
+                            title="Klicken zum Bearbeiten"
+                          >
+                            <div className="flex items-center gap-1">
+                              <div>
+                                <div>{address.street}</div>
+                                <div>{address.cityPostcode}</div>
+                              </div>
+                              <Pencil className="h-3 w-3 text-gray-400 opacity-0 group-hover:opacity-100 transition-opacity" />
+                            </div>
                           </div>
                         </TableCell>
                         <TableCell>
@@ -1219,6 +1234,19 @@ export function OrdersTable({ initialStatusFilter = [] }: OrdersTableProps = {})
         onOpenChange={setShowEmailPreviewDialog}
         order={selectedOrderForEmail}
       />
+
+      {/* Address Edit Dialog */}
+      {selectedOrderForAddress && (
+        <AddressEditDialog
+          order={selectedOrderForAddress}
+          open={showAddressEditDialog}
+          onOpenChange={setShowAddressEditDialog}
+          onSave={() => {
+            fetchOrders();
+            setShowAddressEditDialog(false);
+          }}
+        />
+      )}
     </div>
   );
 }
