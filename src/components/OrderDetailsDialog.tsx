@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useUserRole } from '@/hooks/useUserRole';
 import {
@@ -11,6 +11,8 @@ import {
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Separator } from '@/components/ui/separator';
 import { 
@@ -24,7 +26,10 @@ import {
   Calendar,
   Download,
   Send,
-  DollarSign
+  DollarSign,
+  Pencil,
+  Check,
+  X
 } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import { PDFViewerDialog } from './PDFViewerDialog';
@@ -81,6 +86,68 @@ export function OrderDetailsDialog({ order, open, onOpenChange, onOrderUpdate }:
   const [updating, setUpdating] = useState(false);
   const [showPDFViewer, setShowPDFViewer] = useState(false);
   const { isCaller } = useUserRole();
+  
+  // Delivery address editing state
+  const [editingDeliveryAddress, setEditingDeliveryAddress] = useState(false);
+  const [deliveryAddressForm, setDeliveryAddressForm] = useState({
+    delivery_company_name: order.delivery_company_name || '',
+    delivery_first_name: order.delivery_first_name,
+    delivery_last_name: order.delivery_last_name,
+    delivery_street: order.delivery_street,
+    delivery_postcode: order.delivery_postcode,
+    delivery_city: order.delivery_city,
+    delivery_phone: order.delivery_phone || '',
+  });
+
+  // Reset form when order changes or dialog opens
+  useEffect(() => {
+    setDeliveryAddressForm({
+      delivery_company_name: order.delivery_company_name || '',
+      delivery_first_name: order.delivery_first_name,
+      delivery_last_name: order.delivery_last_name,
+      delivery_street: order.delivery_street,
+      delivery_postcode: order.delivery_postcode,
+      delivery_city: order.delivery_city,
+      delivery_phone: order.delivery_phone || '',
+    });
+    setEditingDeliveryAddress(false);
+  }, [order, open]);
+
+  const saveDeliveryAddress = async () => {
+    try {
+      setUpdating(true);
+      
+      const updateData = {
+        ...deliveryAddressForm,
+        delivery_company_name: deliveryAddressForm.delivery_company_name || null,
+        delivery_phone: deliveryAddressForm.delivery_phone || null,
+      };
+
+      const { error } = await supabase
+        .from('orders')
+        .update(updateData)
+        .eq('id', order.id);
+
+      if (error) throw error;
+
+      toast({
+        title: 'Erfolg',
+        description: 'Lieferadresse wurde aktualisiert',
+      });
+      
+      setEditingDeliveryAddress(false);
+      onOrderUpdate();
+    } catch (error) {
+      console.error('Error updating delivery address:', error);
+      toast({
+        title: 'Fehler',
+        description: 'Lieferadresse konnte nicht aktualisiert werden',
+        variant: 'destructive',
+      });
+    } finally {
+      setUpdating(false);
+    }
+  };
 
   const updateOrderStatus = async (newStatus: string) => {
     try {
@@ -491,32 +558,150 @@ export function OrderDetailsDialog({ order, open, onOpenChange, onOrderUpdate }:
             {/* Delivery Address */}
             <Card>
               <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <MapPin className="h-4 w-4" />
-                  Lieferadresse
+                <CardTitle className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <MapPin className="h-4 w-4" />
+                    Lieferadresse
+                  </div>
+                  {!editingDeliveryAddress ? (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setEditingDeliveryAddress(true)}
+                      className="h-8 w-8 p-0"
+                    >
+                      <Pencil className="h-4 w-4" />
+                    </Button>
+                  ) : (
+                    <div className="flex gap-1">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => {
+                          setEditingDeliveryAddress(false);
+                          setDeliveryAddressForm({
+                            delivery_company_name: order.delivery_company_name || '',
+                            delivery_first_name: order.delivery_first_name,
+                            delivery_last_name: order.delivery_last_name,
+                            delivery_street: order.delivery_street,
+                            delivery_postcode: order.delivery_postcode,
+                            delivery_city: order.delivery_city,
+                            delivery_phone: order.delivery_phone || '',
+                          });
+                        }}
+                        className="h-8 w-8 p-0"
+                        disabled={updating}
+                      >
+                        <X className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={saveDeliveryAddress}
+                        className="h-8 w-8 p-0 text-green-600 hover:text-green-700"
+                        disabled={updating}
+                      >
+                        <Check className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  )}
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="space-y-2">
-                  {order.delivery_company_name && (
-                    <div className="font-semibold text-primary">
-                      {order.delivery_company_name}
+                {editingDeliveryAddress ? (
+                  <div className="space-y-3">
+                    <div>
+                      <Label htmlFor="edit_delivery_company" className="text-xs">Firma (optional)</Label>
+                      <Input
+                        id="edit_delivery_company"
+                        value={deliveryAddressForm.delivery_company_name}
+                        onChange={(e) => setDeliveryAddressForm({ ...deliveryAddressForm, delivery_company_name: e.target.value })}
+                        placeholder="Firmenname"
+                        className="h-8"
+                      />
                     </div>
-                  )}
-                  <div className="font-medium">
-                    {order.delivery_first_name} {order.delivery_last_name}
-                  </div>
-                  <div>{order.delivery_street}</div>
-                  <div>
-                    {order.delivery_postcode} {order.delivery_city}
-                  </div>
-                  {order.delivery_phone && (
-                    <div className="flex items-center gap-2">
-                      <Phone className="h-4 w-4 text-gray-500" />
-                      <span>{order.delivery_phone}</span>
+                    <div className="grid grid-cols-2 gap-2">
+                      <div>
+                        <Label htmlFor="edit_delivery_first_name" className="text-xs">Vorname</Label>
+                        <Input
+                          id="edit_delivery_first_name"
+                          value={deliveryAddressForm.delivery_first_name}
+                          onChange={(e) => setDeliveryAddressForm({ ...deliveryAddressForm, delivery_first_name: e.target.value })}
+                          className="h-8"
+                        />
+                      </div>
+                      <div>
+                        <Label htmlFor="edit_delivery_last_name" className="text-xs">Nachname</Label>
+                        <Input
+                          id="edit_delivery_last_name"
+                          value={deliveryAddressForm.delivery_last_name}
+                          onChange={(e) => setDeliveryAddressForm({ ...deliveryAddressForm, delivery_last_name: e.target.value })}
+                          className="h-8"
+                        />
+                      </div>
                     </div>
-                  )}
-                </div>
+                    <div>
+                      <Label htmlFor="edit_delivery_street" className="text-xs">Straße & Hausnummer</Label>
+                      <Input
+                        id="edit_delivery_street"
+                        value={deliveryAddressForm.delivery_street}
+                        onChange={(e) => setDeliveryAddressForm({ ...deliveryAddressForm, delivery_street: e.target.value })}
+                        className="h-8"
+                      />
+                    </div>
+                    <div className="grid grid-cols-2 gap-2">
+                      <div>
+                        <Label htmlFor="edit_delivery_postcode" className="text-xs">PLZ</Label>
+                        <Input
+                          id="edit_delivery_postcode"
+                          value={deliveryAddressForm.delivery_postcode}
+                          onChange={(e) => setDeliveryAddressForm({ ...deliveryAddressForm, delivery_postcode: e.target.value })}
+                          className="h-8"
+                        />
+                      </div>
+                      <div>
+                        <Label htmlFor="edit_delivery_city" className="text-xs">Stadt</Label>
+                        <Input
+                          id="edit_delivery_city"
+                          value={deliveryAddressForm.delivery_city}
+                          onChange={(e) => setDeliveryAddressForm({ ...deliveryAddressForm, delivery_city: e.target.value })}
+                          className="h-8"
+                        />
+                      </div>
+                    </div>
+                    <div>
+                      <Label htmlFor="edit_delivery_phone" className="text-xs">Telefon (optional)</Label>
+                      <Input
+                        id="edit_delivery_phone"
+                        value={deliveryAddressForm.delivery_phone}
+                        onChange={(e) => setDeliveryAddressForm({ ...deliveryAddressForm, delivery_phone: e.target.value })}
+                        placeholder="Telefonnummer"
+                        className="h-8"
+                      />
+                    </div>
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    {order.delivery_company_name && (
+                      <div className="font-semibold text-primary">
+                        {order.delivery_company_name}
+                      </div>
+                    )}
+                    <div className="font-medium">
+                      {order.delivery_first_name} {order.delivery_last_name}
+                    </div>
+                    <div>{order.delivery_street}</div>
+                    <div>
+                      {order.delivery_postcode} {order.delivery_city}
+                    </div>
+                    {order.delivery_phone && (
+                      <div className="flex items-center gap-2">
+                        <Phone className="h-4 w-4 text-gray-500" />
+                        <span>{order.delivery_phone}</span>
+                      </div>
+                    )}
+                  </div>
+                )}
               </CardContent>
             </Card>
 
