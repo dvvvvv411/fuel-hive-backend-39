@@ -4,10 +4,10 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Select, SelectContent, SelectItem, SelectTrigger } from '@/components/ui/select';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Pagination, PaginationContent, PaginationItem, PaginationLink, PaginationNext, PaginationPrevious } from '@/components/ui/pagination';
-import { Search, RefreshCw, FileText, Eye, DollarSign, Check, EyeOff, Copy, Mail, Pencil } from 'lucide-react';
+import { Search, RefreshCw, FileText, Eye, DollarSign, Check, EyeOff, Copy, Mail, Pencil, X } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import { OrderDetailsDialog } from './OrderDetailsDialog';
 import { BankAccountSelectionDialog } from './BankAccountSelectionDialog';
@@ -112,6 +112,11 @@ export function OrdersTable({ initialStatusFilter = [] }: OrdersTableProps = {})
   const [selectedOrderForEmail, setSelectedOrderForEmail] = useState<Order | null>(null);
   const [showAddressEditDialog, setShowAddressEditDialog] = useState(false);
   const [selectedOrderForAddress, setSelectedOrderForAddress] = useState<Order | null>(null);
+  
+  // Inline editing states for liters and product
+  const [editingLitersOrderId, setEditingLitersOrderId] = useState<string | null>(null);
+  const [newLitersValue, setNewLitersValue] = useState<number>(0);
+  const [editingProductOrderId, setEditingProductOrderId] = useState<string | null>(null);
   
   // Filter states - changed to arrays for multi-select
   const [searchTerm, setSearchTerm] = useState('');
@@ -354,6 +359,104 @@ export function OrdersTable({ initialStatusFilter = [] }: OrdersTableProps = {})
 
   const markAsReady = async (orderId: string) => {
     await updateOrderStatus(orderId, 'ready');
+  };
+
+  const updateOrderLiters = async (orderId: string, newLiters: number) => {
+    const order = orders.find(o => o.id === orderId);
+    if (!order || newLiters <= 0) return;
+
+    const newBasePrice = newLiters * order.price_per_liter;
+    const newTotalAmount = newBasePrice + order.delivery_fee;
+
+    try {
+      const { error } = await supabase
+        .from('orders')
+        .update({
+          liters: newLiters,
+          base_price: newBasePrice,
+          total_amount: newTotalAmount,
+          amount: newBasePrice
+        })
+        .eq('id', orderId);
+
+      if (error) throw error;
+
+      setOrders(orders.map(o => 
+        o.id === orderId 
+          ? { ...o, liters: newLiters, base_price: newBasePrice, total_amount: newTotalAmount, amount: newBasePrice }
+          : o
+      ));
+
+      toast({
+        title: 'Erfolg',
+        description: 'Menge wurde aktualisiert',
+      });
+    } catch (error) {
+      console.error('Error updating liters:', error);
+      toast({
+        title: 'Fehler',
+        description: 'Menge konnte nicht aktualisiert werden',
+        variant: 'destructive',
+      });
+    }
+    setEditingLitersOrderId(null);
+  };
+
+  const updateOrderProduct = async (orderId: string, newProduct: string) => {
+    const order = orders.find(o => o.id === orderId);
+    if (!order) return;
+
+    // Premium pricing: +0.03€/L difference
+    const premiumUpcharge = 0.03;
+    let newPricePerLiter = order.price_per_liter;
+    
+    const currentIsStandard = order.product.toLowerCase().includes('standard');
+    const newIsStandard = newProduct.toLowerCase().includes('standard');
+    
+    if (currentIsStandard && !newIsStandard) {
+      // Upgrade to Premium
+      newPricePerLiter = order.price_per_liter + premiumUpcharge;
+    } else if (!currentIsStandard && newIsStandard) {
+      // Downgrade to Standard
+      newPricePerLiter = order.price_per_liter - premiumUpcharge;
+    }
+
+    const newBasePrice = order.liters * newPricePerLiter;
+    const newTotalAmount = newBasePrice + order.delivery_fee;
+
+    try {
+      const { error } = await supabase
+        .from('orders')
+        .update({
+          product: newProduct,
+          price_per_liter: newPricePerLiter,
+          base_price: newBasePrice,
+          total_amount: newTotalAmount,
+          amount: newBasePrice
+        })
+        .eq('id', orderId);
+
+      if (error) throw error;
+
+      setOrders(orders.map(o => 
+        o.id === orderId 
+          ? { ...o, product: newProduct, price_per_liter: newPricePerLiter, base_price: newBasePrice, total_amount: newTotalAmount, amount: newBasePrice }
+          : o
+      ));
+
+      toast({
+        title: 'Erfolg',
+        description: 'Produkt wurde aktualisiert',
+      });
+    } catch (error) {
+      console.error('Error updating product:', error);
+      toast({
+        title: 'Fehler',
+        description: 'Produkt konnte nicht aktualisiert werden',
+        variant: 'destructive',
+      });
+    }
+    setEditingProductOrderId(null);
   };
 
   const generateInvoice = async (
@@ -981,8 +1084,82 @@ export function OrdersTable({ initialStatusFilter = [] }: OrdersTableProps = {})
                             />
                           </div>
                         </TableCell>
-                        <TableCell>{order.product}</TableCell>
-                        <TableCell>{order.liters}</TableCell>
+                        <TableCell>
+                          {editingProductOrderId === order.id ? (
+                            <Select
+                              defaultValue={order.product}
+                              onValueChange={(value) => updateOrderProduct(order.id, value)}
+                              open={true}
+                              onOpenChange={(open) => !open && setEditingProductOrderId(null)}
+                            >
+                              <SelectTrigger className="w-40 h-8">
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="Standard Heizöl">Standard Heizöl</SelectItem>
+                                <SelectItem value="Premium Heizöl">Premium Heizöl</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          ) : (
+                            <div 
+                              className="cursor-pointer hover:bg-orange-50 hover:text-orange-700 p-1 rounded transition-colors group flex items-center gap-1"
+                              onClick={() => setEditingProductOrderId(order.id)}
+                            >
+                              <span>{order.product}</span>
+                              <Pencil className="h-3 w-3 text-gray-400 opacity-0 group-hover:opacity-100 transition-opacity" />
+                            </div>
+                          )}
+                        </TableCell>
+                        <TableCell>
+                          {editingLitersOrderId === order.id ? (
+                            <div className="flex items-center gap-2">
+                              <Input
+                                type="number"
+                                value={newLitersValue}
+                                onChange={(e) => setNewLitersValue(Number(e.target.value))}
+                                className="w-20 h-8"
+                                autoFocus
+                                onKeyDown={(e) => {
+                                  if (e.key === 'Enter') {
+                                    updateOrderLiters(order.id, newLitersValue);
+                                  } else if (e.key === 'Escape') {
+                                    setEditingLitersOrderId(null);
+                                  }
+                                }}
+                              />
+                              <div className="text-xs text-muted-foreground whitespace-nowrap">
+                                = {(newLitersValue * order.price_per_liter + order.delivery_fee).toFixed(2)}€
+                              </div>
+                              <Button 
+                                size="sm" 
+                                variant="ghost"
+                                className="h-6 w-6 p-0"
+                                onClick={() => updateOrderLiters(order.id, newLitersValue)}
+                              >
+                                <Check className="h-3 w-3 text-green-600" />
+                              </Button>
+                              <Button 
+                                size="sm" 
+                                variant="ghost"
+                                className="h-6 w-6 p-0"
+                                onClick={() => setEditingLitersOrderId(null)}
+                              >
+                                <X className="h-3 w-3 text-red-600" />
+                              </Button>
+                            </div>
+                          ) : (
+                            <div 
+                              className="cursor-pointer hover:bg-orange-50 hover:text-orange-700 p-1 rounded transition-colors group flex items-center gap-1"
+                              onClick={() => {
+                                setEditingLitersOrderId(order.id);
+                                setNewLitersValue(order.liters);
+                              }}
+                            >
+                              <span>{order.liters}</span>
+                              <Pencil className="h-3 w-3 text-gray-400 opacity-0 group-hover:opacity-100 transition-opacity" />
+                            </div>
+                          )}
+                        </TableCell>
                         <TableCell>
                           <CurrencyDisplay
                             amount={order.total_amount}
