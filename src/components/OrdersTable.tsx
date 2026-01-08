@@ -113,10 +113,12 @@ export function OrdersTable({ initialStatusFilter = [] }: OrdersTableProps = {})
   const [showAddressEditDialog, setShowAddressEditDialog] = useState(false);
   const [selectedOrderForAddress, setSelectedOrderForAddress] = useState<Order | null>(null);
   
-  // Inline editing states for liters and product
+  // Inline editing states for liters, product, and email
   const [editingLitersOrderId, setEditingLitersOrderId] = useState<string | null>(null);
   const [newLitersValue, setNewLitersValue] = useState<number>(0);
   const [editingProductOrderId, setEditingProductOrderId] = useState<string | null>(null);
+  const [editingEmailOrderId, setEditingEmailOrderId] = useState<string | null>(null);
+  const [newEmailValue, setNewEmailValue] = useState<string>('');
   
   // Filter states - changed to arrays for multi-select
   const [searchTerm, setSearchTerm] = useState('');
@@ -400,6 +402,39 @@ export function OrdersTable({ initialStatusFilter = [] }: OrdersTableProps = {})
       });
     }
     setEditingLitersOrderId(null);
+  };
+
+  const updateOrderEmail = async (orderId: string, newEmail: string) => {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(newEmail)) {
+      toast({
+        title: 'Fehler',
+        description: 'Bitte geben Sie eine gültige E-Mail-Adresse ein',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    const { error } = await supabase
+      .from('orders')
+      .update({ customer_email: newEmail })
+      .eq('id', orderId);
+
+    if (error) {
+      console.error('Error updating email:', error);
+      toast({
+        title: 'Fehler',
+        description: 'E-Mail konnte nicht aktualisiert werden',
+        variant: 'destructive',
+      });
+    } else {
+      toast({
+        title: 'Erfolg',
+        description: 'E-Mail wurde aktualisiert',
+      });
+      fetchOrders();
+    }
+    setEditingEmailOrderId(null);
   };
 
   const updateOrderProduct = async (orderId: string, newProduct: string) => {
@@ -1041,7 +1076,52 @@ export function OrdersTable({ initialStatusFilter = [] }: OrdersTableProps = {})
                               </div>
                             )}
                             <div className="font-medium">{order.customer_name}</div>
-                            <div className="text-sm text-muted-foreground">{order.customer_email}</div>
+                            {editingEmailOrderId === order.id ? (
+                              <div className="flex items-center gap-1">
+                                <Input
+                                  type="email"
+                                  value={newEmailValue}
+                                  onChange={(e) => setNewEmailValue(e.target.value)}
+                                  className="h-7 text-sm w-48"
+                                  autoFocus
+                                  onKeyDown={(e) => {
+                                    if (e.key === 'Enter') {
+                                      updateOrderEmail(order.id, newEmailValue);
+                                    } else if (e.key === 'Escape') {
+                                      setEditingEmailOrderId(null);
+                                    }
+                                  }}
+                                />
+                                <Button
+                                  size="sm"
+                                  variant="ghost"
+                                  className="h-6 w-6 p-0"
+                                  onClick={() => updateOrderEmail(order.id, newEmailValue)}
+                                >
+                                  <Check className="h-3 w-3 text-green-600" />
+                                </Button>
+                                <Button
+                                  size="sm"
+                                  variant="ghost"
+                                  className="h-6 w-6 p-0"
+                                  onClick={() => setEditingEmailOrderId(null)}
+                                >
+                                  <X className="h-3 w-3 text-red-600" />
+                                </Button>
+                              </div>
+                            ) : (
+                              <div 
+                                className="text-sm text-muted-foreground cursor-pointer hover:bg-orange-50 hover:text-orange-700 p-1 rounded transition-colors group flex items-center gap-1"
+                                onClick={() => {
+                                  setEditingEmailOrderId(order.id);
+                                  setNewEmailValue(order.customer_email);
+                                }}
+                                title="Klicken zum Bearbeiten"
+                              >
+                                <span>{order.customer_email}</span>
+                                <Pencil className="h-3 w-3 text-gray-400 opacity-0 group-hover:opacity-100 transition-opacity" />
+                              </div>
+                            )}
                           </div>
                         </TableCell>
                         <TableCell>
