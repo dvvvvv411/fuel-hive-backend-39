@@ -1325,9 +1325,8 @@ export function OrdersTable({ initialStatusFilter = [] }: OrdersTableProps = {})
                             
                             {(order.status === 'pending' || order.status === 'ready') && !showHidden && (
                               <>
-                                {/* Show Ready button only for callers AND pending status */}
-                                {isCaller && order.status === 'pending' ? (
-                                  // Ready Button for callers at pending status
+                                {/* Ready Button: NUR für Caller bei pending Status */}
+                                {isCaller && order.status === 'pending' && (
                                   <Button
                                     size="sm"
                                     onClick={() => markAsReady(order.id)}
@@ -1335,8 +1334,10 @@ export function OrdersTable({ initialStatusFilter = [] }: OrdersTableProps = {})
                                   >
                                     Ready
                                   </Button>
-                                ) : (
-                                  // Rechnung Button for all users at "ready" status or normal users at "pending" status
+                                )}
+                                
+                                {/* Rechnung Button: Für Admins immer, für Caller NUR bei ready Status */}
+                                {(!isCaller || order.status === 'ready') && (
                                   <Button
                                     size="sm"
                                     onClick={() => handleInvoiceClick(order)}
