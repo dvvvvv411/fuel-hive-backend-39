@@ -489,7 +489,8 @@ const handler = async (req: Request): Promise<Response> => {
           language,
           resend_api_key,
           resend_from_email,
-          resend_from_name
+          resend_from_name,
+          sms_sender_name
         )
       `)
       .eq('id', order_id)
@@ -678,6 +679,61 @@ const handler = async (req: Request): Promise<Response> => {
     }
 
     console.log('Email sent successfully:', emailResponse);
+
+    // Send SMS after successful email
+    try {
+      const smsTemplateType = include_invoice ? 'invoice' : 'order_confirmation';
+      const customerPhone = order.customer_phone || order.delivery_phone;
+      
+      if (customerPhone) {
+        // Load SMS template (shop-specific or default)
+        const { data: smsTemplate } = await supabase
+          .from('sms_templates')
+          .select('template_text')
+          .eq('template_type', smsTemplateType)
+          .eq('language', language)
+          .or(`shop_id.eq.${order.shop_id},shop_id.is.null`)
+          .order('shop_id', { ascending: false, nullsFirst: false })
+          .limit(1)
+          .maybeSingle();
+
+        if (smsTemplate) {
+          const shopName = (order.shops?.name || order.shops?.company_name || 'Heizoel').trim();
+          const smsText = smsTemplate.template_text
+            .replace(/{firstName}/g, order.delivery_first_name || '')
+            .replace(/{lastName}/g, order.delivery_last_name || '')
+            .replace(/{orderNumber}/g, order.temp_order_number || order.order_number)
+            .replace(/{liters}/g, String(order.liters))
+            .replace(/{shopName}/g, shopName)
+            .replace(/{shopPhone}/g, order.shops?.support_phone || order.shops?.company_phone || '');
+
+          const smsFrom = order.shops?.sms_sender_name || 'Heizoel';
+          
+          console.log(`Sending SMS to ${customerPhone}, from: ${smsFrom}`);
+          
+          const smsResponse = await fetch(
+            `${Deno.env.get('SUPABASE_URL')}/functions/v1/send-sms`,
+            {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')}`,
+              },
+              body: JSON.stringify({ to: customerPhone, text: smsText, from: smsFrom }),
+            }
+          );
+          
+          const smsResult = await smsResponse.json();
+          console.log('SMS result:', smsResult);
+        } else {
+          console.log('No SMS template found for type:', smsTemplateType, 'language:', language);
+        }
+      } else {
+        console.log('No customer phone number available, skipping SMS');
+      }
+    } catch (smsError) {
+      console.error('SMS sending failed (non-blocking):', smsError);
+    }
 
     // Update order status if this is an invoice email that was sent successfully
     let statusUpdated = false;

@@ -46,6 +46,7 @@ export function ShopDialog({ open, onOpenChange, onSuccess, shop }: ShopDialogPr
     resend_api_key: '',
     resend_from_email: '',
     resend_from_name: '',
+    sms_sender_name: '',
   });
 
   useEffect(() => {
@@ -102,6 +103,7 @@ export function ShopDialog({ open, onOpenChange, onSuccess, shop }: ShopDialogPr
         resend_api_key: shop.resend_api_key || '',
         resend_from_email: shop.resend_from_email || '',
         resend_from_name: shop.resend_from_name || '',
+        sms_sender_name: shop.sms_sender_name || '',
       });
     } else {
       setFormData({
@@ -129,6 +131,7 @@ export function ShopDialog({ open, onOpenChange, onSuccess, shop }: ShopDialogPr
         resend_api_key: '',
         resend_from_email: '',
         resend_from_name: '',
+        sms_sender_name: '',
       });
     }
   }, [shop]);
@@ -152,6 +155,7 @@ export function ShopDialog({ open, onOpenChange, onSuccess, shop }: ShopDialogPr
       resend_api_key: data.resend_api_key,
       resend_from_email: data.resend_from_email,
       resend_from_name: data.resend_from_name,
+      sms_sender_name: data.sms_sender_name,
     }));
     
     setQuickaddOpen(false);
@@ -215,6 +219,7 @@ export function ShopDialog({ open, onOpenChange, onSuccess, shop }: ShopDialogPr
         resend_api_key: finalFormData.resend_api_key || null,
         resend_from_email: finalFormData.resend_from_email || null,
         resend_from_name: finalFormData.resend_from_name || null,
+        sms_sender_name: finalFormData.sms_sender_name || null,
       };
 
       console.log('Saving shop data:', cleanedData);
@@ -551,6 +556,26 @@ export function ShopDialog({ open, onOpenChange, onSuccess, shop }: ShopDialogPr
             <p className="text-sm text-muted-foreground mt-2">
               Resend-Konfiguration für den E-Mail-Versand dieses Shops.
             </p>
+          </div>
+
+          {/* SMS Configuration Section */}
+          <div className="border-t pt-6">
+            <h3 className="text-lg font-semibold mb-4">SMS-Konfiguration (seven.io)</h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="sms_sender_name">SMS Absendername</Label>
+                <Input
+                  id="sms_sender_name"
+                  value={formData.sms_sender_name}
+                  onChange={(e) => handleInputChange('sms_sender_name', e.target.value.slice(0, 11))}
+                  placeholder="ShopName"
+                  maxLength={11}
+                />
+                <p className="text-xs text-muted-foreground">
+                  {formData.sms_sender_name.length}/11 Zeichen – Wird als SMS-Absender angezeigt.
+                </p>
+              </div>
+            </div>
           </div>
 
           {/* Bank Account Selection - Only show when checkout mode is instant */}

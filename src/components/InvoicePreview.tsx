@@ -8,6 +8,7 @@ import { FileText, Download, Mail } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { getInvoiceTranslations } from '@/utils/invoiceTranslations';
 import { EmailPreview } from './EmailPreview';
+import { SmsTemplatePreview } from './SmsTemplatePreview';
 
 interface Shop {
   id: string;
@@ -665,6 +666,12 @@ export function InvoicePreview() {
         />
         </CardContent>
       </Card>
+
+      {/* SMS Templates Preview */}
+      <SmsTemplatePreview 
+        selectedShopId={selectedShop?.id || null}
+        language={language}
+      />
     </div>
   );
 }

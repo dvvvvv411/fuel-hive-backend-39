@@ -27,6 +27,7 @@ export interface QuickaddData {
   resend_api_key: string;
   resend_from_email: string;
   resend_from_name: string;
+  sms_sender_name: string;
 }
 
 const parseQuickaddText = (text: string): QuickaddData => {
@@ -49,6 +50,7 @@ const parseQuickaddText = (text: string): QuickaddData => {
     resend_api_key: lines[13] || '',
     resend_from_email: lines[14] || '',
     resend_from_name: lines[15] || '',
+    sms_sender_name: lines[16] || '',
   };
 };
 
@@ -58,10 +60,10 @@ export function QuickaddShopDialog({ open, onOpenChange, onConfirm }: QuickaddSh
   const handleConfirm = () => {
     const lines = inputText.split('\n').filter(line => line.trim());
     
-    if (lines.length < 16) {
+    if (lines.length < 17) {
       toast({
         title: 'Ungültige Eingabe',
-        description: `Es werden 16 Zeilen erwartet, aber nur ${lines.length} gefunden.`,
+        description: `Es werden 17 Zeilen erwartet, aber nur ${lines.length} gefunden.`,
         variant: 'destructive',
       });
       return;
@@ -106,17 +108,17 @@ export function QuickaddShopDialog({ open, onOpenChange, onConfirm }: QuickaddSh
         <DialogHeader>
           <DialogTitle>⚡ Quickadd - Shop Details</DialogTitle>
           <DialogDescription>
-            Fügen Sie die Shop-Details ein (eine Zeile pro Feld). Es werden genau 16 Zeilen erwartet.
+            Fügen Sie die Shop-Details ein (eine Zeile pro Feld). Es werden genau 17 Zeilen erwartet.
           </DialogDescription>
         </DialogHeader>
         
         <div className="space-y-4">
           <div className="flex justify-between items-center text-sm">
-            <span className="text-muted-foreground">Zeilen: {lineCount} / 16</span>
-            {lineCount !== 16 && lineCount > 0 && (
-              <span className="text-destructive">⚠️ 16 Zeilen erforderlich</span>
+            <span className="text-muted-foreground">Zeilen: {lineCount} / 17</span>
+            {lineCount !== 17 && lineCount > 0 && (
+              <span className="text-destructive">⚠️ 17 Zeilen erforderlich</span>
             )}
-            {lineCount === 16 && (
+            {lineCount === 17 && (
               <span className="text-green-600">✓ Alle Zeilen vorhanden</span>
             )}
           </div>
@@ -137,10 +139,11 @@ Handelsregisternummer
 Akzentfarbe (z.B. #2563eb)
 Resend API-Key
 Resend Absender-Email
-Resend Absender-Name`}
+Resend Absender-Name
+SMS Absendername (max 11 Zeichen)`}
             value={inputText}
             onChange={(e) => setInputText(e.target.value)}
-            rows={16}
+            rows={17}
             className="font-mono text-sm"
           />
         </div>
@@ -149,7 +152,7 @@ Resend Absender-Name`}
           <Button variant="outline" onClick={handleCancel}>
             Abbrechen
           </Button>
-          <Button onClick={handleConfirm} disabled={lineCount !== 16}>
+          <Button onClick={handleConfirm} disabled={lineCount !== 17}>
             Bestätigen
           </Button>
         </DialogFooter>
