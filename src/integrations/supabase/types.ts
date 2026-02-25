@@ -531,6 +531,7 @@ export type Database = {
           resend_config_id: string | null
           resend_from_email: string | null
           resend_from_name: string | null
+          sms_sender_name: string | null
           support_phone: string | null
           vat_number: string | null
           vat_rate: number | null
@@ -561,6 +562,7 @@ export type Database = {
           resend_config_id?: string | null
           resend_from_email?: string | null
           resend_from_name?: string | null
+          sms_sender_name?: string | null
           support_phone?: string | null
           vat_number?: string | null
           vat_rate?: number | null
@@ -591,6 +593,7 @@ export type Database = {
           resend_config_id?: string | null
           resend_from_email?: string | null
           resend_from_name?: string | null
+          sms_sender_name?: string | null
           support_phone?: string | null
           vat_number?: string | null
           vat_rate?: number | null
@@ -608,6 +611,44 @@ export type Database = {
             columns: ["resend_config_id"]
             isOneToOne: false
             referencedRelation: "resend_configs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      sms_templates: {
+        Row: {
+          created_at: string | null
+          id: string
+          language: string
+          shop_id: string | null
+          template_text: string
+          template_type: string
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          language?: string
+          shop_id?: string | null
+          template_text: string
+          template_type: string
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          language?: string
+          shop_id?: string | null
+          template_text?: string
+          template_type?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sms_templates_shop_id_fkey"
+            columns: ["shop_id"]
+            isOneToOne: false
+            referencedRelation: "shops"
             referencedColumns: ["id"]
           },
         ]
