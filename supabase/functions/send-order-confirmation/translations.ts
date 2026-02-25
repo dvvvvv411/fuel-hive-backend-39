@@ -121,9 +121,9 @@ const translations: { [key: string]: EmailTranslations } = {
       'standard_heizoel': 'Standard Heizöl'
     },
     
-    managerThanks: 'Ich möchte mich persönlich für Ihr Vertrauen bedanken!',
+    managerThanks: 'Wir bedanken uns für Ihre Bestellung und Ihr Vertrauen in unser Unternehmen.',
     managerSignature: 'Mit freundlichen Grüßen',
-    managerTitle: 'Geschäftsführer'
+    managerTitle: 'Geschäftsleitung'
   },
   
   en: {
@@ -182,9 +182,9 @@ const translations: { [key: string]: EmailTranslations } = {
       'standard_heizoel': 'Standard Heating Oil'
     },
     
-    managerThanks: 'I would like to personally thank you for your trust!',
+    managerThanks: 'We appreciate your order and your trust in our company.',
     managerSignature: 'Kind regards',
-    managerTitle: 'Managing Director'
+    managerTitle: 'Management'
   },
   
   fr: {
@@ -243,9 +243,9 @@ const translations: { [key: string]: EmailTranslations } = {
       'standard_heizoel': 'Fioul standard'
     },
     
-    managerThanks: 'Je voudrais vous remercier personnellement pour votre confiance !',
+    managerThanks: 'Nous vous remercions pour votre commande et votre confiance.',
     managerSignature: 'Cordialement',
-    managerTitle: 'Directeur Général'
+    managerTitle: 'La Direction'
   },
   
   it: {
@@ -304,9 +304,9 @@ const translations: { [key: string]: EmailTranslations } = {
       'standard_heizoel': 'Gasolio standard'
     },
     
-    managerThanks: 'Vorrei ringraziarla personalmente per la sua fiducia!',
+    managerThanks: 'Vi ringraziamo per il vostro ordine e la vostra fiducia.',
     managerSignature: 'Cordiali saluti',
-    managerTitle: 'Amministratore Delegato'
+    managerTitle: 'La Direzione'
   },
   
   es: {
@@ -365,9 +365,9 @@ const translations: { [key: string]: EmailTranslations } = {
       'standard_heizoel': 'Gasóleo estándar'
     },
     
-    managerThanks: '¡Quisiera agradecerle personalmente por su confianza!',
+    managerThanks: 'Le agradecemos su pedido y su confianza en nuestra empresa.',
     managerSignature: 'Saludos cordiales',
-    managerTitle: 'Director General'
+    managerTitle: 'La Dirección'
   },
   
   pl: {
@@ -426,9 +426,9 @@ const translations: { [key: string]: EmailTranslations } = {
       'standard_heizoel': 'Olej opałowy standardowy'
     },
     
-    managerThanks: 'Chciałbym osobiście podziękować za zaufanie!',
+    managerThanks: 'Dziękujemy za zamówienie i zaufanie do naszej firmy.',
     managerSignature: 'Z poważaniem',
-    managerTitle: 'Dyrektor Generalny'
+    managerTitle: 'Zarząd'
   },
   
   nl: {
@@ -487,9 +487,9 @@ const translations: { [key: string]: EmailTranslations } = {
       'standard_heizoel': 'Standaard stookolie'
     },
     
-    managerThanks: 'Ik wil u persoonlijk bedanken voor uw vertrouwen!',
+    managerThanks: 'Wij danken u voor uw bestelling en uw vertrouwen.',
     managerSignature: 'Met vriendelijke groet',
-    managerTitle: 'Directeur'
+    managerTitle: 'De Directie'
   }
 };
 
