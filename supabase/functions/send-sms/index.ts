@@ -11,6 +11,24 @@ interface SmsRequest {
   from: string;
 }
 
+function formatPhoneNumber(phone: string): string {
+  // Remove spaces, hyphens, parentheses
+  let cleaned = phone.replace(/[\s\-\(\)]/g, '');
+  // Replace leading 00 with +
+  if (cleaned.startsWith('00')) {
+    cleaned = '+' + cleaned.slice(2);
+  }
+  // Replace leading 0 with +49
+  else if (cleaned.startsWith('0')) {
+    cleaned = '+49' + cleaned.slice(1);
+  }
+  // If no + prefix, prepend +49
+  else if (!cleaned.startsWith('+')) {
+    cleaned = '+49' + cleaned;
+  }
+  return cleaned;
+}
+
 const handler = async (req: Request): Promise<Response> => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -35,7 +53,8 @@ const handler = async (req: Request): Promise<Response> => {
       );
     }
 
-    console.log(`Sending SMS to ${to} from "${from}", length: ${text.length} chars`);
+    const formattedTo = formatPhoneNumber(to);
+    console.log(`Sending SMS to ${formattedTo} (original: ${to}) from "${from}", length: ${text.length} chars`);
 
     const response = await fetch("https://gateway.seven.io/api/sms", {
       method: "POST",
@@ -44,7 +63,7 @@ const handler = async (req: Request): Promise<Response> => {
         "X-Api-Key": apiKey,
       },
       body: JSON.stringify({
-        to,
+        to: formattedTo,
         text,
         from: from || "Heizoel",
       }),
