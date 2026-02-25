@@ -10,7 +10,7 @@ import { ShopsList } from '@/components/ShopsList';
 import { OrdersList } from '@/components/OrdersList';
 import { BankAccountsList } from '@/components/BankAccountsList';
 import { PaymentMethodsList } from '@/components/PaymentMethodsList';
-import { ResendConfigsList } from '@/components/ResendConfigsList';
+
 import { InvoicePreview } from '@/components/InvoicePreview';
 import { WrongOrdersList } from '@/components/WrongOrdersList';
 import { ShopPerformanceTables } from '@/components/ShopPerformanceTables';
@@ -74,8 +74,6 @@ const Dashboard = () => {
         return <BankAccountsList />;
       case 'payment-methods':
         return <PaymentMethodsList />;
-      case 'resend-configs':
-        return <ResendConfigsList />;
       case 'preview':
         return <InvoicePreview />;
       case 'security-check':
@@ -165,9 +163,8 @@ const DashboardContent = ({
             <h2 className="text-lg font-semibold text-gray-900 capitalize">
               {isCaller ? 'Orders' :
                effectiveActiveTab === 'overview' ? 'Dashboard' : 
-               effectiveActiveTab === 'resend-configs' ? 'Resend Configuration' :
                effectiveActiveTab === 'payment-methods' ? 'Payment Methods' :
-               effectiveActiveTab === 'preview' ? 'Invoice Preview' :
+               effectiveActiveTab === 'preview' ? 'Preview' :
                effectiveActiveTab === 'security-check' ? 'Sicherheitscheck' :
                effectiveActiveTab === 'bank-analytics' ? 'Bank Performance' :
                effectiveActiveTab === 'payment-analytics' ? 'Payment Analysis' :

@@ -72,12 +72,7 @@ const handler = async (req: Request): Promise<Response> => {
           name,
           company_name,
           company_email,
-          resend_config_id,
-          resend_configs (
-            resend_api_key,
-            from_email,
-            from_name
-          )
+          resend_api_key
         )
       `)
       .eq('id', order_id)
@@ -94,7 +89,7 @@ const handler = async (req: Request): Promise<Response> => {
     console.log('Found manual order:', order.order_number);
 
     // Send confirmation email (without invoice)
-    if (order.shops?.resend_configs?.resend_api_key) {
+    if (order.shops?.resend_api_key) {
       console.log('Sending confirmation email for manual order...');
       
       const emailResponse = await supabase.functions.invoke('send-order-confirmation', {
@@ -122,7 +117,7 @@ const handler = async (req: Request): Promise<Response> => {
       order_number: order.order_number,
       temp_order_number: temp_order_number || order.order_number,
       processing_mode: 'manual',
-      email_sent: !!order.shops?.resend_configs?.resend_api_key,
+      email_sent: !!order.shops?.resend_api_key,
       processed_at: new Date().toISOString(),
       message: 'Order received and confirmation sent. Manual processing required.'
     }), {

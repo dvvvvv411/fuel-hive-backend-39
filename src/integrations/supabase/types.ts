@@ -527,7 +527,10 @@ export type Database = {
           logo_url: string | null
           name: string
           registration_number: string | null
+          resend_api_key: string | null
           resend_config_id: string | null
+          resend_from_email: string | null
+          resend_from_name: string | null
           support_phone: string | null
           vat_number: string | null
           vat_rate: number | null
@@ -554,7 +557,10 @@ export type Database = {
           logo_url?: string | null
           name: string
           registration_number?: string | null
+          resend_api_key?: string | null
           resend_config_id?: string | null
+          resend_from_email?: string | null
+          resend_from_name?: string | null
           support_phone?: string | null
           vat_number?: string | null
           vat_rate?: number | null
@@ -581,7 +587,10 @@ export type Database = {
           logo_url?: string | null
           name?: string
           registration_number?: string | null
+          resend_api_key?: string | null
           resend_config_id?: string | null
+          resend_from_email?: string | null
+          resend_from_name?: string | null
           support_phone?: string | null
           vat_number?: string | null
           vat_rate?: number | null

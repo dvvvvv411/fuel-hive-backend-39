@@ -17,6 +17,7 @@ interface EmailPreviewProps {
     currency: string;
     vat_rate: number;
     accent_color?: string;
+    support_phone?: string;
     bank_accounts?: {
       account_holder: string;
       iban: string;
@@ -478,11 +479,87 @@ export function EmailPreview({ selectedShop, language, sampleData, totalAmount, 
     return { subject, html };
   }, [selectedShop, language, sampleData, totalAmount, t, accentColor, shopName, translatedProduct, selectedBankAccount]);
 
+  const generateContactAttemptEmail = useMemo(() => {
+    const shopPhone = selectedShop.support_phone || selectedShop.company_phone;
+    const subject = `Kontaktversuch - Ihre Heizöl-Bestellung #${sampleData.orderNumber} bei ${shopName}`;
+    
+    const html = `
+      <!DOCTYPE html>
+      <html lang="de">
+      <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Kontaktversuch - Bestellung #${sampleData.orderNumber}</title>
+      </head>
+      <body style="margin: 0; padding: 0; background-color: #f8fafc; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;">
+        <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="background-color: #f8fafc;">
+          <tr>
+            <td align="center" style="padding: 40px 20px;">
+              <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="600" style="max-width: 600px; background-color: #ffffff; border-radius: 12px; box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);">
+                <tr>
+                  <td style="padding: 50px 40px 30px 40px; text-align: center; background: ${accentColor}; border-radius: 12px 12px 0 0;">
+                    <h1 style="margin: 0; color: #ffffff; font-size: 32px; font-weight: 700;">${shopName}</h1>
+                    <div style="margin: 20px 0 0 0; padding: 12px 24px; background-color: rgba(255,255,255,0.2); border-radius: 50px; display: inline-block;">
+                      <span style="color: #ffffff; font-size: 18px; font-weight: 600;">📞 Kontaktversuch</span>
+                    </div>
+                  </td>
+                </tr>
+                <tr>
+                  <td style="padding: 40px;">
+                    <p style="margin: 0 0 24px 0; color: #374151; font-size: 18px;"><strong>Liebe/r Max Mustermann,</strong></p>
+                    <p style="margin: 0 0 32px 0; color: #374151; font-size: 16px; line-height: 1.6;">wir haben versucht, Sie bezüglich Ihrer Heizöl-Bestellung zu kontaktieren, konnten Sie jedoch leider nicht erreichen.</p>
+                    <table role="presentation" width="100%" style="background: linear-gradient(135deg, #fef3c7, #fde68a); border-radius: 12px; border: 2px solid #f59e0b; margin-bottom: 32px;">
+                      <tr><td style="padding: 24px; text-align: center; color: #92400e; font-size: 16px; font-weight: 600;">⚠️ Kontaktaufnahme erforderlich</td></tr>
+                    </table>
+                    <table role="presentation" width="100%" style="background: linear-gradient(135deg, #fef2f2, #fecaca); border-radius: 12px; border: 2px solid #ef4444; margin-bottom: 32px;">
+                      <tr><td style="padding: 30px; text-align: center;">
+                        <h3 style="margin: 0 0 16px 0; color: #dc2626; font-size: 20px;">🚨 Wichtiger Hinweis</h3>
+                        <p style="margin: 0; color: #991b1b; font-size: 16px; font-weight: 600;">Um Ihre Bestellung ordnungsgemäß abwickeln zu können, benötigen wir dringend Ihren Rückruf.</p>
+                      </td></tr>
+                    </table>
+                    <table role="presentation" width="100%" style="background: linear-gradient(135deg, #dbeafe, #bfdbfe); border-radius: 12px; border: 2px solid #3b82f6; margin-bottom: 32px;">
+                      <tr><td style="padding: 30px; text-align: center;">
+                        <h3 style="margin: 0 0 20px 0; color: #1e40af; font-size: 22px;">📞 Bitte rufen Sie uns zurück</h3>
+                        <p style="margin: 0 0 16px 0; color: #1e40af; font-size: 16px; font-weight: 600;"><strong>Ihr Ansprechpartner:</strong> ${shopName}</p>
+                        ${shopPhone ? `<div style="margin: 20px 0; padding: 16px; background-color: rgba(255,255,255,0.7); border-radius: 8px;"><div style="color: ${accentColor}; font-size: 28px; font-weight: 700;">${shopPhone}</div><p style="margin: 0; color: #1e40af; font-size: 14px;"><small>Montag bis Freitag, 8:00 - 18:00 Uhr</small></p></div>` : ''}
+                      </td></tr>
+                    </table>
+                    <table role="presentation" width="100%" style="background: linear-gradient(145deg, #f8fafc, #e2e8f0); border-radius: 12px; border: 2px solid ${accentColor}; margin-bottom: 32px;">
+                      <tr><td style="padding: 30px;">
+                        <h2 style="margin: 0 0 24px 0; color: ${accentColor}; font-size: 20px; text-align: center;">📋 Ihre Bestelldetails</h2>
+                        <table role="presentation" width="100%">
+                          <tr><td style="padding: 8px 0; color: #6b7280; font-size: 15px; font-weight: 600; width: 40%;">Bestellnummer:</td><td style="padding: 8px 0; color: #111827; font-size: 15px; font-weight: 700;">#${sampleData.orderNumber}</td></tr>
+                          <tr><td style="padding: 8px 0; color: #6b7280; font-size: 15px; font-weight: 600;">Produkt:</td><td style="padding: 8px 0; color: #111827; font-size: 15px; font-weight: 700;">${translatedProduct}</td></tr>
+                          <tr><td style="padding: 8px 0; color: #6b7280; font-size: 15px; font-weight: 600;">Menge:</td><td style="padding: 8px 0; color: #111827; font-size: 15px; font-weight: 700;">${sampleData.liters} Liter</td></tr>
+                          <tr><td style="padding: 8px 0; color: #6b7280; font-size: 15px; font-weight: 600;">Gesamtbetrag:</td><td style="padding: 8px 0; color: #111827; font-size: 15px; font-weight: 700;">${formatCurrency(totalAmount, selectedShop.currency)}</td></tr>
+                        </table>
+                      </td></tr>
+                    </table>
+                    <p style="margin: 32px 0 0 0; color: #374151; font-size: 16px; text-align: center;"><strong>Mit freundlichen Grüßen</strong><br><strong style="color: ${accentColor};">Ihr Team von ${shopName}</strong></p>
+                  </td>
+                </tr>
+                <tr>
+                  <td style="padding: 24px 40px; background-color: #f9fafb; border-radius: 0 0 12px 12px; border-top: 1px solid #e5e7eb;">
+                    <div style="text-align: center; color: #6b7280; font-size: 13px;"><strong>${shopName}</strong></div>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+        </table>
+      </body>
+      </html>
+    `;
+
+    return { subject, html };
+  }, [selectedShop, sampleData, accentColor, shopName, translatedProduct, totalAmount]);
+
   return (
     <Tabs defaultValue="confirmation" className="w-full">
-      <TabsList className="grid w-full grid-cols-2">
+      <TabsList className="grid w-full grid-cols-3">
         <TabsTrigger value="confirmation">Bestellbestätigung</TabsTrigger>
         <TabsTrigger value="invoice">Rechnungs-E-Mail</TabsTrigger>
+        <TabsTrigger value="contact">Kontaktversuch</TabsTrigger>
       </TabsList>
 
       <TabsContent value="confirmation" className="mt-4">
@@ -513,6 +590,23 @@ export function EmailPreview({ selectedShop, language, sampleData, totalAmount, 
               srcDoc={generateInvoiceEmail.html}
               className="w-full h-[600px] border-0"
               title="Invoice Email Preview"
+              sandbox="allow-same-origin"
+            />
+          </div>
+        </div>
+      </TabsContent>
+
+      <TabsContent value="contact" className="mt-4">
+        <div className="space-y-3">
+          <div className="bg-muted p-3 rounded-md border">
+            <p className="text-sm font-medium text-muted-foreground">Betreff:</p>
+            <p className="text-sm font-semibold">{generateContactAttemptEmail.subject}</p>
+          </div>
+          <div className="border rounded-lg overflow-hidden bg-white">
+            <iframe
+              srcDoc={generateContactAttemptEmail.html}
+              className="w-full h-[600px] border-0"
+              title="Contact Attempt Email Preview"
               sandbox="allow-same-origin"
             />
           </div>

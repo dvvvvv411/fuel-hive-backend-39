@@ -48,12 +48,7 @@ const handler = async (req: Request): Promise<Response> => {
           company_phone,
           vat_number,
           registration_number,
-          resend_config_id,
-          resend_configs (
-            resend_api_key,
-            from_email,
-            from_name
-          )
+          resend_api_key
         )
       `)
       .eq('id', order_id)
@@ -83,7 +78,7 @@ const handler = async (req: Request): Promise<Response> => {
     console.log('Invoice generated successfully');
 
     // Step 2: Send confirmation email with invoice
-    if (order.shops?.resend_configs?.resend_api_key) {
+    if (order.shops?.resend_api_key) {
       console.log('Sending confirmation email with invoice...');
       
       const emailResponse = await supabase.functions.invoke('send-order-confirmation', {
@@ -123,7 +118,7 @@ const handler = async (req: Request): Promise<Response> => {
       success: true,
       order_number: order.order_number,
       invoice_generated: true,
-      email_sent: !!order.shops?.resend_configs?.resend_api_key,
+      email_sent: !!order.shops?.resend_api_key,
       processed_at: new Date().toISOString()
     }), {
       status: 200,
