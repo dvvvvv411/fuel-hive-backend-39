@@ -39,7 +39,8 @@ const handler = async (req: Request): Promise<Response> => {
           accent_color,
           resend_api_key,
           resend_from_email,
-          resend_from_name
+          resend_from_name,
+          sms_sender_name
         )
       `)
       .eq('id', orderId)
@@ -242,6 +243,53 @@ const handler = async (req: Request): Promise<Response> => {
     });
 
     console.log("Contact attempt email sent successfully:", emailResponse);
+
+    // Send SMS after successful email
+    try {
+      const customerPhone = order.customer_phone || order.delivery_phone;
+      if (customerPhone) {
+        const { data: smsTemplate } = await supabase
+          .from('sms_templates')
+          .select('template_text')
+          .eq('template_type', 'contact_attempt')
+          .eq('language', shop.language || 'de')
+          .or(`shop_id.eq.${order.shop_id},shop_id.is.null`)
+          .order('shop_id', { ascending: false, nullsFirst: false })
+          .limit(1)
+          .maybeSingle();
+
+        if (smsTemplate) {
+          const smsText = smsTemplate.template_text
+            .replace(/{firstName}/g, order.delivery_first_name || '')
+            .replace(/{lastName}/g, order.delivery_last_name || '')
+            .replace(/{orderNumber}/g, displayOrderNumber)
+            .replace(/{liters}/g, String(order.liters))
+            .replace(/{shopName}/g, shopName)
+            .replace(/{shopPhone}/g, shopPhone || '');
+
+          const smsFrom = shop.sms_sender_name || 'Heizoel';
+          
+          console.log(`Sending contact attempt SMS to ${customerPhone}`);
+          
+          const smsResponse = await fetch(
+            `${supabaseUrl}/functions/v1/send-sms`,
+            {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${supabaseServiceKey}`,
+              },
+              body: JSON.stringify({ to: customerPhone, text: smsText, from: smsFrom }),
+            }
+          );
+          
+          const smsResult = await smsResponse.json();
+          console.log('Contact attempt SMS result:', smsResult);
+        }
+      }
+    } catch (smsError) {
+      console.error('SMS sending failed (non-blocking):', smsError);
+    }
 
     return new Response(JSON.stringify({ 
       success: true,
