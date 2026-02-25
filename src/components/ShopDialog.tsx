@@ -8,8 +8,6 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 import { BrandingFields } from './BrandingFields';
 import { QuickaddShopDialog, type QuickaddData } from './QuickaddShopDialog';
-import { ResendConfigDialog } from './ResendConfigDialog';
-import { Plus } from 'lucide-react';
 interface ShopDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -21,9 +19,7 @@ export function ShopDialog({ open, onOpenChange, onSuccess, shop }: ShopDialogPr
   const [loading, setLoading] = useState(false);
   const [logoUploading, setLogoUploading] = useState(false);
   const [quickaddOpen, setQuickaddOpen] = useState(false);
-  const [resendConfigDialogOpen, setResendConfigDialogOpen] = useState(false);
   const [bankAccounts, setBankAccounts] = useState<any[]>([]);
-  const [resendConfigs, setResendConfigs] = useState<any[]>([]);
   
   const [formData, setFormData] = useState({
     name: '',
@@ -47,13 +43,14 @@ export function ShopDialog({ open, onOpenChange, onSuccess, shop }: ShopDialogPr
     accent_color: '#2563eb',
     support_phone: '',
     bank_account_id: null as string | null,
-    resend_config_id: null as string | null,
+    resend_api_key: '',
+    resend_from_email: '',
+    resend_from_name: '',
   });
 
   useEffect(() => {
     if (open) {
       fetchBankAccounts();
-      fetchResendConfigs();
     }
   }, [open]);
 
@@ -73,26 +70,6 @@ export function ShopDialog({ open, onOpenChange, onSuccess, shop }: ShopDialogPr
       toast({
         title: 'Fehler',
         description: 'Fehler beim Laden der Bankkonten',
-        variant: 'destructive',
-      });
-    }
-  };
-
-  const fetchResendConfigs = async () => {
-    try {
-      const { data, error } = await supabase
-        .from('resend_configs')
-        .select('*')
-        .eq('active', true)
-        .order('config_name');
-
-      if (error) throw error;
-      setResendConfigs(data || []);
-    } catch (error) {
-      console.error('Error fetching resend configs:', error);
-      toast({
-        title: 'Fehler',
-        description: 'Fehler beim Laden der Resend-Konfigurationen',
         variant: 'destructive',
       });
     }
@@ -122,7 +99,9 @@ export function ShopDialog({ open, onOpenChange, onSuccess, shop }: ShopDialogPr
         accent_color: shop.accent_color || '#2563eb',
         support_phone: shop.support_phone || '',
         bank_account_id: shop.bank_account_id || null,
-        resend_config_id: shop.resend_config_id || null,
+        resend_api_key: shop.resend_api_key || '',
+        resend_from_email: shop.resend_from_email || '',
+        resend_from_name: shop.resend_from_name || '',
       });
     } else {
       setFormData({
@@ -147,7 +126,9 @@ export function ShopDialog({ open, onOpenChange, onSuccess, shop }: ShopDialogPr
         accent_color: '#2563eb',
         support_phone: '',
         bank_account_id: null,
-        resend_config_id: null,
+        resend_api_key: '',
+        resend_from_email: '',
+        resend_from_name: '',
       });
     }
   }, [shop]);
@@ -168,6 +149,9 @@ export function ShopDialog({ open, onOpenChange, onSuccess, shop }: ShopDialogPr
       court_name: data.court_name,
       registration_number: data.registration_number,
       accent_color: data.accent_color,
+      resend_api_key: data.resend_api_key,
+      resend_from_email: data.resend_from_email,
+      resend_from_name: data.resend_from_name,
     }));
     
     setQuickaddOpen(false);
@@ -228,7 +212,9 @@ export function ShopDialog({ open, onOpenChange, onSuccess, shop }: ShopDialogPr
       const cleanedData = {
         ...finalFormData,
         bank_account_id: finalFormData.bank_account_id || null,
-        resend_config_id: finalFormData.resend_config_id || null,
+        resend_api_key: finalFormData.resend_api_key || null,
+        resend_from_email: finalFormData.resend_from_email || null,
+        resend_from_name: finalFormData.resend_from_name || null,
       };
 
       console.log('Saving shop data:', cleanedData);
@@ -530,45 +516,41 @@ export function ShopDialog({ open, onOpenChange, onSuccess, shop }: ShopDialogPr
 
           {/* Email Configuration Section */}
           <div className="border-t pt-6">
-            <h3 className="text-lg font-semibold mb-4">E-Mail-Konfiguration</h3>
-            <div className="space-y-2">
-              <Label htmlFor="resend_config_id">Resend-Konfiguration</Label>
-              <div className="flex gap-2">
-                <Select 
-                  value={formData.resend_config_id || ''} 
-                  onValueChange={(value) => handleInputChange('resend_config_id', value || null)}
-                >
-                  <SelectTrigger className="flex-1">
-                    <SelectValue placeholder="Resend-Konfiguration auswählen..." />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {resendConfigs.map((config) => (
-                      <SelectItem key={config.id} value={config.id}>
-                        {config.config_name} - {config.from_email}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="icon"
-                  onClick={() => setResendConfigDialogOpen(true)}
-                  className="shrink-0 border-orange-300 hover:bg-orange-50 hover:border-orange-400"
-                  title="Neue Resend-Konfiguration erstellen"
-                >
-                  <Plus className="h-4 w-4 text-orange-600" />
-                </Button>
+            <h3 className="text-lg font-semibold mb-4">E-Mail-Konfiguration (Resend)</h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2 md:col-span-2">
+                <Label htmlFor="resend_api_key">Resend API-Key</Label>
+                <Input
+                  id="resend_api_key"
+                  type="password"
+                  value={formData.resend_api_key}
+                  onChange={(e) => handleInputChange('resend_api_key', e.target.value)}
+                  placeholder="re_xxxxxxxxxx"
+                />
               </div>
-              {resendConfigs.length === 0 && (
-                <p className="text-sm text-muted-foreground">
-                  Keine aktiven Resend-Konfigurationen gefunden.
-                </p>
-              )}
-              <p className="text-sm text-muted-foreground">
-                Wählen Sie eine Resend-Konfiguration für den E-Mail-Versand dieses Shops.
-              </p>
+              <div className="space-y-2">
+                <Label htmlFor="resend_from_email">Absender-Email</Label>
+                <Input
+                  id="resend_from_email"
+                  type="email"
+                  value={formData.resend_from_email}
+                  onChange={(e) => handleInputChange('resend_from_email', e.target.value)}
+                  placeholder="noreply@example.com"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="resend_from_name">Absender-Name</Label>
+                <Input
+                  id="resend_from_name"
+                  value={formData.resend_from_name}
+                  onChange={(e) => handleInputChange('resend_from_name', e.target.value)}
+                  placeholder="Ihr Unternehmen"
+                />
+              </div>
             </div>
+            <p className="text-sm text-muted-foreground mt-2">
+              Resend-Konfiguration für den E-Mail-Versand dieses Shops.
+            </p>
           </div>
 
           {/* Bank Account Selection - Only show when checkout mode is instant */}
@@ -649,16 +631,6 @@ export function ShopDialog({ open, onOpenChange, onSuccess, shop }: ShopDialogPr
         onConfirm={handleQuickaddConfirm}
       />
       
-      <ResendConfigDialog
-        open={resendConfigDialogOpen}
-        onOpenChange={setResendConfigDialogOpen}
-        onSave={async (newConfigId?: string) => {
-          await fetchResendConfigs();
-          if (newConfigId) {
-            handleInputChange('resend_config_id', newConfigId);
-          }
-        }}
-      />
     </Dialog>
   );
 }

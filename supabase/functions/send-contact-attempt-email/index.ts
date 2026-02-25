@@ -37,11 +37,9 @@ const handler = async (req: Request): Promise<Response> => {
           support_phone,
           language,
           accent_color,
-          resend_configs!inner(
-            resend_api_key,
-            from_email,
-            from_name
-          )
+          resend_api_key,
+          resend_from_email,
+          resend_from_name
         )
       `)
       .eq('id', orderId)
@@ -56,16 +54,15 @@ const handler = async (req: Request): Promise<Response> => {
     }
 
     const shop = order.shops;
-    const resendConfig = shop.resend_configs;
 
-    if (!resendConfig?.resend_api_key) {
+    if (!shop?.resend_api_key) {
       return new Response(
         JSON.stringify({ error: 'No Resend configuration found for shop' }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
-    const resend = new Resend(resendConfig.resend_api_key);
+    const resend = new Resend(shop.resend_api_key);
 
     const shopName = shop.company_name || shop.name || 'Heizöl-Service';
     const shopPhone = shop.support_phone || shop.company_phone;
@@ -238,7 +235,7 @@ const handler = async (req: Request): Promise<Response> => {
     `;
 
     const emailResponse = await resend.emails.send({
-      from: `${resendConfig.from_name} <${resendConfig.from_email}>`,
+      from: `${shop.resend_from_name} <${shop.resend_from_email}>`,
       to: [order.customer_email],
       subject: subject,
       html: htmlContent,

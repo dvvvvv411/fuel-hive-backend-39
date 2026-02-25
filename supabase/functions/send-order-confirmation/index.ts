@@ -487,11 +487,9 @@ const handler = async (req: Request): Promise<Response> => {
           bank_account_id,
           country_code,
           language,
-          resend_configs (
-            resend_api_key,
-            from_email,
-            from_name
-          )
+          resend_api_key,
+          resend_from_email,
+          resend_from_name
         )
       `)
       .eq('id', order_id)
@@ -505,8 +503,8 @@ const handler = async (req: Request): Promise<Response> => {
       });
     }
 
-    const resendConfig = order.shops?.resend_configs;
-    if (!resendConfig?.resend_api_key) {
+    const resendApiKey = order.shops?.resend_api_key;
+    if (!resendApiKey) {
       console.error('No Resend configuration found for shop');
       return new Response(JSON.stringify({ error: 'No email configuration found' }), {
         status: 400,
@@ -604,7 +602,7 @@ const handler = async (req: Request): Promise<Response> => {
     }
 
     // Initialize Resend
-    const resend = new Resend(resendConfig.resend_api_key);
+    const resend = new Resend(resendApiKey);
 
     // Generate email template based on type
     const { subject, htmlContent } = include_invoice
@@ -613,7 +611,7 @@ const handler = async (req: Request): Promise<Response> => {
 
     // Prepare email payload
     const emailPayload: any = {
-      from: `${resendConfig.from_name} <${resendConfig.from_email}>`,
+      from: `${order.shops?.resend_from_name} <${order.shops?.resend_from_email}>`,
       to: [order.customer_email],
       subject: subject,
       html: htmlContent,

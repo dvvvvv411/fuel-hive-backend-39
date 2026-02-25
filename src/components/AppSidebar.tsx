@@ -47,13 +47,7 @@ const navigationItems = [
     value: "payment-methods"
   },
   {
-    title: "Resend Config",
-    url: "/dashboard",
-    icon: Mail,
-    value: "resend-configs"
-  },
-  {
-    title: "Invoice Preview",
+    title: "Preview",
     url: "/dashboard",
     icon: Eye,
     value: "preview"
