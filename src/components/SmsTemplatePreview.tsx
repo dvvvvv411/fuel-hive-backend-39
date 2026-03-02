@@ -79,23 +79,37 @@ export function SmsTemplatePreview({ selectedShopId, language }: SmsTemplatePrev
     setSaving(true);
 
     try {
-      if (templateId) {
+      // Check if a shop-specific template already exists
+      const { data: existing, error: selectError } = await supabase
+        .from('sms_templates')
+        .select('id')
+        .eq('shop_id', selectedShopId)
+        .eq('template_type', templateType)
+        .eq('language', language)
+        .maybeSingle();
+
+      if (selectError) {
+        console.error('Error checking existing template:', selectError);
+        throw selectError;
+      }
+
+      if (existing) {
         // Update existing shop-specific template
         const { error } = await supabase
           .from('sms_templates')
           .update({ template_text: templateText, updated_at: new Date().toISOString() })
-          .eq('id', templateId);
+          .eq('id', existing.id);
         if (error) throw error;
       } else {
-        // Create new shop-specific template (upsert)
+        // Insert new shop-specific template
         const { error } = await supabase
           .from('sms_templates')
-          .upsert({
+          .insert({
             shop_id: selectedShopId,
             template_type: templateType,
             template_text: templateText,
             language,
-          }, { onConflict: 'shop_id,template_type,language' });
+          });
         if (error) throw error;
       }
 
@@ -105,7 +119,7 @@ export function SmsTemplatePreview({ selectedShopId, language }: SmsTemplatePrev
       await loadTemplate();
     } catch (err: any) {
       console.error('Error saving template:', err);
-      toast({ title: 'Fehler', description: 'Fehler beim Speichern.', variant: 'destructive' });
+      toast({ title: 'Fehler', description: err?.message || 'Fehler beim Speichern.', variant: 'destructive' });
     } finally {
       setSaving(false);
     }
