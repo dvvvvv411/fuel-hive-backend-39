@@ -1,29 +1,41 @@
 
 
-## Plan: Telefonnummern-Formatierung fuer seven.io
+## Plan: SMS Template Speichern reparieren
 
-### Aenderung
+### Problem
 
-Eine `formatPhoneNumber`-Funktion wird in `supabase/functions/send-sms/index.ts` hinzugefuegt, die alle eingehenden Telefonnummern automatisch ins internationale Format konvertiert, bevor sie an seven.io gesendet werden.
+Der "Speichern"-Button in der SMS Template Sektion funktioniert nicht. Es gibt zwei Probleme im Code:
 
-### Logik der Formatierung
+### 1. Upsert `onConflict` Problem
 
-1. Alle Leerzeichen, Bindestriche und Klammern entfernen
-2. Fuehrende `00` durch `+` ersetzen (z.B. `0049` wird `+49`)
-3. Fuehrende `0` durch `+49` ersetzen (z.B. `0175...` wird `+49175...`)
-4. Wenn keine `+` vorhanden, `+49` voranstellen
+Die `upsert`-Operation verwendet `onConflict: 'shop_id,template_type,language'`, was als String uebergeben wird. Bei manchen Supabase-Versionen muss das exakt dem Constraint-Namen oder den Spaltennamen entsprechen. Ausserdem koennte der Upsert fehlschlagen ohne einen sichtbaren Fehler zu werfen, weil der Fehler im catch-Block nur in die Konsole geloggt wird.
 
-Beispiele:
-- `0175 8678706` wird `+491758678706`
-- `+49 175 867 8706` wird `+491758678706`
-- `0049 175 8678706` wird `+491758678706`
-- `+33612345678` bleibt `+33612345678` (nicht-deutsche Nummern bleiben erhalten)
+### 2. Fehlende Fehlerbehandlung und Debugging
+
+Die `handleSave`-Funktion loggt Fehler nur in die Konsole, aber zeigt dem User keinen hilfreichen Fehler an. Ausserdem fehlt besseres Logging um das Problem zu identifizieren.
+
+### Loesung
+
+In `src/components/SmsTemplatePreview.tsx`:
+
+1. **Upsert durch separates Insert/Select ersetzen**: Statt `upsert` wird zuerst geprueft ob ein shop-spezifisches Template existiert, dann entweder `update` oder `insert` aufgerufen
+2. **Bessere Fehlerbehandlung**: Detaillierte Fehlermeldungen im Toast anzeigen
+3. **Console-Logging verbessern**: Mehr Debug-Output um Probleme zu identifizieren
 
 ### Betroffene Datei
 
 | Datei | Aenderung |
 |-------|----------|
-| `supabase/functions/send-sms/index.ts` | `formatPhoneNumber()` Funktion hinzufuegen, auf `to` anwenden bevor SMS gesendet wird |
+| `src/components/SmsTemplatePreview.tsx` | `handleSave` ueberarbeiten: upsert durch explizites insert/update ersetzen, besseres Error-Handling |
 
-Die Formatierung passiert zentral in der send-sms Funktion, sodass alle aufrufenden Edge Functions automatisch davon profitieren ohne eigene Aenderungen.
+### Neue Save-Logik
+
+```text
+handleSave:
+  1. Pruefe ob shop-spezifisches Template existiert (SELECT mit shop_id + template_type + language)
+  2. Falls ja -> UPDATE template_text WHERE id = existing.id
+  3. Falls nein -> INSERT neues Template mit shop_id, template_type, language, template_text
+  4. Toast mit Erfolg/Fehler anzeigen
+  5. loadTemplate() aufrufen um den State zu aktualisieren
+```
 
