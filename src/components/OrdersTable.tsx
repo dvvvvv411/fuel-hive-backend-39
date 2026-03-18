@@ -5,7 +5,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Pagination, PaginationContent, PaginationItem, PaginationLink, PaginationNext, PaginationPrevious } from '@/components/ui/pagination';
 import { Search, RefreshCw, FileText, Eye, DollarSign, Check, EyeOff, Copy, Mail, Pencil, X } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
@@ -1006,323 +1006,409 @@ export function OrdersTable({ initialStatusFilter = [] }: OrdersTableProps = {})
             </Button>
           </div>
 
-          {/* Orders Cards */}
-          <div className="space-y-4">
-            {(loading || roleLoading) ? (
-              <div className="text-center py-12 text-muted-foreground">Lade Bestellungen...</div>
-            ) : orders.length === 0 ? (
-              <div className="text-center py-12 text-muted-foreground">
-                {showHidden ? 'Keine ausgeblendeten Bestellungen gefunden' : 'Keine Bestellungen gefunden'}
-              </div>
-            ) : (
-              orders.map((order) => {
-                const address = formatAddress(order);
-                const { dateStr, timeStr } = formatDateTime(order.created_at);
-                const hasAddressDifference = checkAddressDifference(order);
-                const phoneNumber = order.customer_phone || order.delivery_phone;
-                const bankAccountInfo = getBankAccountInfo(order);
-
-                return (
-                  <div
-                    key={order.id}
-                    className="bg-white/80 backdrop-blur-sm border border-gray-100 rounded-2xl shadow-sm hover:shadow-md transition-shadow p-5 space-y-3"
-                  >
-                    {/* Row 1: Header — Order number, Product, Liters, Status */}
-                    <div className="flex flex-wrap items-center gap-3 justify-between">
-                      <div className="flex flex-wrap items-center gap-3">
-                        {/* Order Number */}
-                        <span className="font-semibold text-base">
-                          #{getDisplayOrderNumber(order)}
-                          {order.temp_order_number && (
-                            <span className="text-xs text-muted-foreground ml-1">(Orig: #{order.order_number})</span>
-                          )}
-                        </span>
-
-                        <span className="text-muted-foreground">·</span>
-
-                        {/* Product (editable) */}
-                        {editingProductOrderId === order.id ? (
-                          <Select
-                            defaultValue={order.product}
-                            onValueChange={(value) => updateOrderProduct(order.id, value)}
-                            open={true}
-                            onOpenChange={(open) => !open && setEditingProductOrderId(null)}
-                          >
-                            <SelectTrigger className="w-40 h-8">
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="Standard Heizöl">Standard Heizöl</SelectItem>
-                              <SelectItem value="Premium Heizöl">Premium Heizöl</SelectItem>
-                            </SelectContent>
-                          </Select>
-                        ) : (
-                          <span
-                            className="cursor-pointer hover:bg-orange-50 hover:text-orange-700 px-2 py-0.5 rounded transition-colors group inline-flex items-center gap-1 text-sm"
-                            onClick={() => setEditingProductOrderId(order.id)}
-                          >
-                            {order.product}
-                            <Pencil className="h-3 w-3 text-gray-400 opacity-0 group-hover:opacity-100 transition-opacity" />
-                          </span>
-                        )}
-
-                        <span className="text-muted-foreground">·</span>
-
-                        {/* Liters (editable) */}
-                        {editingLitersOrderId === order.id ? (
-                          <div className="flex items-center gap-2">
-                            <Input
-                              type="number"
-                              value={newLitersValue}
-                              onChange={(e) => setNewLitersValue(Number(e.target.value))}
-                              className="w-20 h-8"
-                              autoFocus
-                              onKeyDown={(e) => {
-                                if (e.key === 'Enter') {
-                                  updateOrderLiters(order.id, newLitersValue);
-                                } else if (e.key === 'Escape') {
-                                  setEditingLitersOrderId(null);
-                                }
-                              }}
-                            />
-                            <span className="text-xs text-muted-foreground whitespace-nowrap">
-                              = {(newLitersValue * order.price_per_liter + order.delivery_fee).toFixed(2)}€
-                            </span>
-                            <Button size="sm" variant="ghost" className="h-6 w-6 p-0" onClick={() => updateOrderLiters(order.id, newLitersValue)}>
-                              <Check className="h-3 w-3 text-green-600" />
-                            </Button>
-                            <Button size="sm" variant="ghost" className="h-6 w-6 p-0" onClick={() => setEditingLitersOrderId(null)}>
-                              <X className="h-3 w-3 text-red-600" />
-                            </Button>
+          {/* Orders Table */}
+          <div className="border border-gray-100 rounded-xl overflow-x-auto">
+            <Table>
+              <TableHeader className="bg-gray-50/80">
+                <TableRow className="hover:bg-transparent">
+                  <TableHead>Datum</TableHead>
+                  <TableHead>Bestellnummer</TableHead>
+                  <TableHead>Kunde</TableHead>
+                  <TableHead>Telefon</TableHead>
+                  <TableHead>Adresse</TableHead>
+                  <TableHead>Abw.</TableHead>
+                  <TableHead>Produkt</TableHead>
+                  <TableHead>Menge (L)</TableHead>
+                  <TableHead>Gesamtpreis</TableHead>
+                  <TableHead>Bankkonto</TableHead>
+                  <TableHead>Shop</TableHead>
+                  <TableHead>
+                    {selectedStatuses.length === 1 && selectedStatuses[0] === 'invoice_sent' ? 'RG-Datum' : 'Zahlung'}
+                  </TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead>Aktionen</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {(loading || roleLoading) ? (
+                  <TableRow>
+                    <TableCell colSpan={14} className="text-center py-8">
+                      Lade Bestellungen...
+                    </TableCell>
+                  </TableRow>
+                ) : orders.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={14} className="text-center py-8">
+                      {showHidden ? 'Keine ausgeblendeten Bestellungen gefunden' : 'Keine Bestellungen gefunden'}
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  orders.map((order) => {
+                    const address = formatAddress(order);
+                    const { dateStr, timeStr } = formatDateTime(order.created_at);
+                    const hasAddressDifference = checkAddressDifference(order);
+                    const phoneNumber = order.customer_phone || order.delivery_phone;
+                    const bankAccountInfo = getBankAccountInfo(order);
+                    
+                    return (
+                      <TableRow key={order.id}>
+                        <TableCell className="font-medium">
+                          <div className="text-sm">
+                            <div>{dateStr}</div>
+                            <div className="text-gray-500">{timeStr}</div>
                           </div>
-                        ) : (
-                          <span
-                            className="cursor-pointer hover:bg-orange-50 hover:text-orange-700 px-2 py-0.5 rounded transition-colors group inline-flex items-center gap-1 text-sm font-medium"
+                        </TableCell>
+                        <TableCell className="font-medium">
+                          <div>
+                            <div>#{getDisplayOrderNumber(order)}</div>
+                            {order.temp_order_number && (
+                              <div className="text-xs text-gray-500">
+                                Original: #{order.order_number}
+                              </div>
+                            )}
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <div className="space-y-0.5">
+                            {(order.billing_company_name || order.delivery_company_name) && (
+                              <div className="font-semibold text-primary">
+                                {order.billing_company_name || order.delivery_company_name}
+                              </div>
+                            )}
+                            <div className="font-medium">{order.customer_name}</div>
+                            {editingEmailOrderId === order.id ? (
+                              <div className="flex items-center gap-1">
+                                <Input
+                                  type="email"
+                                  value={newEmailValue}
+                                  onChange={(e) => setNewEmailValue(e.target.value)}
+                                  className="h-7 text-sm w-48"
+                                  autoFocus
+                                  onKeyDown={(e) => {
+                                    if (e.key === 'Enter') {
+                                      updateOrderEmail(order.id, newEmailValue);
+                                    } else if (e.key === 'Escape') {
+                                      setEditingEmailOrderId(null);
+                                    }
+                                  }}
+                                />
+                                <Button
+                                  size="sm"
+                                  variant="ghost"
+                                  className="h-6 w-6 p-0"
+                                  onClick={() => updateOrderEmail(order.id, newEmailValue)}
+                                >
+                                  <Check className="h-3 w-3 text-green-600" />
+                                </Button>
+                                <Button
+                                  size="sm"
+                                  variant="ghost"
+                                  className="h-6 w-6 p-0"
+                                  onClick={() => setEditingEmailOrderId(null)}
+                                >
+                                  <X className="h-3 w-3 text-red-600" />
+                                </Button>
+                              </div>
+                            ) : (
+                              <div 
+                                className="text-sm text-muted-foreground cursor-pointer hover:bg-orange-50 hover:text-orange-700 p-1 rounded transition-colors group flex items-center gap-1"
+                                onClick={() => {
+                                  setEditingEmailOrderId(order.id);
+                                  setNewEmailValue(order.customer_email);
+                                }}
+                                title="Klicken zum Bearbeiten"
+                              >
+                                <span>{order.customer_email}</span>
+                                <Pencil className="h-3 w-3 text-gray-400 opacity-0 group-hover:opacity-100 transition-opacity" />
+                              </div>
+                            )}
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          {phoneNumber ? (
+                            <div 
+                              className="flex items-center gap-1 cursor-pointer hover:bg-gray-100 p-1 rounded"
+                              onClick={() => copyPhoneToClipboard(phoneNumber)}
+                              title="Klicken zum Kopieren"
+                            >
+                              <span>{phoneNumber}</span>
+                              <Copy className="h-3 w-3 text-gray-400" />
+                            </div>
+                          ) : (
+                            '-'
+                          )}
+                        </TableCell>
+                        <TableCell>
+                          <div 
+                            className="text-sm cursor-pointer hover:bg-orange-50 hover:text-orange-700 p-1 rounded transition-colors group"
                             onClick={() => {
-                              setEditingLitersOrderId(order.id);
-                              setNewLitersValue(order.liters);
+                              setSelectedOrderForAddress(order);
+                              setShowAddressEditDialog(true);
                             }}
+                            title="Klicken zum Bearbeiten"
                           >
-                            {order.liters}L
-                            <Pencil className="h-3 w-3 text-gray-400 opacity-0 group-hover:opacity-100 transition-opacity" />
-                          </span>
-                        )}
-                      </div>
-
-                      {/* Status */}
-                      <div>
-                        {isCaller ? (
-                          (order.status === 'pending' || order.status === 'ready') ? (
-                            <Select value={order.status} onValueChange={(value) => updateOrderStatus(order.id, value)}>
-                              <SelectTrigger className="w-36 h-8">
-                                <Badge className={getStatusColor(order.status)}>{getStatusLabel(order.status)}</Badge>
+                            <div className="flex items-center gap-1">
+                              <div>
+                                <div>{address.street}</div>
+                                <div>{address.cityPostcode}</div>
+                              </div>
+                              <Pencil className="h-3 w-3 text-gray-400 opacity-0 group-hover:opacity-100 transition-opacity" />
+                            </div>
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex justify-center">
+                            <div 
+                              className={`w-3 h-3 rounded-full ${hasAddressDifference ? 'bg-green-500' : 'bg-red-500'}`}
+                              title={hasAddressDifference ? 'Rechnungsadresse weicht ab' : 'Rechnungsadresse identisch'}
+                            />
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          {editingProductOrderId === order.id ? (
+                            <Select
+                              defaultValue={order.product}
+                              onValueChange={(value) => updateOrderProduct(order.id, value)}
+                              open={true}
+                              onOpenChange={(open) => !open && setEditingProductOrderId(null)}
+                            >
+                              <SelectTrigger className="w-40 h-8">
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="Standard Heizöl">Standard Heizöl</SelectItem>
+                                <SelectItem value="Premium Heizöl">Premium Heizöl</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          ) : (
+                            <div 
+                              className="cursor-pointer hover:bg-orange-50 hover:text-orange-700 p-1 rounded transition-colors group flex items-center gap-1"
+                              onClick={() => setEditingProductOrderId(order.id)}
+                            >
+                              <span>{order.product}</span>
+                              <Pencil className="h-3 w-3 text-gray-400 opacity-0 group-hover:opacity-100 transition-opacity" />
+                            </div>
+                          )}
+                        </TableCell>
+                        <TableCell>
+                          {editingLitersOrderId === order.id ? (
+                            <div className="flex items-center gap-2">
+                              <Input
+                                type="number"
+                                value={newLitersValue}
+                                onChange={(e) => setNewLitersValue(Number(e.target.value))}
+                                className="w-20 h-8"
+                                autoFocus
+                                onKeyDown={(e) => {
+                                  if (e.key === 'Enter') {
+                                    updateOrderLiters(order.id, newLitersValue);
+                                  } else if (e.key === 'Escape') {
+                                    setEditingLitersOrderId(null);
+                                  }
+                                }}
+                              />
+                              <div className="text-xs text-muted-foreground whitespace-nowrap">
+                                = {(newLitersValue * order.price_per_liter + order.delivery_fee).toFixed(2)}€
+                              </div>
+                              <Button 
+                                size="sm" 
+                                variant="ghost"
+                                className="h-6 w-6 p-0"
+                                onClick={() => updateOrderLiters(order.id, newLitersValue)}
+                              >
+                                <Check className="h-3 w-3 text-green-600" />
+                              </Button>
+                              <Button 
+                                size="sm" 
+                                variant="ghost"
+                                className="h-6 w-6 p-0"
+                                onClick={() => setEditingLitersOrderId(null)}
+                              >
+                                <X className="h-3 w-3 text-red-600" />
+                              </Button>
+                            </div>
+                          ) : (
+                            <div 
+                              className="cursor-pointer hover:bg-orange-50 hover:text-orange-700 p-1 rounded transition-colors group flex items-center gap-1"
+                              onClick={() => {
+                                setEditingLitersOrderId(order.id);
+                                setNewLitersValue(order.liters);
+                              }}
+                            >
+                              <span>{order.liters}</span>
+                              <Pencil className="h-3 w-3 text-gray-400 opacity-0 group-hover:opacity-100 transition-opacity" />
+                            </div>
+                          )}
+                        </TableCell>
+                        <TableCell>
+                          <CurrencyDisplay
+                            amount={order.total_amount}
+                            currency={order.currency || 'EUR'}
+                            eurAmount={order.eur_amount}
+                          />
+                        </TableCell>
+                        <TableCell>
+                          <div className="text-sm">
+                            {bankAccountInfo || (
+                              <span className="text-gray-400 text-xs">-</span>
+                            )}
+                          </div>
+                        </TableCell>
+                        <TableCell>{order.shops?.name}</TableCell>
+                        <TableCell>
+                          {selectedStatuses.length === 1 && selectedStatuses[0] === 'invoice_sent' && order.invoice_generation_date ? (
+                            <div className="text-sm">
+                              <div>{formatDateTime(order.invoice_generation_date).dateStr}</div>
+                              <div className="text-gray-500">{formatDateTime(order.invoice_generation_date).timeStr}</div>
+                            </div>
+                          ) : (
+                            order.payment_method
+                          )}
+                        </TableCell>
+                        <TableCell>
+                          {isCaller ? (
+                            // Caller: nur pending/ready änderbar, andere Status nur als Badge
+                            (order.status === 'pending' || order.status === 'ready') ? (
+                              <Select
+                                value={order.status}
+                                onValueChange={(value) => updateOrderStatus(order.id, value)}
+                              >
+                                <SelectTrigger className="w-32">
+                                  <Badge className={getStatusColor(order.status)}>
+                                    {getStatusLabel(order.status)}
+                                  </Badge>
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="pending">Neu</SelectItem>
+                                  <SelectItem value="ready">Ready</SelectItem>
+                                </SelectContent>
+                              </Select>
+                            ) : (
+                              <Badge className={getStatusColor(order.status)}>
+                                {getStatusLabel(order.status)}
+                              </Badge>
+                            )
+                          ) : (
+                            // Admin: voller Dropdown
+                            <Select
+                              value={order.status}
+                              onValueChange={(value) => updateOrderStatus(order.id, value)}
+                            >
+                              <SelectTrigger className="w-32">
+                                <Badge className={getStatusColor(order.status)}>
+                                  {getStatusLabel(order.status)}
+                                </Badge>
                               </SelectTrigger>
                               <SelectContent>
                                 <SelectItem value="pending">Neu</SelectItem>
                                 <SelectItem value="ready">Ready</SelectItem>
+                                <SelectItem value="invoice_sent">Rechnung versendet</SelectItem>
+                                <SelectItem value="paid">Bezahlt</SelectItem>
+                                <SelectItem value="confirmed">Bestätigt</SelectItem>
+                                <SelectItem value="cancelled">Down</SelectItem>
                               </SelectContent>
                             </Select>
-                          ) : (
-                            <Badge className={getStatusColor(order.status)}>{getStatusLabel(order.status)}</Badge>
-                          )
-                        ) : (
-                          <Select value={order.status} onValueChange={(value) => updateOrderStatus(order.id, value)}>
-                            <SelectTrigger className="w-36 h-8">
-                              <Badge className={getStatusColor(order.status)}>{getStatusLabel(order.status)}</Badge>
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="pending">Neu</SelectItem>
-                              <SelectItem value="ready">Ready</SelectItem>
-                              <SelectItem value="invoice_sent">Rechnung versendet</SelectItem>
-                              <SelectItem value="paid">Bezahlt</SelectItem>
-                              <SelectItem value="confirmed">Bestätigt</SelectItem>
-                              <SelectItem value="cancelled">Down</SelectItem>
-                            </SelectContent>
-                          </Select>
-                        )}
-                      </div>
-                    </div>
-
-                    {/* Row 2: Customer info */}
-                    <div className="flex flex-wrap items-start gap-x-6 gap-y-1 text-sm">
-                      <div className="flex items-center gap-2">
-                        <span className="text-muted-foreground">👤</span>
-                        <div className="flex flex-wrap items-center gap-x-2">
-                          {(order.billing_company_name || order.delivery_company_name) && (
-                            <span className="font-semibold text-primary">{order.billing_company_name || order.delivery_company_name}</span>
                           )}
-                          <span className="font-medium">{order.customer_name}</span>
-                        </div>
-                      </div>
-
-                      {/* Email (editable) */}
-                      <div className="flex items-center gap-1">
-                        {editingEmailOrderId === order.id ? (
-                          <div className="flex items-center gap-1">
-                            <Input
-                              type="email"
-                              value={newEmailValue}
-                              onChange={(e) => setNewEmailValue(e.target.value)}
-                              className="h-7 text-sm w-48"
-                              autoFocus
-                              onKeyDown={(e) => {
-                                if (e.key === 'Enter') updateOrderEmail(order.id, newEmailValue);
-                                else if (e.key === 'Escape') setEditingEmailOrderId(null);
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex items-center gap-2">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => {
+                                setSelectedOrder(order);
+                                setShowDetailsDialog(true);
                               }}
-                            />
-                            <Button size="sm" variant="ghost" className="h-6 w-6 p-0" onClick={() => updateOrderEmail(order.id, newEmailValue)}>
-                              <Check className="h-3 w-3 text-green-600" />
+                            >
+                              <Eye className="h-4 w-4" />
                             </Button>
-                            <Button size="sm" variant="ghost" className="h-6 w-6 p-0" onClick={() => setEditingEmailOrderId(null)}>
-                              <X className="h-3 w-3 text-red-600" />
-                            </Button>
+                            
+                            {(order.status === 'pending' || order.status === 'ready') && !showHidden && (
+                              <>
+                                {/* Ready Button: NUR für Caller bei pending Status */}
+                                {isCaller && order.status === 'pending' && (
+                                  <Button
+                                    size="sm"
+                                    onClick={() => markAsReady(order.id)}
+                                    className="bg-cyan-500 hover:bg-cyan-600 text-white"
+                                  >
+                                    Ready
+                                  </Button>
+                                )}
+                                
+                                {/* Rechnung Button: Für Admins immer, für Caller NUR bei ready Status */}
+                                {(!isCaller || order.status === 'ready') && (
+                                  <Button
+                                    size="sm"
+                                    onClick={() => handleInvoiceClick(order)}
+                                  >
+                                    <FileText className="h-4 w-4 mr-1" />
+                                    Rechnung
+                                  </Button>
+                                )}
+                                
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => {
+                                    setSelectedOrderForEmail(order);
+                                    setShowEmailPreviewDialog(true);
+                                  }}
+                                  className="text-blue-600 hover:text-blue-700"
+                                  title="Kontaktversuch E-Mail Vorschau"
+                                >
+                                  <Mail className="h-4 w-4" />
+                                </Button>
+                              </>
+                            )}
+
+                            {order.status === 'invoice_sent' && !showHidden && (
+                              <Button
+                                size="sm"
+                                onClick={() => markAsPaid(order.id)}
+                                className="bg-green-600 hover:bg-green-700 text-white"
+                              >
+                                <DollarSign className="h-4 w-4" />
+                              </Button>
+                            )}
+
+                            {order.status === 'paid' && !showHidden && (
+                              <Button
+                                size="sm"
+                                onClick={() => markAsExchanged(order.id)}
+                                className="bg-green-600 hover:bg-green-700 text-white"
+                              >
+                                <Check className="h-4 w-4" />
+                              </Button>
+                            )}
+
+                            {!showHidden ? (
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => hideOrder(order.id)}
+                                className="text-orange-600 hover:text-orange-700"
+                              >
+                                <EyeOff className="h-4 w-4" />
+                              </Button>
+                            ) : (
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => showOrder(order.id)}
+                                className="text-green-600 hover:text-green-700"
+                              >
+                                <Eye className="h-4 w-4" />
+                              </Button>
+                            )}
                           </div>
-                        ) : (
-                          <span
-                            className="text-muted-foreground cursor-pointer hover:bg-orange-50 hover:text-orange-700 px-1 py-0.5 rounded transition-colors group inline-flex items-center gap-1"
-                            onClick={() => { setEditingEmailOrderId(order.id); setNewEmailValue(order.customer_email); }}
-                            title="Klicken zum Bearbeiten"
-                          >
-                            {order.customer_email}
-                            <Pencil className="h-3 w-3 text-gray-400 opacity-0 group-hover:opacity-100 transition-opacity" />
-                          </span>
-                        )}
-                      </div>
-
-                      {/* Phone */}
-                      {phoneNumber && (
-                        <div
-                          className="flex items-center gap-1 cursor-pointer hover:bg-gray-100 px-1 py-0.5 rounded"
-                          onClick={() => copyPhoneToClipboard(phoneNumber)}
-                          title="Klicken zum Kopieren"
-                        >
-                          <span className="text-muted-foreground">📞</span>
-                          <span>{phoneNumber}</span>
-                          <Copy className="h-3 w-3 text-gray-400" />
-                        </div>
-                      )}
-                    </div>
-
-                    {/* Row 3: Address */}
-                    <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm">
-                      <div
-                        className="flex items-center gap-1 cursor-pointer hover:bg-orange-50 hover:text-orange-700 px-1 py-0.5 rounded transition-colors group"
-                        onClick={() => { setSelectedOrderForAddress(order); setShowAddressEditDialog(true); }}
-                        title="Klicken zum Bearbeiten"
-                      >
-                        <span className="text-muted-foreground">📍</span>
-                        <span>{address.street}, {address.cityPostcode}</span>
-                        <Pencil className="h-3 w-3 text-gray-400 opacity-0 group-hover:opacity-100 transition-opacity" />
-                      </div>
-
-                      {hasAddressDifference && (
-                        <span className="inline-flex items-center gap-1 text-xs text-green-700 bg-green-50 px-2 py-0.5 rounded-full">
-                          ⚠ Abweichende Rechnungsadresse
-                        </span>
-                      )}
-                    </div>
-
-                    {/* Row 4: Price, Payment, Bank, Shop, Date */}
-                    <div className="flex flex-wrap items-center gap-x-6 gap-y-1 text-sm border-t border-gray-100 pt-3">
-                      <div className="flex items-center gap-1">
-                        <span className="text-muted-foreground">💰</span>
-                        <CurrencyDisplay
-                          amount={order.total_amount}
-                          currency={order.currency || 'EUR'}
-                          eurAmount={order.eur_amount}
-                        />
-                      </div>
-
-                      <span className="text-muted-foreground">·</span>
-
-                      <span>
-                        {selectedStatuses.length === 1 && selectedStatuses[0] === 'invoice_sent' && order.invoice_generation_date
-                          ? `RG: ${formatDateTime(order.invoice_generation_date).dateStr} ${formatDateTime(order.invoice_generation_date).timeStr}`
-                          : order.payment_method}
-                      </span>
-
-                      {bankAccountInfo && (
-                        <>
-                          <span className="text-muted-foreground">·</span>
-                          <span className="text-muted-foreground">{bankAccountInfo}</span>
-                        </>
-                      )}
-
-                      <span className="text-muted-foreground">·</span>
-
-                      <span className="text-muted-foreground">🏪 {order.shops?.name}</span>
-
-                      <span className="text-muted-foreground">·</span>
-
-                      <span className="text-muted-foreground">{dateStr} {timeStr}</span>
-                    </div>
-
-                    {/* Row 5: Actions */}
-                    <div className="flex flex-wrap items-center gap-2 border-t border-gray-100 pt-3">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => { setSelectedOrder(order); setShowDetailsDialog(true); }}
-                      >
-                        <Eye className="h-4 w-4 mr-1" />
-                        Details
-                      </Button>
-
-                      {(order.status === 'pending' || order.status === 'ready') && !showHidden && (
-                        <>
-                          {isCaller && order.status === 'pending' && (
-                            <Button size="sm" onClick={() => markAsReady(order.id)} className="bg-cyan-500 hover:bg-cyan-600 text-white">
-                              Ready
-                            </Button>
-                          )}
-
-                          {(!isCaller || order.status === 'ready') && (
-                            <Button size="sm" onClick={() => handleInvoiceClick(order)}>
-                              <FileText className="h-4 w-4 mr-1" />
-                              Rechnung
-                            </Button>
-                          )}
-
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => { setSelectedOrderForEmail(order); setShowEmailPreviewDialog(true); }}
-                            className="text-blue-600 hover:text-blue-700"
-                            title="Kontaktversuch E-Mail"
-                          >
-                            <Mail className="h-4 w-4" />
-                          </Button>
-                        </>
-                      )}
-
-                      {order.status === 'invoice_sent' && !showHidden && (
-                        <Button size="sm" onClick={() => markAsPaid(order.id)} className="bg-green-600 hover:bg-green-700 text-white">
-                          <DollarSign className="h-4 w-4 mr-1" />
-                          Bezahlt
-                        </Button>
-                      )}
-
-                      {order.status === 'paid' && !showHidden && (
-                        <Button size="sm" onClick={() => markAsExchanged(order.id)} className="bg-green-600 hover:bg-green-700 text-white">
-                          <Check className="h-4 w-4 mr-1" />
-                          Bestätigt
-                        </Button>
-                      )}
-
-                      {!showHidden ? (
-                        <Button variant="outline" size="sm" onClick={() => hideOrder(order.id)} className="text-orange-600 hover:text-orange-700">
-                          <EyeOff className="h-4 w-4" />
-                        </Button>
-                      ) : (
-                        <Button variant="outline" size="sm" onClick={() => showOrder(order.id)} className="text-green-600 hover:text-green-700">
-                          <Eye className="h-4 w-4" />
-                        </Button>
-                      )}
-                    </div>
-                  </div>
-                );
-              })
-            )}
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })
+                )}
+              </TableBody>
+            </Table>
           </div>
 
           {/* Pagination */}
