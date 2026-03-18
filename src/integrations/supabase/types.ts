@@ -653,6 +653,63 @@ export type Database = {
           },
         ]
       }
+      telegram_chat_id_shops: {
+        Row: {
+          id: string
+          shop_id: string
+          telegram_chat_id_id: string
+        }
+        Insert: {
+          id?: string
+          shop_id: string
+          telegram_chat_id_id: string
+        }
+        Update: {
+          id?: string
+          shop_id?: string
+          telegram_chat_id_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "telegram_chat_id_shops_shop_id_fkey"
+            columns: ["shop_id"]
+            isOneToOne: false
+            referencedRelation: "shops"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "telegram_chat_id_shops_telegram_chat_id_id_fkey"
+            columns: ["telegram_chat_id_id"]
+            isOneToOne: false
+            referencedRelation: "telegram_chat_ids"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      telegram_chat_ids: {
+        Row: {
+          active: boolean
+          chat_id: string
+          created_at: string
+          id: string
+          label: string | null
+        }
+        Insert: {
+          active?: boolean
+          chat_id: string
+          created_at?: string
+          id?: string
+          label?: string | null
+        }
+        Update: {
+          active?: boolean
+          chat_id?: string
+          created_at?: string
+          id?: string
+          label?: string | null
+        }
+        Relationships: []
+      }
       user_roles: {
         Row: {
           created_at: string | null
