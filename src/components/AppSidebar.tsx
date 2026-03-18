@@ -64,6 +64,12 @@ const navigationItems = [
     icon: Users,
     value: "employees"
   },
+  {
+    title: "Telegram",
+    url: "/dashboard",
+    icon: Send,
+    value: "telegram"
+  },
 ];
 
 interface AppSidebarProps {

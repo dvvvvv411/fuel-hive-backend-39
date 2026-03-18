@@ -173,6 +173,7 @@ const DashboardContent = ({
                effectiveActiveTab === 'payment-analytics' ? 'Payment Analysis' :
                effectiveActiveTab === 'status-analytics' ? 'Status Pipeline' :
                effectiveActiveTab === 'employees' ? 'Mitarbeiterverwaltung' :
+               effectiveActiveTab === 'telegram' ? 'Telegram' :
                effectiveActiveTab.replace('-', ' ')}
             </h2>
           </div>
