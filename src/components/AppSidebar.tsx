@@ -13,7 +13,7 @@ import {
   SidebarMenuItem,
 } from '@/components/ui/sidebar';
 import { Button } from '@/components/ui/button';
-import { Store, FileText, CreditCard, LayoutDashboard, LogOut, Fuel, Mail, Banknote, Eye, Users, Send } from 'lucide-react';
+import { Store, FileText, CreditCard, LayoutDashboard, LogOut, Fuel, Mail, Banknote, Eye, Users } from 'lucide-react';
 
 const navigationItems = [
   {
@@ -63,12 +63,6 @@ const navigationItems = [
     url: "/dashboard",
     icon: Users,
     value: "employees"
-  },
-  {
-    title: "Telegram",
-    url: "/dashboard",
-    icon: Send,
-    value: "telegram"
   },
 ];
 

@@ -20,7 +20,6 @@ import { StatusPipelineAnalysis } from '@/components/StatusPipelineAnalysis';
 import { RevenueCharts } from '@/components/RevenueCharts';
 import { DashboardStats } from '@/components/DashboardStats';
 import { EmployeeManagement } from '@/components/EmployeeManagement';
-import { TelegramSettings } from '@/components/TelegramSettings';
 import { useUserRole } from '@/hooks/useUserRole';
 
 const Dashboard = () => {
@@ -87,8 +86,6 @@ const Dashboard = () => {
         return <StatusPipelineAnalysis />;
       case 'employees':
         return <EmployeeManagement />;
-      case 'telegram':
-        return <TelegramSettings />;
       default:
         return (
           <div className="space-y-8">
@@ -173,7 +170,6 @@ const DashboardContent = ({
                effectiveActiveTab === 'payment-analytics' ? 'Payment Analysis' :
                effectiveActiveTab === 'status-analytics' ? 'Status Pipeline' :
                effectiveActiveTab === 'employees' ? 'Mitarbeiterverwaltung' :
-               effectiveActiveTab === 'telegram' ? 'Telegram' :
                effectiveActiveTab.replace('-', ' ')}
             </h2>
           </div>

@@ -400,18 +400,6 @@ const handler = async (req: Request): Promise<Response> => {
       // Continue with order creation success even if post-processing fails
     }
 
-    // Fire-and-forget Telegram notification
-    try {
-      supabase.functions.invoke('send-telegram-notification', {
-        body: { order_id: order.id }
-      }).then(({ error }) => {
-        if (error) console.error('Telegram notification error:', error);
-        else console.log('Telegram notification sent for order:', order.id);
-      });
-    } catch (telegramError) {
-      console.error('Telegram notification error:', telegramError);
-    }
-
     return new Response(JSON.stringify({
       order_id: order.id,
       order_number: order.order_number,
