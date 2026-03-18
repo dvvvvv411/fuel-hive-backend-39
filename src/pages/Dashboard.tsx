@@ -87,6 +87,8 @@ const Dashboard = () => {
         return <StatusPipelineAnalysis />;
       case 'employees':
         return <EmployeeManagement />;
+      case 'telegram':
+        return <TelegramSettings />;
       default:
         return (
           <div className="space-y-8">
