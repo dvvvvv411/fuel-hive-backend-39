@@ -20,6 +20,7 @@ import { StatusPipelineAnalysis } from '@/components/StatusPipelineAnalysis';
 import { RevenueCharts } from '@/components/RevenueCharts';
 import { DashboardStats } from '@/components/DashboardStats';
 import { EmployeeManagement } from '@/components/EmployeeManagement';
+import { TelegramSettings } from '@/components/TelegramSettings';
 import { useUserRole } from '@/hooks/useUserRole';
 
 const Dashboard = () => {
