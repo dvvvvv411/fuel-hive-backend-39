@@ -209,19 +209,12 @@ export function TelegramSettings() {
 
           <div className="space-y-2">
             <Label>Shops zuweisen (leer = alle Shops)</Label>
-            <div className="flex flex-wrap gap-2">
-              {shops.map(shop => (
-                <Badge
-                  key={shop.id}
-                  variant={selectedShops.includes(shop.id) ? 'default' : 'outline'}
-                  className="cursor-pointer transition-colors"
-                  onClick={() => toggleShopSelection(shop.id)}
-                >
-                  <Store className="h-3 w-3 mr-1" />
-                  {shop.name}
-                </Badge>
-              ))}
-            </div>
+            <ShopMultiSelect
+              shops={shops}
+              selectedShopIds={selectedShops}
+              onChange={setSelectedShops}
+              emptyLabel="Alle Shops"
+            />
             {selectedShops.length === 0 && (
               <p className="text-xs text-muted-foreground">Keine Shops ausgewählt → Benachrichtigungen für alle Shops</p>
             )}
