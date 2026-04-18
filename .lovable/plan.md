@@ -1,41 +1,29 @@
 
+Replace shop multi-select pills with a searchable dropdown (Combobox pattern) in two places:
 
-## Plan: SMS Template Speichern reparieren
+### 1. `src/components/TelegramSettings.tsx`
+Replace the "Shops zuweisen" `Badge` pill list with a `Popover` + `Command` combobox:
+- Trigger button shows count ("X Shops ausgewählt" / "Alle Shops").
+- Popover contains `Command` with `CommandInput` (search), `CommandList`, `CommandGroup`, `CommandItem` per shop.
+- Each item shows checkmark when selected; clicking toggles `selectedShops`.
+- Selected shops shown as small removable badges below the trigger (optional, keeps overview).
 
-### Problem
+### 2. `src/components/EmployeeManagement.tsx`
+Locate the existing shop assignment UI for callers (currently pills based on memory). Replace with the same `Popover` + `Command` searchable multi-select pattern.
 
-Der "Speichern"-Button in der SMS Template Sektion funktioniert nicht. Es gibt zwei Probleme im Code:
+### Components used (already in project)
+- `@/components/ui/popover` (Popover, PopoverTrigger, PopoverContent)
+- `@/components/ui/command` (Command, CommandInput, CommandEmpty, CommandGroup, CommandItem, CommandList)
+- `@/components/ui/button`, `lucide-react` icons (`Check`, `ChevronsUpDown`, `Store`, `X`)
 
-### 1. Upsert `onConflict` Problem
+### Behavior
+- Search filters shop list by name (cmdk built-in).
+- Multi-select: clicking item toggles, popover stays open.
+- Empty selection = "Alle Shops" (Telegram) / "Alle Shops sichtbar" (Mitarbeiter), preserving existing semantics.
+- No DB schema changes, no API changes — pure UI refactor.
 
-Die `upsert`-Operation verwendet `onConflict: 'shop_id,template_type,language'`, was als String uebergeben wird. Bei manchen Supabase-Versionen muss das exakt dem Constraint-Namen oder den Spaltennamen entsprechen. Ausserdem koennte der Upsert fehlschlagen ohne einen sichtbaren Fehler zu werfen, weil der Fehler im catch-Block nur in die Konsole geloggt wird.
-
-### 2. Fehlende Fehlerbehandlung und Debugging
-
-Die `handleSave`-Funktion loggt Fehler nur in die Konsole, aber zeigt dem User keinen hilfreichen Fehler an. Ausserdem fehlt besseres Logging um das Problem zu identifizieren.
-
-### Loesung
-
-In `src/components/SmsTemplatePreview.tsx`:
-
-1. **Upsert durch separates Insert/Select ersetzen**: Statt `upsert` wird zuerst geprueft ob ein shop-spezifisches Template existiert, dann entweder `update` oder `insert` aufgerufen
-2. **Bessere Fehlerbehandlung**: Detaillierte Fehlermeldungen im Toast anzeigen
-3. **Console-Logging verbessern**: Mehr Debug-Output um Probleme zu identifizieren
-
-### Betroffene Datei
-
-| Datei | Aenderung |
-|-------|----------|
-| `src/components/SmsTemplatePreview.tsx` | `handleSave` ueberarbeiten: upsert durch explizites insert/update ersetzen, besseres Error-Handling |
-
-### Neue Save-Logik
-
-```text
-handleSave:
-  1. Pruefe ob shop-spezifisches Template existiert (SELECT mit shop_id + template_type + language)
-  2. Falls ja -> UPDATE template_text WHERE id = existing.id
-  3. Falls nein -> INSERT neues Template mit shop_id, template_type, language, template_text
-  4. Toast mit Erfolg/Fehler anzeigen
-  5. loadTemplate() aufrufen um den State zu aktualisieren
-```
-
+### Files touched
+| File | Change |
+|------|--------|
+| `src/components/TelegramSettings.tsx` | Replace pills with searchable combobox in add-form |
+| `src/components/EmployeeManagement.tsx` | Replace pills with searchable combobox in caller shop assignment |
