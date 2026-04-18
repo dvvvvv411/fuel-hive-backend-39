@@ -423,23 +423,12 @@ export function EmployeeManagement() {
               Wenn keine Shops ausgewählt sind, werden alle Shops angezeigt.
             </p>
             
-            <div className="space-y-3 max-h-64 overflow-y-auto">
-              {shops.map((shop) => (
-                <div key={shop.id} className="flex items-center space-x-3">
-                  <Checkbox
-                    id={`shop-${shop.id}`}
-                    checked={selectedShops.includes(shop.id)}
-                    onCheckedChange={(checked) => handleShopToggle(shop.id, checked as boolean)}
-                  />
-                  <label 
-                    htmlFor={`shop-${shop.id}`} 
-                    className="text-sm cursor-pointer flex-1"
-                  >
-                    {shop.name}
-                  </label>
-                </div>
-              ))}
-            </div>
+            <ShopMultiSelect
+              shops={shops}
+              selectedShopIds={selectedShops}
+              onChange={setSelectedShops}
+              emptyLabel="Alle Shops"
+            />
 
             {selectedShops.length === 0 && (
               <p className="text-sm text-blue-600 mt-4">
