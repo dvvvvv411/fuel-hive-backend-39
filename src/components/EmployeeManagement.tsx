@@ -14,6 +14,7 @@ import { Calendar } from '@/components/ui/calendar';
 import { toast } from '@/hooks/use-toast';
 import { Users, Store, RefreshCw, CalendarIcon, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { ShopMultiSelect } from './ShopMultiSelect';
 
 interface Profile {
   id: string;
